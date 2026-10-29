@@ -42,15 +42,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.serverless.import_item_backend import (
-    ITEM_CLASS,
-    ServerlessImportBackend,
-)
-from ansys.dynamicreporting.core.utils.json_item_import.errors import (
+from ansys.dynamicreporting.core.exceptions import (
     ImportItemValidationError,
     ImportItemVersionError,
 )
-from ansys.dynamicreporting.core.utils.json_item_import.importer import JSONItemImporter
+from ansys.dynamicreporting.core.serverless import ADR
+from ansys.dynamicreporting.core.serverless.item import HTML, Image, String, Table, Tree
+from ansys.dynamicreporting.core.utils.json_item_import.importer import import_items
 from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document, load_document
 
 CANONICAL_DOCUMENT: dict[str, Any] = {
@@ -220,8 +218,8 @@ def test_canonical_table_is_parsed(canonical):
 
 @pytest.fixture
 def imported(tmp_path: Path):
-    """Drive the canonical document through the serverless adapter."""
-    adr = MagicMock()
+    """Drive the canonical document through the serverless backend."""
+    adr = object.__new__(ADR)
     adr._logger = MagicMock()
     created: dict[str, Any] = {}
 
@@ -233,10 +231,10 @@ def imported(tmp_path: Path):
         created[kwargs["name"]] = item
         return item
 
-    adr.create_item.side_effect = create_item
+    adr.create_item = create_item
 
     document = build_document(copy.deepcopy(CANONICAL_DOCUMENT), base_dir=str(tmp_path))
-    result = JSONItemImporter(ServerlessImportBackend(adr)).import_document(document)
+    result = import_items(document, adr._populate_item)
     return result, created
 
 
@@ -278,11 +276,11 @@ def test_canonical_table_properties_are_applied(imported):
 @pytest.mark.unit
 def test_canonical_items_bind_to_their_own_classes(imported):
     _, created = imported
-    assert created["Summary"].imported_class is ITEM_CLASS["text"]
-    assert created["Notes"].imported_class is ITEM_CLASS["html"]
-    assert created["Contour"].imported_class is ITEM_CLASS["image"]
-    assert created["Probe Table"].imported_class is ITEM_CLASS["table"]
-    assert created["Mesh"].imported_class is ITEM_CLASS["tree"]
+    assert created["Summary"].imported_class is String
+    assert created["Notes"].imported_class is HTML
+    assert created["Contour"].imported_class is Image
+    assert created["Probe Table"].imported_class is Table
+    assert created["Mesh"].imported_class is Tree
 
 
 @pytest.mark.unit
@@ -447,11 +445,9 @@ def test_a_broken_document_never_reaches_the_backend():
     def mutate(document):
         del document["items"][IMAGE]["path"]
 
-    adr = MagicMock()
-    adr._logger = MagicMock()
-    importer = JSONItemImporter(ServerlessImportBackend(adr))
+    populate_item = MagicMock()
 
     with pytest.raises(ImportItemValidationError):
-        importer.import_document(build_document(_mutated(mutate)))
+        import_items(build_document(_mutated(mutate)), populate_item)
 
-    adr.create_item.assert_not_called()
+    populate_item.assert_not_called()

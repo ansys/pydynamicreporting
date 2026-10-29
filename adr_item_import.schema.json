@@ -11,7 +11,7 @@
               "const": "animation"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document.",
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .mp4.",
               "minLength": 1,
               "type": "string"
             }
@@ -82,7 +82,7 @@
               "const": "html"
             },
             "value": {
-              "description": "Inline payload body.",
+              "description": "Inline HTML body; must contain at least one HTML tag.",
               "type": "string"
             }
           },
@@ -104,7 +104,7 @@
               "const": "image"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document.",
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .png, .jpg, .tif, .tiff.",
               "minLength": 1,
               "type": "string"
             }
@@ -156,7 +156,7 @@
           "type": "string"
         },
         "properties": {
-          "description": "Escape hatch for ADR fields not promoted to first class.",
+          "description": "Escape hatch for table fields not promoted to first class. Ignored with a warning on other item types.",
           "items": {
             "$ref": "#/$defs/propertyObject"
           },
@@ -209,7 +209,7 @@
               "const": "scene"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document.",
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .stl, .ply, .csf, .avz, .scdoc, .scdocx, .dsco, .glb, .obj.",
               "minLength": 1,
               "type": "string"
             }
@@ -254,9 +254,11 @@
         {
           "properties": {
             "name": {
+              "minLength": 1,
               "type": "string"
             },
             "type": {
+              "description": "Informational; not interpreted by the importer.",
               "type": "string"
             }
           },
@@ -406,6 +408,14 @@
         },
         "value": {
           "description": "Node value. Defaults to the node name.",
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
           "type": [
             "string",
             "number",

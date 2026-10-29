@@ -28,8 +28,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_item_import.errors import ImportItemVersionError
-from ansys.dynamicreporting.core.utils.json_item_import.version import (
+from ansys.dynamicreporting.core.exceptions import ImportItemVersionError
+from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     SCHEMA_VERSION,
     SUPPORTED_MAJOR,
     check_version,
@@ -40,14 +40,19 @@ from ansys.dynamicreporting.core.utils.json_item_import.version import (
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("text", "expected"),
-    [("1.0", (1, 0)), ("1.7", (1, 7)), ("2.13", (2, 13)), (" 1.0 ", (1, 0)), ("0.1", (0, 1))],
+    [("1.0", (1, 0)), ("1.7", (1, 7)), ("2.13", (2, 13)), ("0.1", (0, 1))],
 )
 def test_parse_version_accepts_major_minor(text, expected):
     assert parse_version(text) == expected
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("text", ["1", "1.0.0", "x.y", "", "1.", ".1", "1,0", "v1.0", "1.0b"])
+@pytest.mark.parametrize(
+    "text",
+    # Surrounding whitespace and a trailing newline are rejected, matching the
+    # JSON Schema pattern, so the schema and the parser agree.
+    ["1", "1.0.0", "x.y", "", "1.", ".1", "1,0", "v1.0", "1.0b", " 1.0 ", "1.0\n", "\u0661.\u0660"],
+)
 def test_parse_version_rejects_malformed(text):
     with pytest.raises(ImportItemVersionError):
         parse_version(text)

@@ -34,30 +34,28 @@ error per run.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable
 import json
-import math
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
-from .enums import ITEM_TYPES
-from .errors import ImportItemValidationError
-from .models import (
-    DatasetPayload,
-    ImportDocument,
-    SessionPayload,
-)
+from ...exceptions import ImportItemValidationError
+from .models import DatasetPayload, ImportDocument, SessionPayload
 from .spec import (
     ANY,
     DATASET_SPEC,
     DOCUMENT_SPEC,
-    ITEM_SPECS,
     ITEM_COMMON_NAMES,
+    ITEM_SPECS,
+    ITEM_TYPES,
+    MEDIA_EXTENSIONS,
+    NON_FINITE_MESSAGE,
     SESSION_SPEC,
     TREE_NODE_SPEC,
     FieldSpec,
+    check_version,
+    is_non_finite,
 )
-from .version import check_version
 
 _INVALID = object()
 """Sentinel returned when a value failed validation."""
@@ -73,35 +71,27 @@ stack: the recursive builders run during parsing, so a RecursionError there
 would abort the whole document before any item could be saved.
 """
 
+_T = TypeVar("_T")
+
 
 class ErrorCollector:
-    """Accumulates validation problems for a single parse pass."""
+    """Accumulates validation problems for a single parse pass.
+
+    ``problems`` holds every recorded ``(location, message)`` pair, in
+    discovery order.
+    """
 
     def __init__(self) -> None:
-        self._problems: list[tuple[str, str]] = []
+        self.problems: list[tuple[str, str]] = []
 
     def add(self, location: str, message: str) -> None:
         """Record one problem at ``location``."""
-        self._problems.append((location, message))
-
-    @property
-    def problems(self) -> tuple[tuple[str, str], ...]:
-        """All problems recorded so far, in discovery order."""
-        return tuple(self._problems)
-
-    def __bool__(self) -> bool:
-        return bool(self._problems)
-
-    def __len__(self) -> int:
-        return len(self._problems)
-
-    def __iter__(self) -> Iterator[tuple[str, str]]:
-        return iter(self._problems)
+        self.problems.append((location, message))
 
     def raise_if_any(self) -> None:
-        """Raise :class:`ImportValidationError` when anything was recorded."""
-        if self._problems:
-            raise ImportItemValidationError(self._problems)
+        """Raise :class:`ImportItemValidationError` when anything was recorded."""
+        if self.problems:
+            raise ImportItemValidationError(self.problems)
 
 
 def _type_name(kind: Any) -> str:
@@ -145,7 +135,7 @@ def _check_value(value: Any, spec: FieldSpec, location: str, errors: ErrorCollec
         if spec.required:
             errors.add(location, "must not be null")
             return _INVALID
-        return spec.default_factory() if spec.default_factory else spec.default
+        return spec.default_value()
 
     if not _matches(value, spec.kind):
         errors.add(location, f"expected {_type_name(spec.kind)}, got {type(value).__name__}")
@@ -213,7 +203,7 @@ def apply_spec(
     strict_keys : bool, default: False
         Promote unknown-key warnings to validation errors.
     logger : object, optional
-        Logger used for deprecation and unknown-key warnings.
+        Logger used for unknown-key warnings.
 
     Returns
     -------
@@ -225,36 +215,14 @@ def apply_spec(
 
     for spec in specs:
         field_location = f"{location}.{spec.name}" if location else spec.name
-        source_key: str | None = None
         if spec.name in raw:
-            source_key = spec.name
             consumed.add(spec.name)
-        if spec.alias and spec.alias in raw:
-            consumed.add(spec.alias)
-            if source_key is None:
-                source_key = spec.alias
-                if logger is not None:
-                    logger.warning("%s: %r is deprecated; use %r.", location, spec.alias, spec.name)
-            elif logger is not None:
-                logger.warning(
-                    "%s: both %r and deprecated %r are present; using %r.",
-                    location,
-                    spec.name,
-                    spec.alias,
-                    spec.name,
-                )
-
-        if source_key is None:
+            checked = _check_value(raw[spec.name], spec, field_location, errors)
+        else:
             if spec.required:
                 errors.add(field_location, "is required")
-            values[spec.name] = spec.default_factory() if spec.default_factory else spec.default
-            continue
-
-        checked = _check_value(raw[source_key], spec, field_location, errors)
-        if checked is _INVALID:
-            values[spec.name] = spec.default_factory() if spec.default_factory else spec.default
-            continue
-        values[spec.name] = checked
+            checked = _INVALID
+        values[spec.name] = spec.default_value() if checked is _INVALID else checked
 
     extra = {key: value for key, value in raw.items() if key not in consumed}
     for key in extra:
@@ -267,31 +235,27 @@ def apply_spec(
     return values, extra
 
 
-def _is_non_finite(value: Any) -> bool:
-    """Whether ``value`` is a NaN or infinite float.
+def _build_each(raws: Iterable[Any], build: Callable[[Any, int], _T | None]) -> tuple[_T, ...]:
+    """Call ``build(raw, index)`` on every entry, dropping the ones that failed."""
+    built = (build(raw, index) for index, raw in enumerate(raws))
+    return tuple(entry for entry in built if entry is not None)
 
-    Python's ``json`` accepts the ``NaN``/``Infinity`` literals, but they are
-    not valid JSON and the published schema rejects them. Use ``null`` for a
-    missing number; it already becomes NaN in a numeric table.
-    """
-    return isinstance(value, float) and not math.isfinite(value)
+
+def _check_scalar(value: Any, location: str, errors: ErrorCollector, expected: str) -> None:
+    """Check that ``value`` is a finite JSON scalar; ``expected`` prefixes the type error."""
+    if not isinstance(value, _JSON_SCALARS):
+        errors.add(location, f"{expected}, got {type(value).__name__}")
+    elif is_non_finite(value):
+        errors.add(location, NON_FINITE_MESSAGE)
 
 
 def _validate_tree_value(value: Any, location: str, errors: ErrorCollector) -> None:
-    """Check that a tree node value is a JSON scalar or a list of scalars."""
+    """Check that a tree node value is a finite JSON scalar or a list of them."""
     if isinstance(value, list):
         for index, element in enumerate(value):
-            if not isinstance(element, _JSON_SCALARS):
-                errors.add(
-                    f"{location}[{index}]",
-                    f"tree values must be scalars, got {type(element).__name__}",
-                )
-        return
-    if not isinstance(value, _JSON_SCALARS):
-        errors.add(
-            location,
-            f"tree values must be a scalar or a list of scalars, got {type(value).__name__}",
-        )
+            _check_scalar(element, f"{location}[{index}]", errors, "tree values must be scalars")
+    else:
+        _check_scalar(value, location, errors, "tree values must be a scalar or a list of scalars")
 
 
 def build_tree_node(
@@ -323,61 +287,18 @@ def build_tree_node(
     else:
         _validate_tree_value(value, f"{location}.value", errors)
 
-    children = tuple(
-        node
-        for index, child in enumerate(values["children"])
-        if (
-            node := build_tree_node(
-                child,
-                f"{location}.children[{index}]",
-                errors,
-                strict_keys=strict_keys,
-                logger=logger,
-                depth=depth + 1,
-            )
-        )
-        is not None
+    children = _build_each(
+        values["children"],
+        lambda child, index: build_tree_node(
+            child,
+            f"{location}.children[{index}]",
+            errors,
+            strict_keys=strict_keys,
+            logger=logger,
+            depth=depth + 1,
+        ),
     )
-
-    return {
-        "name": values["name"],
-        "value": value,
-        "key": values["key"],
-        "children": children,
-    }
-
-
-def _normalize_table_shape(
-    raw: dict[str, Any], location: str, errors: ErrorCollector, logger: Any
-) -> dict[str, Any]:
-    """Fold a ``data: {columns, rows}`` wrapper into the top-level form.
-
-    The wrapper is removed so exactly one representation reaches the rest of
-    the parser; carrying both forward is what makes downstream code guess.
-    """
-    if "data" not in raw:
-        return raw
-
-    normalized = dict(raw)
-    wrapper = normalized.pop("data")
-    if not isinstance(wrapper, dict):
-        errors.add(f"{location}.data", f"expected an object, got {type(wrapper).__name__}")
-        return normalized
-
-    for key in ("columns", "rows"):
-        if key not in wrapper:
-            continue
-        if key in normalized:
-            if logger is not None:
-                logger.warning(
-                    "%s: both top-level %r and 'data.%s' are present; using the top-level value.",
-                    location,
-                    key,
-                    key,
-                )
-            continue
-        normalized[key] = wrapper[key]
-    return normalized
+    return {"name": values["name"], "value": value, "key": values["key"], "children": children}
 
 
 def _validate_table(values: dict[str, Any], location: str, errors: ErrorCollector) -> None:
@@ -395,16 +316,9 @@ def _validate_table(values: dict[str, Any], location: str, errors: ErrorCollecto
                 f"expected {expected_width} cells to match the other rows, got {len(row)}",
             )
         for cell_index, cell in enumerate(row):
-            if not isinstance(cell, _JSON_SCALARS):
-                errors.add(
-                    f"{row_location}[{cell_index}]",
-                    f"table cells must be scalars, got {type(cell).__name__}",
-                )
-            elif _is_non_finite(cell):
-                errors.add(
-                    f"{row_location}[{cell_index}]",
-                    "NaN and Infinity are not valid JSON; use null for a missing number",
-                )
+            _check_scalar(
+                cell, f"{row_location}[{cell_index}]", errors, "table cells must be scalars"
+            )
 
     if not column_names:
         return
@@ -427,6 +341,7 @@ def build_item(
     *,
     base_dir: str | None = None,
     strict_keys: bool = False,
+    allow_external_paths: bool = True,
     logger: Any = None,
 ) -> dict[str, Any] | None:
     """Build one item payload from the document ``items`` array."""
@@ -441,9 +356,6 @@ def build_item(
         errors.add(f"{location}.item_type", f"expected one of [{allowed}], got {item_type!r}")
         return None
 
-    if item_type == "table":
-        raw = _normalize_table_shape(raw, location, errors, logger)
-
     values, extra = apply_spec(
         raw, ITEM_SPECS[item_type], location, errors, strict_keys=strict_keys, logger=logger
     )
@@ -451,58 +363,113 @@ def build_item(
     if item_type == "table":
         _validate_table(values, location, errors)
     elif item_type == "tree":
-        values["nodes"] = tuple(
-            node
-            for node_index, node_raw in enumerate(values["nodes"] or ())
-            if (
-                node := build_tree_node(
-                    node_raw,
-                    f"{location}.nodes[{node_index}]",
-                    errors,
-                    strict_keys=strict_keys,
-                    logger=logger,
-                )
-            )
-            is not None
+        values["nodes"] = _build_each(
+            values["nodes"] or (),
+            lambda node, node_index: build_tree_node(
+                node,
+                f"{location}.nodes[{node_index}]",
+                errors,
+                strict_keys=strict_keys,
+                logger=logger,
+            ),
         )
 
-    if logger is not None:
-        # A property of the same name is applied after the first-class field,
-        # so it silently wins unless the conflict is surfaced here.
-        shadowed = {key for entry in values["properties"] for key in entry} & (
-            values.keys() - ITEM_COMMON_NAMES
-        )
-        for key in sorted(shadowed):
-            logger.warning(
-                "%s: property %r overrides the first-class %r field.", location, key, key
-            )
+    if item_type != "table" and values["properties"]:
+        # Only tables persist properties, so neither backend would store
+        # them here; report and drop them rather than discard them silently.
+        if logger is not None:
+            for key in sorted({key for entry in values["properties"] for key in entry}, key=str):
+                logger.warning(
+                    "%s: property %r is ignored; only table items accept properties.",
+                    location,
+                    key,
+                )
+        values["properties"] = ()
+
+    if logger is not None and values["properties"]:
+        _warn_about_property_conflicts(values, location, logger)
+
+    if not allow_external_paths and item_type in MEDIA_EXTENSIONS and values["path"] is not None:
+        _check_path_containment(values["path"], base_dir, f"{location}.path", errors)
 
     return {**values, "extra": extra, "base_dir": base_dir}
 
 
-def _build_simple(
-    raw: Any,
-    location: str,
+def _warn_about_property_conflicts(values: dict[str, Any], location: str, logger: Any) -> None:
+    """Report table properties that silently replace another value.
+
+    Properties are applied after the first-class fields and the
+    column-derived ``labels_row``, so a property of the same name wins. When
+    the same key appears in several entries, the last one wins.
+    """
+    seen: set[str] = set()
+    duplicated: set[str] = set()
+    for entry in values["properties"]:
+        for key in entry:
+            if key in seen:
+                duplicated.add(key)
+            seen.add(key)
+
+    for key in sorted(duplicated, key=str):
+        logger.warning("%s: property %r is set more than once; the last value wins.", location, key)
+    for key in sorted(seen & (values.keys() - ITEM_COMMON_NAMES), key=str):
+        logger.warning("%s: property %r overrides the first-class %r field.", location, key, key)
+    if "labels_row" in seen:
+        logger.warning(
+            "%s: property 'labels_row' overrides the labels derived from 'columns'.", location
+        )
+
+
+def _check_path_containment(
+    path: str, base_dir: str | None, location: str, errors: ErrorCollector
+) -> None:
+    """Reject a media path that resolves outside ``base_dir``.
+
+    Resolution follows symbolic links, so a link inside ``base_dir`` that
+    points elsewhere is rejected too. Without a ``base_dir``, relative paths
+    resolve against the working directory, so that is the boundary.
+    """
+    base = Path(base_dir or ".").resolve()
+    # Joining an absolute path discards ``base``, so absolute paths are
+    # checked against the boundary like relative ones.
+    target = (base / path).resolve()
+    if not target.is_relative_to(base):
+        errors.add(
+            location,
+            f"{path!r} resolves outside {str(base)!r}; pass allow_external_paths=True to allow it",
+        )
+
+
+def _build_payloads(
+    document: dict[str, Any],
+    key: str,
     specs: tuple[FieldSpec, ...],
-    factory: Any,
+    factory: Callable[..., _T],
     errors: ErrorCollector,
-    *,
     strict_keys: bool,
     logger: Any,
-) -> Any:
-    """Build a session or dataset payload."""
-    if not isinstance(raw, dict):
-        errors.add(location, f"expected an object, got {type(raw).__name__}")
-        return None
-    values, extra = apply_spec(raw, specs, location, errors, strict_keys=strict_keys, logger=logger)
-    return factory(**values, extra=extra)
+) -> tuple[_T, ...]:
+    """Build the session or dataset payloads listed under ``document[key]``."""
+
+    def build(raw: Any, index: int) -> _T | None:
+        location = f"{key}[{index}]"
+        if not isinstance(raw, dict):
+            errors.add(location, f"expected an object, got {type(raw).__name__}")
+            return None
+        values, extra = apply_spec(
+            raw, specs, location, errors, strict_keys=strict_keys, logger=logger
+        )
+        return factory(**values, extra=extra)
+
+    return _build_each(document[key], build)
 
 
 def build_document(
     raw: Any,
     *,
-    base_dir: str | None = None,
+    base_dir: str | Path | None = None,
     strict_keys: bool = False,
+    allow_external_paths: bool = True,
     logger: Any = None,
 ) -> ImportDocument:
     """Validate a raw mapping and build an :class:`ImportDocument`.
@@ -511,10 +478,13 @@ def build_document(
     ----------
     raw : Any
         Decoded JSON document.
-    base_dir : str, optional
+    base_dir : str or pathlib.Path, optional
         Directory that relative media paths resolve against.
     strict_keys : bool, default: False
         Treat unknown keys as validation errors.
+    allow_external_paths : bool, default: True
+        Accept media paths that resolve outside ``base_dir``. When ``False``,
+        such paths, including absolute ones, are validation errors.
     logger : object, optional
         Logger used for warnings and notes.
 
@@ -525,16 +495,18 @@ def build_document(
 
     Raises
     ------
-    ImportValidationError
+    ImportItemValidationError
         If the document violates the contract. The error carries every
         problem found during the pass.
-    ImportVersionError
+    ImportItemVersionError
         If the declared schema version is malformed or too new.
     """
     errors = ErrorCollector()
     if not isinstance(raw, dict):
         errors.add("<document>", f"expected an object, got {type(raw).__name__}")
         errors.raise_if_any()
+
+    base = None if base_dir is None else str(base_dir)
 
     # Version is an envelope-level precondition: fail before anything else is
     # interpreted, because a newer major may redefine every field below.
@@ -544,52 +516,23 @@ def build_document(
         raw, DOCUMENT_SPEC, "", errors, strict_keys=strict_keys, logger=logger
     )
 
-    sessions = tuple(
-        session
-        for index, session_raw in enumerate(values["sessions"])
-        if (
-            session := _build_simple(
-                session_raw,
-                f"sessions[{index}]",
-                SESSION_SPEC,
-                SessionPayload,
-                errors,
-                strict_keys=strict_keys,
-                logger=logger,
-            )
-        )
-        is not None
+    sessions = _build_payloads(
+        values, "sessions", SESSION_SPEC, SessionPayload, errors, strict_keys, logger
     )
-    datasets = tuple(
-        dataset
-        for index, dataset_raw in enumerate(values["datasets"])
-        if (
-            dataset := _build_simple(
-                dataset_raw,
-                f"datasets[{index}]",
-                DATASET_SPEC,
-                DatasetPayload,
-                errors,
-                strict_keys=strict_keys,
-                logger=logger,
-            )
-        )
-        is not None
+    datasets = _build_payloads(
+        values, "datasets", DATASET_SPEC, DatasetPayload, errors, strict_keys, logger
     )
-    items = tuple(
-        item
-        for index, item_raw in enumerate(values["items"])
-        if (
-            item := build_item(
-                item_raw,
-                index,
-                errors,
-                base_dir=base_dir,
-                strict_keys=strict_keys,
-                logger=logger,
-            )
-        )
-        is not None
+    items = _build_each(
+        values["items"],
+        lambda item_raw, index: build_item(
+            item_raw,
+            index,
+            errors,
+            base_dir=base,
+            strict_keys=strict_keys,
+            allow_external_paths=allow_external_paths,
+            logger=logger,
+        ),
     )
 
     errors.raise_if_any()
@@ -613,15 +556,52 @@ def build_document(
         datasets=datasets,
         items=items,
         extra=extra,
-        base_dir=base_dir,
+        base_dir=base,
     )
+
+
+def read_document(path: str | Path) -> Any:
+    """Read and decode an import document from a JSON file without validating it.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Path to the JSON document.
+
+    Returns
+    -------
+    Any
+        The decoded JSON value, to pass to :func:`build_document`.
+
+    Raises
+    ------
+    ImportItemValidationError
+        If the file cannot be read, is not UTF-8, or is not valid JSON.
+    """
+    document_path = Path(path)
+    try:
+        # utf-8-sig also reads plain UTF-8; Windows editors routinely add a BOM.
+        with document_path.open("r", encoding="utf-8-sig") as handle:
+            return json.load(handle)
+    except FileNotFoundError:
+        problem = (str(document_path), "the import document does not exist")
+    except OSError as exc:
+        # Permission denied, a directory instead of a file, and similar.
+        reason = f"the import document cannot be read: {exc.strerror or exc}"
+        problem = (str(document_path), reason)
+    except UnicodeDecodeError as exc:
+        problem = (f"{document_path}:byte {exc.start}", "the import document is not valid UTF-8")
+    except json.JSONDecodeError as exc:
+        problem = (f"{document_path}:{exc.lineno}:{exc.colno}", f"invalid JSON: {exc.msg}")
+    raise ImportItemValidationError([problem]) from None
 
 
 def load_document(
     path: str | Path,
     *,
-    base_dir: str | None = None,
+    base_dir: str | Path | None = None,
     strict_keys: bool = False,
+    allow_external_paths: bool = True,
     logger: Any = None,
 ) -> ImportDocument:
     """Read and validate an import document from a JSON file.
@@ -630,11 +610,14 @@ def load_document(
     ----------
     path : str or pathlib.Path
         Path to the JSON document.
-    base_dir : str, optional
+    base_dir : str or pathlib.Path, optional
         Directory that relative media paths resolve against. Defaults to the
         directory containing ``path``.
     strict_keys : bool, default: False
         Treat unknown keys as validation errors.
+    allow_external_paths : bool, default: True
+        Accept media paths that resolve outside ``base_dir``. When ``False``,
+        such paths, including absolute ones, are validation errors.
     logger : object, optional
         Logger used for warnings and notes.
 
@@ -642,20 +625,19 @@ def load_document(
     -------
     ImportDocument
         The validated document.
-    """
-    document_path = Path(path)
-    try:
-        # utf-8-sig also reads plain UTF-8; Windows editors routinely add a BOM.
-        with document_path.open("r", encoding="utf-8-sig") as handle:
-            raw = json.load(handle)
-    except FileNotFoundError:
-        raise ImportItemValidationError(
-            [(str(document_path), "the import document does not exist")]
-        ) from None
-    except json.JSONDecodeError as exc:
-        raise ImportItemValidationError(
-            [(f"{document_path}:{exc.lineno}:{exc.colno}", f"invalid JSON: {exc.msg}")]
-        ) from None
 
-    resolved_base = base_dir if base_dir is not None else str(document_path.parent)
-    return build_document(raw, base_dir=resolved_base, strict_keys=strict_keys, logger=logger)
+    Raises
+    ------
+    ImportItemValidationError
+        If the file cannot be read, is not UTF-8, is not valid JSON, or
+        violates the contract.
+    ImportItemVersionError
+        If the declared schema version is malformed or too new.
+    """
+    return build_document(
+        read_document(path),
+        base_dir=base_dir if base_dir is not None else Path(path).parent,
+        strict_keys=strict_keys,
+        allow_external_paths=allow_external_paths,
+        logger=logger,
+    )

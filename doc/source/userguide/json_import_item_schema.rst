@@ -41,7 +41,7 @@ curated subset of the product data model, not a parallel invention. A continuous
 integration check fails the build if a field here loses its counterpart.
 
 **Validation reports every problem at once.** A malformed document raises a
-single ``ImportValidationError`` listing every violation with its location, so
+single ``ImportItemValidationError`` listing every violation with its location, so
 you fix a whole document in one edit instead of one error per run.
 
 **Unknown fields are never silently dropped.** They are retained, reported, and
@@ -67,9 +67,9 @@ versioning; there is no patch component.
      - Accepted. Unrecognized fields are retained and an informational note is
        logged.
    * - ``"2.0"``
-     - Rejected with ``ImportVersionError``.
+     - Rejected with ``ImportItemVersionError``.
    * - ``"1"`` or ``"1.0.0"``
-     - Rejected with ``ImportVersionError``: malformed.
+     - Rejected with ``ImportItemVersionError``: malformed.
 
 A **MAJOR** bump means a field was removed or retyped. A **MINOR** bump is
 additive only, so a client built for ``1.0`` keeps working against a ``1.x``
@@ -134,14 +134,9 @@ Document tags and item tags are merged, so an item declaring
 ``{"section": "intro"}`` inside a document declaring ``{"report": "run42"}``
 is stored with both.
 
-For convenience these forms are also accepted and normalized:
-
-.. code:: json
-
-   "tags": { "section": "results" }
-   "tags": ["section=results", "solver=fluent"]
-
-A string entry without ``=`` is a validation error.
+A tag object must have at least one key, and every value must be a string,
+number, or boolean. Anything else, such as a bare ``"key=value"`` string, a
+nested object, or a ``NaN`` or ``Infinity`` number, is a validation error.
 
 Sessions and datasets
 ---------------------
@@ -193,7 +188,8 @@ Every item accepts these fields regardless of type.
    * - ``properties``
      - array of objects
      - no
-     - Escape hatch for fields not promoted to first class. See `Properties`_.
+     - Escape hatch for table fields not promoted to first class. Ignored with a
+       warning on other item types. See `Properties`_.
 
 Item types
 ----------
@@ -210,7 +206,7 @@ Item types
      - Plain text body.
    * - ``html``
      - ``value``
-     - HTML fragment. Validated as markup.
+     - HTML fragment. Must contain at least one HTML tag.
    * - ``table``
      - ``columns``, ``rows``
      - Two-dimensional data. See `Tables`_.
@@ -219,19 +215,24 @@ Item types
      - Hierarchical data. See `Trees`_.
    * - ``image``
      - ``path``
-     - Image file.
+     - Image file: ``.png``, ``.jpg``, ``.tif``, or ``.tiff``.
    * - ``animation``
      - ``path``
-     - MP4 file.
+     - MP4 file: ``.mp4``.
    * - ``scene``
      - ``path``
-     - 3D scene file, such as AVZ.
+     - 3D scene file: ``.stl``, ``.ply``, ``.csf``, ``.avz``, ``.scdoc``,
+       ``.scdocx``, ``.dsco``, ``.glb``, or ``.obj``.
    * - ``file``
      - ``path``
-     - Any other file.
+     - Any other file, with any extension.
 
 An ``item_type`` outside this set is a validation error naming the offending
 value and listing what is accepted.
+
+Media extensions are matched case-insensitively. Any other extension, including
+``.jpeg``, is a validation error for both backends, so a document that validates
+imports the same way into a service and into serverless ADR.
 
 File paths
 ----------
@@ -239,6 +240,16 @@ File paths
 ``path`` may be absolute, or relative to the directory containing the JSON
 document. Pass ``base_dir`` to the import call to resolve relative paths against
 a different directory instead.
+
+If the document comes from a producer you do not control, pass
+``allow_external_paths=False``. Then every media path must resolve inside
+``base_dir`` (by default, the document's directory). Absolute paths elsewhere,
+``..`` segments that climb out, and symbolic links that point outside are
+validation errors, so the document cannot make the importer upload other files:
+
+.. code:: python
+
+   result = adr_service.import_items_from_json("report.json", allow_external_paths=False)
 
 Keeping the document beside its media keeps it portable:
 
@@ -255,11 +266,6 @@ Keeping the document beside its media keeps it portable:
    Path resolution does not check that the file exists. Existence, readability,
    and extension are validated when the item is saved. A missing file surfaces
    as a per-item failure, not a parse error. See `Error handling`_.
-
-.. note::
-
-   ``src`` is accepted as a deprecated alias for ``path`` and logs a warning.
-   Use ``path`` in new documents.
 
 Tables
 ------
@@ -334,8 +340,11 @@ Rules
 - If ``xaxis`` and ``yaxis`` are omitted, the first column becomes the x axis
   and the remaining columns become the y axes.
 - If supplied, ``xaxis`` and ``yaxis`` must name real columns.
-- Numeric tables are stored as floats. A table containing any text is stored as
-  text, with no truncation of long values.
+- Numeric tables are stored as floats. A table is numeric when every cell is a
+  JSON number, boolean, or ``null``; booleans become ``1.0`` and ``0.0``.
+- A table containing any JSON string is stored as text, with no truncation of
+  long values. Strings stay strings even when they look numeric, so ``"001"``
+  keeps its leading zeros. Write numbers without quotes to get a numeric table.
 - Text cells may contain any Unicode character. Accented letters, symbols such
   as ``°`` and ``µ``, and non-Latin scripts are encoded as UTF-8 on the way in
   and survive the round trip unchanged.
@@ -385,7 +394,7 @@ Trees
    * - ``value``
      - scalar or array of scalars
      - no
-     - Defaults to the node name.
+     - Defaults to the node name. ``NaN`` and ``Infinity`` are rejected.
    * - ``key``
      - string
      - no
@@ -402,7 +411,7 @@ stable identifier of your own.
 Properties
 ----------
 
-``properties`` reaches any item field that the schema does not promote to a
+``properties`` reaches any table field that the schema does not promote to a
 first-class field. Each entry is a single-key object:
 
 .. code:: json
@@ -422,6 +431,18 @@ name Ansys Dynamic Reporting does not recognize is reported at warning level
 and skipped, because neither backend would persist it. Names that are private
 or that would shadow a method are refused the same way, so a document cannot
 overwrite behavior through this channel.
+
+Only table items persist ``properties``. On any other item type, each property
+is reported at warning level and ignored, because neither backend would store
+it.
+
+Properties are applied after every other table field, so a property wins over
+the value it names. Each of these conflicts is applied, and reported at warning
+level so that it is not silent:
+
+- a property that names a first-class field, such as ``plot``;
+- a ``labels_row`` property, which replaces the labels derived from ``columns``;
+- a key that appears in more than one entry, where the last entry wins.
 
 Forward compatibility
 =====================
@@ -450,7 +471,7 @@ Error handling
 Validation errors
 -----------------
 
-A document that violates the contract raises ``ImportValidationError`` before
+A document that violates the contract raises ``ImportItemValidationError`` before
 anything is written. The error lists **every** problem found, each with its
 location:
 
@@ -469,7 +490,7 @@ A rejected document never reaches the database. Nothing is partially written.
 Version errors
 --------------
 
-An unsupported or malformed ``schema_version`` raises ``ImportVersionError``.
+An unsupported or malformed ``schema_version`` raises ``ImportItemVersionError``.
 This is checked before any other field, because a newer major version may
 redefine everything below it.
 
@@ -619,9 +640,10 @@ recommended check to add to a producing application's own test suite.
 When Ansys Dynamic Reporting does not model something
 =====================================================
 
-Put it in ``properties`` for an item, or in ``metadata`` for the document. Both
-are honored where Ansys Dynamic Reporting recognizes the name, and retained with
-a warning otherwise. Nothing you supply is silently discarded.
+Put it in ``properties`` for a table item, or in ``metadata`` for the document.
+Table properties are honored where Ansys Dynamic Reporting recognizes the name;
+``metadata`` is retained. Anything that is not applied is reported with a
+warning, so nothing you supply is silently discarded.
 
 If you need a field promoted to first class, or a new item type, open an issue
 at https://github.com/ansys/pydynamicreporting/issues describing the producing

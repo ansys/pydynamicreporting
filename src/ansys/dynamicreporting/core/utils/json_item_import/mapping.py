@@ -20,11 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Shared mapping helpers for the ADR item import adapters.
+"""Shared mapping helpers for the ADR item import backends.
 
-Every public helper here must be called by **both** backend adapters. A helper
-with only one call site means the adapters have grown divergent inline copies,
-which the drift guard fails on.
+``item_content``, ``table_fields``, ``apply_properties``, and ``combine_tags``
+are the only helpers the backends call; they keep the REST and serverless
+models fed with identical values. The lower-level helpers are their building
+blocks.
+
+Both backends are required to render tags through :func:`normalize_tags` and
+:func:`combine_tags`. A backend that builds its own ``key=value`` string will
+drift from the other one; the drift guard asserts there is no such local
+rendering.
 """
 
 from __future__ import annotations
@@ -35,9 +41,27 @@ from typing import Any
 
 import numpy
 
-from ....adr_utils import table_attr
+from ...adr_utils import table_attr
+from ..report_objects import ItemREST
+
+__all__ = [
+    "apply_properties",
+    "column_labels",
+    "combine_tags",
+    "derive_axes",
+    "flatten_tree",
+    "item_content",
+    "normalize_tags",
+    "resolve_path",
+    "rows_to_array",
+    "table_fields",
+]
 
 _SLUG_RE = re.compile(r"[^0-9a-z]+")
+
+# Reuses the REST model's quoting rather than the serverless
+# BaseModel._add_quotes, which would pull in Django.
+_quote = ItemREST.add_quotes
 
 KNOWN_PROPERTY_NAMES: frozenset[str] = frozenset(table_attr)
 """Property names ADR recognizes; anything else is reported rather than dropped."""
@@ -63,21 +87,24 @@ def rows_to_array(rows: Any, column_count: int | None = None) -> numpy.ndarray:
     -------
     numpy.ndarray
         A 2-D array of shape ``(n_columns, n_rows)``, of float dtype when
-        every cell is numeric and auto-sized bytes dtype otherwise.
+        every cell is a JSON number, boolean, or null, and auto-sized bytes
+        dtype otherwise.
     """
     if not len(rows):
         return numpy.zeros((column_count or 0, 0), dtype=float)
 
-    try:
+    # Decide from the JSON cell types rather than letting NumPy try a float
+    # cast: NumPy parses numeric-looking strings, so "001" would become 1.0.
+    if all(cell is None or isinstance(cell, (int, float)) for row in rows for cell in row):
         return numpy.array(rows, dtype="float").T
-    except (TypeError, ValueError):
-        # Fall back to auto-sized bytes. 'S' without a width never truncates,
-        # unlike a fixed '|S20'. Cells are encoded explicitly because NumPy
-        # encodes str -> bytes as ASCII, which rejects a degree sign.
-        text_rows = [
-            [b"" if cell is None else str(cell).encode("utf-8") for cell in row] for row in rows
-        ]
-        return numpy.array(text_rows, dtype="S").T
+
+    # Auto-sized bytes. 'S' without a width never truncates, unlike a fixed
+    # '|S20'. Cells are encoded explicitly because NumPy encodes str -> bytes
+    # as ASCII, which rejects a degree sign.
+    text_rows = [
+        [b"" if cell is None else str(cell).encode("utf-8") for cell in row] for row in rows
+    ]
+    return numpy.array(text_rows, dtype="S").T
 
 
 def column_labels(columns: Any) -> list[str]:
@@ -100,10 +127,7 @@ def derive_axes(
     """
     names = column_labels(columns)
     resolved_x = xaxis if xaxis is not None else (names[0] if names else None)
-    if yaxis is not None:
-        resolved_y = list(yaxis)
-    else:
-        resolved_y = names[1:] if len(names) > 1 else []
+    resolved_y = list(yaxis) if yaxis is not None else names[1:]
     return resolved_x, resolved_y
 
 
@@ -182,34 +206,21 @@ def apply_properties(
     applied: list[str] = []
     for key, value in flat.items():
         if not isinstance(key, str) or key.startswith("_"):
-            if logger is not None:
-                logger.warning(
-                    "Item %r: property %r is not a public field name; ignored.",
-                    _item_label(item),
-                    key,
-                )
-            continue
-        class_attribute = getattr(type(item), key, None)
-        if callable(class_attribute) and not isinstance(class_attribute, property):
-            if logger is not None:
-                logger.warning(
-                    "Item %r: property %r would shadow a method; ignored.",
-                    _item_label(item),
-                    key,
-                )
-            continue
-        if key not in KNOWN_PROPERTY_NAMES:
+            reason = "is not a public field name"
+        elif callable(attribute := getattr(type(item), key, None)) and not isinstance(
+            attribute, property
+        ):
+            reason = "would shadow a method"
+        elif key not in KNOWN_PROPERTY_NAMES:
             # Both backends drop unrecognized names at save time, so report
             # them here rather than letting them disappear.
-            if logger is not None:
-                logger.warning(
-                    "Item %r: property %r is not a known ADR field; ignored.",
-                    _item_label(item),
-                    key,
-                )
+            reason = "is not a known ADR field"
+        else:
+            assign(item, key, value)
+            applied.append(key)
             continue
-        assign(item, key, value)
-        applied.append(key)
+        if logger is not None:
+            logger.warning("Item %r: property %r %s; ignored.", _item_label(item), key, reason)
     return applied
 
 
@@ -222,3 +233,108 @@ def resolve_path(path: str, base_dir: str | None = None) -> str:
     if candidate.is_absolute() or base_dir is None:
         return str(candidate)
     return str(Path(base_dir) / candidate)
+
+
+def item_content(item_data: dict[str, Any]) -> Any:
+    """Build the payload content for one validated item.
+
+    Returns
+    -------
+    str, numpy.ndarray, or list of dict
+        The inline string for ``text``/``html``, the series-per-row array for
+        ``table``, the nested node dicts for ``tree``, and the resolved file
+        path for every media type.
+    """
+    item_type = item_data["item_type"]
+    if item_type in ("text", "html"):
+        return item_data["value"]
+    if item_type == "table":
+        return rows_to_array(item_data["rows"], len(item_data["columns"]))
+    if item_type == "tree":
+        return flatten_tree(item_data["nodes"])
+    return resolve_path(item_data["path"], item_data["base_dir"])
+
+
+def table_fields(item_data: dict[str, Any]) -> dict[str, Any]:
+    """Return the first-class table display fields to set on a table item.
+
+    Returns
+    -------
+    dict
+        ``labels_row`` always, plus ``xaxis``, ``yaxis``, ``plot``, and
+        ``format`` when they resolve to a value.
+    """
+    columns = item_data["columns"]
+    fields: dict[str, Any] = {"labels_row": column_labels(columns)}
+    xaxis, yaxis = derive_axes(columns, item_data["xaxis"], item_data["yaxis"])
+    if xaxis is not None:
+        fields["xaxis"] = xaxis
+    if yaxis:
+        fields["yaxis"] = yaxis
+    for key in ("plot", "format"):
+        if item_data[key] is not None:
+            fields[key] = item_data[key]
+    return fields
+
+
+def _render_mapping(mapping: dict[Any, Any]) -> list[str]:
+    """Render one tag object as a list of ``key=value`` tokens."""
+    return [
+        f"{_quote(str(key))}={_quote(str(value))}"
+        for key, value in mapping.items()
+        if value is not None
+    ]
+
+
+def normalize_tags(raw_tags: Any) -> str:
+    """Render tags into ADR's space-separated ``key=value`` string.
+
+    Parameters
+    ----------
+    raw_tags : Any
+        ``None``, an already-rendered string, a single mapping, a list of
+        mappings, a list of ``"key=value"`` strings, or a bare scalar.
+
+    Returns
+    -------
+    str
+        Space-separated tag string. Empty when there is nothing to render.
+    """
+    if raw_tags is None:
+        return ""
+    if isinstance(raw_tags, str):
+        return raw_tags.strip()
+    if isinstance(raw_tags, dict):
+        return " ".join(_render_mapping(raw_tags))
+    if isinstance(raw_tags, (list, tuple, set)):
+        tokens: list[str] = []
+        for entry in raw_tags:
+            if entry is None:
+                continue
+            if isinstance(entry, dict):
+                tokens.extend(_render_mapping(entry))
+            elif isinstance(entry, str):
+                stripped = entry.strip()
+                if stripped:
+                    tokens.append(stripped)
+            else:
+                tokens.append(_quote(str(entry)))
+        return " ".join(tokens)
+    return _quote(str(raw_tags))
+
+
+def combine_tags(*parts: Any) -> str:
+    """Normalize every part and join the non-empty results.
+
+    Parameters
+    ----------
+    *parts : Any
+        Tag payloads accepted by :func:`normalize_tags`.
+
+    Returns
+    -------
+    str
+        Space-separated tag string.
+    """
+    rendered = [normalize_tags(part) for part in parts]
+    return " ".join(part for part in rendered if part)

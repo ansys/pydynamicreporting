@@ -23,20 +23,22 @@
 """Drift guard.
 
 Keeps the import contract provably a subset of the ADR data model, and keeps
-the two adapters honest about sharing one mapping layer.
+the two backends honest about sharing one mapping layer.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import json
 from pathlib import Path
+import re
 
 import pytest
 
 from ansys.dynamicreporting.core.adr_utils import table_attr
-from ansys.dynamicreporting.core.import_item_backend_server import ITEM_ATTRIBUTE
 from ansys.dynamicreporting.core.serverless import (
+    ADR,
     HTML,
     Animation,
     File,
@@ -46,21 +48,25 @@ from ansys.dynamicreporting.core.serverless import (
     Table,
     Tree,
 )
-from ansys.dynamicreporting.core.serverless.import_item_backend import ITEM_CLASS
-from ansys.dynamicreporting.core.serverless.item import ItemType
-from ansys.dynamicreporting.core.utils.json_item_import import mapping
-from ansys.dynamicreporting.core.utils.json_item_import.enums import (
-    ITEM_TYPE_TO_ADR_TYPE,
-    ITEM_TYPES,
+from ansys.dynamicreporting.core.serverless.item import (
+    AnimContent,
+    FileContent,
+    HTMLParser,
+    ImageContent,
+    ItemType,
+    SceneContent,
 )
 from ansys.dynamicreporting.core.utils.json_item_import.parser import load_document
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
-    DOCUMENT_SPEC,
-    ITEM_SPECS,
+    ITEM_TYPE_TO_ADR_TYPE,
+    ITEM_TYPES,
+    MEDIA_EXTENSIONS,
+    SCHEMA_VERSION,
     TABLE_FIELDS,
-    TREE_NODE_SPEC,
+    validate_html,
 )
-from ansys.dynamicreporting.core.utils.json_item_import.version import SCHEMA_VERSION
+from ansys.dynamicreporting.core.utils.report_objects import ItemREST
+from ansys.dynamicreporting.core.utils.report_remote_server import Server
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACT = REPO_ROOT / "adr_item_import.schema.json"
@@ -71,16 +77,14 @@ SAMPLE = REPO_ROOT / "tests" / "test_data" / "adr_import" / "canonical_report.js
 # shape rather than an ADR field, so they are not in this set.
 FIRST_CLASS_TABLE_FIELDS = {"plot", "format", "xaxis", "yaxis"}
 
-ADAPTER_SOURCES = (
-    REPO_ROOT
-    / "src"
-    / "ansys"
-    / "dynamicreporting"
-    / "core"
-    / "serverless"
-    / "import_item_backend.py",
-    REPO_ROOT / "src" / "ansys" / "dynamicreporting" / "core" / "import_item_backend_server.py",
-)
+ITEM_CLASS = {item_type: ADR._import_item_class(item_type) for item_type in ITEM_TYPES}
+
+# The per-item hooks each backend hands to import_items, like the
+# create_template_func each backend hands to populate_template.
+POPULATE_HOOKS = (Server._populate_item, ADR._populate_item)
+
+# The mapping helpers both hooks must call instead of inlining their own copy.
+SHARED_HELPERS = ("item_content", "table_fields", "apply_properties", "combine_tags")
 
 
 def _load_generator():
@@ -144,24 +148,53 @@ def test_each_item_class_declares_the_mapped_type(item_type):
 
 
 @pytest.mark.unit
-def test_both_adapters_declare_every_item_type():
-    assert set(ITEM_CLASS) == set(ITEM_ATTRIBUTE) == set(ITEM_TYPES)
+def test_both_backends_declare_every_item_type():
+    assert set(ITEM_CLASS) == set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
 
 
 # --------------------------------------------------------------------------
-# Aliases
+# Validation mirrors the serverless content validators
 # --------------------------------------------------------------------------
+
+SERVERLESS_MEDIA_VALIDATORS = {
+    "image": ImageContent,
+    "animation": AnimContent,
+    "scene": SceneContent,
+    "file": FileContent,
+}
 
 
 @pytest.mark.unit
-def test_every_alias_resolves_to_a_declared_field():
-    tables = [DOCUMENT_SPEC, TREE_NODE_SPEC, *ITEM_SPECS.values()]
-    for specs in tables:
-        names = {spec.name for spec in specs}
-        for spec in specs:
-            if spec.alias is not None:
-                assert spec.name in names
-                assert spec.alias not in names, spec.alias
+def test_media_extensions_cover_exactly_the_media_item_types():
+    assert set(MEDIA_EXTENSIONS) == set(SERVERLESS_MEDIA_VALIDATORS)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("item_type", sorted(SERVERLESS_MEDIA_VALIDATORS))
+def test_media_extensions_match_the_serverless_validators(item_type):
+    assert MEDIA_EXTENSIONS[item_type] == SERVERLESS_MEDIA_VALIDATORS[item_type].ALLOWED_EXT
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("setter", "item_type"),
+    [("set_payload_animation", "animation"), ("set_payload_scene", "scene")],
+)
+def test_media_extensions_match_the_rest_payload_setters(setter, item_type, tmp_path: Path):
+    bad = tmp_path / "payload.unsupported"
+    bad.write_bytes(b"payload")
+    allowed = list(MEDIA_EXTENSIONS[item_type])
+    with pytest.raises(ValueError, match=re.escape(f"Allowed types: {allowed}")):
+        getattr(ItemREST(), setter)(str(bad))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "value",
+    ["<p>x</p>", "<br/>", "text <b>bold</b>", "plain text", "a < b", "<p", "", "</p>"],
+)
+def test_html_validation_agrees_with_the_serverless_parser(value):
+    assert (validate_html(value) is None) is HTMLParser().validate(value)
 
 
 # --------------------------------------------------------------------------
@@ -170,21 +203,18 @@ def test_every_alias_resolves_to_a_declared_field():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("helper", sorted(mapping.__all__))
-def test_every_shared_helper_is_used_by_both_adapters(helper):
-    for source in ADAPTER_SOURCES:
-        text = source.read_text(encoding="utf-8")
-        assert helper in text, f"{helper} is unused in {source.name}"
+@pytest.mark.parametrize("helper", SHARED_HELPERS)
+@pytest.mark.parametrize("hook", POPULATE_HOOKS, ids=lambda f: f.__qualname__)
+def test_every_shared_helper_is_used_by_both_backends(hook, helper):
+    assert helper in inspect.getsource(hook), f"{helper} is unused in {hook.__qualname__}"
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("source", ADAPTER_SOURCES, ids=lambda p: p.name)
-def test_adapters_do_not_render_tags_locally(source: Path):
-    # Tag rendering lives in json_item_import.tags; an inline f-string join here is
-    # how the two adapters drift apart.
-    text = source.read_text(encoding="utf-8")
-    assert 'f"{key}={value}"' not in text
-    assert "combine_tags" in text
+@pytest.mark.parametrize("hook", POPULATE_HOOKS, ids=lambda f: f.__qualname__)
+def test_backends_do_not_render_tags_locally(hook):
+    # Tag rendering lives in json_item_import.mapping; an inline f-string join here is
+    # how the two backends drift apart.
+    assert 'f"{key}={value}"' not in inspect.getsource(hook)
 
 
 # --------------------------------------------------------------------------

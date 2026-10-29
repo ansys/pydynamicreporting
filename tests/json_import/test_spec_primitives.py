@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_item_import.errors import ImportItemValidationError
+from ansys.dynamicreporting.core import exceptions
+from ansys.dynamicreporting.core.exceptions import ImportItemValidationError
+from ansys.dynamicreporting.core.utils import json_item_import
 from ansys.dynamicreporting.core.utils.json_item_import.parser import (
     ErrorCollector,
     _matches,
@@ -54,9 +56,7 @@ def _positive(value):
 @pytest.mark.unit
 def test_error_collector_starts_empty():
     errors = ErrorCollector()
-    assert not errors
-    assert len(errors) == 0
-    assert errors.problems == ()
+    assert errors.problems == []
     errors.raise_if_any()
 
 
@@ -66,10 +66,7 @@ def test_error_collector_records_in_order():
     errors.add("a", "first")
     errors.add("b", "second")
 
-    assert bool(errors) is True
-    assert len(errors) == 2
-    assert list(errors) == [("a", "first"), ("b", "second")]
-    assert errors.problems == (("a", "first"), ("b", "second"))
+    assert errors.problems == [("a", "first"), ("b", "second")]
 
 
 @pytest.mark.unit
@@ -82,6 +79,17 @@ def test_error_collector_raises_with_every_problem():
         errors.raise_if_any()
     assert excinfo.value.problems == (("a", "first"), ("b", "second"))
     assert "2 problems found" in str(excinfo.value)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "name", ["ADRItemImportError", "ImportItemValidationError", "ImportItemVersionError"]
+)
+def test_import_errors_live_with_the_public_exceptions(name):
+    # The import package re-exports the same classes, so either import works.
+    error_class = getattr(exceptions, name)
+    assert issubclass(error_class, exceptions.ADRException)
+    assert getattr(json_item_import, name) is error_class
 
 
 # --------------------------------------------------------------------------
@@ -149,7 +157,7 @@ def test_explicit_null_is_replaced_by_the_default():
     spec = (FieldSpec("opt", str, default="fallback"),)
     values, _ = apply_spec({"opt": None}, spec, "obj", errors)
     assert values["opt"] == "fallback"
-    assert not errors
+    assert errors.problems == []
 
 
 @pytest.mark.unit
@@ -157,7 +165,7 @@ def test_explicit_null_on_a_required_field_is_an_error():
     errors = ErrorCollector()
     spec = (FieldSpec("req", str, required=True),)
     apply_spec({"req": None}, spec, "obj", errors)
-    assert errors.problems == (("obj.req", "must not be null"),)
+    assert errors.problems == [("obj.req", "must not be null")]
 
 
 @pytest.mark.unit
@@ -185,8 +193,8 @@ def test_all_bad_elements_of_a_list_are_reported():
 @pytest.mark.unit
 def test_a_coerce_failure_is_reported_at_the_field():
     errors = ErrorCollector()
-    specs = (FieldSpec("tags", (list, dict), coerce=coerce_tag_list),)
-    apply_spec({"tags": [7]}, specs, "obj", errors)
+    specs = (FieldSpec("tags", list, coerce=coerce_tag_list),)
+    apply_spec({"tags": [{"a": {"b": 1}}]}, specs, "obj", errors)
     assert errors.problems[0][0] == "obj.tags"
 
 
@@ -195,7 +203,7 @@ def test_a_validate_failure_is_reported_at_the_field():
     errors = ErrorCollector()
     specs = (FieldSpec("count", int, validate=_positive),)
     apply_spec({"count": -1}, specs, "obj", errors)
-    assert errors.problems == (("obj.count", "must be greater than 0"),)
+    assert errors.problems == [("obj.count", "must be greater than 0")]
 
 
 @pytest.mark.unit
@@ -203,7 +211,7 @@ def test_field_location_omits_an_empty_parent():
     errors = ErrorCollector()
     specs = (FieldSpec("app_id", str, required=True),)
     apply_spec({}, specs, "", errors)
-    assert errors.problems == (("app_id", "is required"),)
+    assert errors.problems == [("app_id", "is required")]
 
 
 # --------------------------------------------------------------------------
@@ -212,27 +220,23 @@ def test_field_location_omits_an_empty_parent():
 
 
 @pytest.mark.unit
-def test_coerce_tag_list_accepts_key_value_strings():
-    assert coerce_tag_list(["a=1", {"b": 2}]) == ({"a": "1"}, {"b": 2})
+def test_coerce_tag_list_accepts_scalar_values():
+    tags = [{"a": "1"}, {"b": 2, "c": 1.5, "d": True}]
+    assert coerce_tag_list(tags) == ({"a": "1"}, {"b": 2, "c": 1.5, "d": True})
 
 
 @pytest.mark.unit
-def test_coerce_tag_list_rejects_a_string_without_an_equals():
+def test_coerce_tag_list_rejects_a_nested_value():
     with pytest.raises(ValueError) as excinfo:
-        coerce_tag_list(["oops"])
-    assert "key=value" in str(excinfo.value)
+        coerce_tag_list([{"a": {"b": 1}}])
+    assert "'a' must be a string, number, or boolean" in str(excinfo.value)
 
 
 @pytest.mark.unit
-def test_coerce_tag_list_rejects_a_non_string_scalar():
+def test_coerce_tag_list_rejects_an_empty_object():
     with pytest.raises(ValueError) as excinfo:
-        coerce_tag_list([7])
-    assert "must be an object" in str(excinfo.value)
-
-
-@pytest.mark.unit
-def test_coerce_tag_list_wraps_a_single_mapping():
-    assert coerce_tag_list({"a": 1}) == ({"a": 1},)
+        coerce_tag_list([{}])
+    assert "at least one key" in str(excinfo.value)
 
 
 @pytest.mark.unit

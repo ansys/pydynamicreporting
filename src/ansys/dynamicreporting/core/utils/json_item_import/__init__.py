@@ -23,29 +23,29 @@
 """Backend-agnostic JSON item import contract for Ansys Dynamic Reporting.
 
 This package owns the import document schema, its validation, and the
-orchestration that drives a backend adapter. It depends only on the standard
-library and NumPy; it must never import a backend module.
+per-item orchestration. Like ``populate_template`` for the template JSON
+import, it never imports a backend module: ``report_remote_server.Server`` and
+the serverless ``ADR`` pass in the callable that builds their own models.
 """
 
-from .enums import ITEM_TYPES
-from .errors import ADRItemImportError, ImportItemValidationError, ImportItemVersionError
-from .importer import ImportBackend, JSONItemImporter
+from ...exceptions import ADRItemImportError, ImportItemValidationError, ImportItemVersionError
+from .importer import import_items
+from .mapping import combine_tags, normalize_tags
 from .models import (
     DatasetPayload,
     ImportDocument,
+    ImportResult,
+    ItemFailure,
     SessionPayload,
 )
-from .parser import build_document, load_document
-from .result import ImportResult, ItemFailure
-from .tags import combine_tags, normalize_tags
-from .version import SCHEMA_VERSION, SUPPORTED_MAJOR, check_version, parse_version
+from .parser import build_document, load_document, read_document
+from .spec import ITEM_TYPES, SCHEMA_VERSION, SUPPORTED_MAJOR, check_version, parse_version
 
 __all__ = [
     "ADRItemImportError",
     "ImportItemValidationError",
     "ImportItemVersionError",
-    "ImportBackend",
-    "JSONItemImporter",
+    "import_items",
     "ImportDocument",
     "SessionPayload",
     "DatasetPayload",
@@ -56,6 +56,7 @@ __all__ = [
     "SUPPORTED_MAJOR",
     "build_document",
     "load_document",
+    "read_document",
     "check_version",
     "parse_version",
     "combine_tags",

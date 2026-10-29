@@ -20,17 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Public-API tests for ``Service.import_from_json``."""
+"""Public-API tests for ``Service.import_items_from_json``."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from ansys.dynamicreporting.core import Service
+from ansys.dynamicreporting.core.exceptions import ConnectionToServiceError
 from ansys.dynamicreporting.core.utils.json_item_import import ImportResult
 
 
@@ -40,53 +41,57 @@ def _write_document(tmp_path: Path) -> Path:
     return path
 
 
-@pytest.mark.unit
-def test_import_from_json_delegates_to_the_importer(tmp_path: Path):
+def _service(serverobj) -> Service:
     service = Service.__new__(Service)
     service.logger = MagicMock()
+    service.serverobj = serverobj
+    return service
+
+
+@pytest.mark.unit
+def test_import_from_json_delegates_to_the_server(tmp_path: Path):
+    # Mirrors Service.load_templates, which delegates to serverobj.load_templates.
+    service = _service(MagicMock())
     path = _write_document(tmp_path)
     expected = ImportResult(schema_version="1.0", app_id="demo-app")
+    service.serverobj.import_items_from_json.return_value = expected
 
-    with patch(
-        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
-    ) as importer_cls:
-        importer_cls.return_value.import_file.return_value = expected
-        result = service.import_items_from_json(path)
+    result = service.import_items_from_json(path)
 
     assert result is expected
-    importer_cls.return_value.import_file.assert_called_once_with(
-        path, on_error="collect", base_dir=None, strict_keys=False
+    service.serverobj.import_items_from_json.assert_called_once_with(
+        path,
+        on_error="collect",
+        base_dir=None,
+        strict_keys=False,
+        allow_external_paths=True,
+        logger=service.logger,
     )
 
 
 @pytest.mark.unit
 def test_import_from_json_forwards_every_option(tmp_path: Path):
-    service = Service.__new__(Service)
-    service.logger = MagicMock()
+    service = _service(MagicMock())
     path = _write_document(tmp_path)
 
-    with patch(
-        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
-    ) as importer_cls:
-        service.import_items_from_json(path, on_error="raise", base_dir="/media", strict_keys=True)
+    service.import_items_from_json(
+        path, on_error="raise", base_dir="/media", strict_keys=True, allow_external_paths=False
+    )
 
-    importer_cls.return_value.import_file.assert_called_once_with(
-        path, on_error="raise", base_dir="/media", strict_keys=True
+    service.serverobj.import_items_from_json.assert_called_once_with(
+        path,
+        on_error="raise",
+        base_dir="/media",
+        strict_keys=True,
+        allow_external_paths=False,
+        logger=service.logger,
     )
 
 
 @pytest.mark.unit
-def test_import_from_json_uses_the_server_backend(tmp_path: Path):
-    from ansys.dynamicreporting.core.import_item_backend_server import ServerImportBackend
-
-    service = Service.__new__(Service)
-    service.logger = MagicMock()
-    path = _write_document(tmp_path)
-
-    with patch(
-        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
-    ) as importer_cls:
-        service.import_items_from_json(path)
-
-    backend = importer_cls.call_args.args[0]
-    assert isinstance(backend, ServerImportBackend)
+def test_import_from_json_requires_a_connection(tmp_path: Path):
+    # Same contract as every other Service method that needs a server.
+    service = _service(None)
+    with pytest.raises(ConnectionToServiceError):
+        service.import_items_from_json(_write_document(tmp_path))
+    service.logger.error.assert_called_once()

@@ -21,7 +21,7 @@ This is useful when a producing application already knows what it wants to
 report and simply needs to hand that description to ADR.
 
 This page is a task-oriented introduction. For the complete field-by-field
-contract, see :doc:`json_import_schema`.
+contract, see :doc:`json_import_item_schema`.
 
 .. note::
 
@@ -82,6 +82,17 @@ The serverless call is identical:
 
    result = adr_obj.import_items_from_json(r"D:\runs\42\report.json")
 
+If the document is already in memory, for example built by your own code,
+pass the dictionary to
+:func:`ADR.import_items<ansys.dynamicreporting.core.serverless.ADR.import_items>`
+instead, the same way ``load_templates`` complements ``load_templates_from_file``
+for templates. There is no file to resolve relative media paths against, so
+pass ``base_dir``; otherwise they resolve against the current working directory:
+
+.. code:: python
+
+   result = adr_obj.import_items(document, base_dir=r"D:\runs\42")
+
 The document envelope
 ---------------------
 
@@ -118,7 +129,15 @@ Every item carries ``item_type``, ``name``, and optionally ``tags``,
 =================  ===============================  ========================
 
 Media paths may be absolute, or relative to the directory containing the JSON
-document. Pass ``base_dir`` to resolve them against a different directory.
+document. Pass ``base_dir`` to resolve them against a different directory. For
+documents from a producer you do not control, pass
+``allow_external_paths=False`` so that every media path must stay inside
+``base_dir``.
+
+Media files must use an extension that both backends accept: ``image`` takes
+``.png``, ``.jpg``, ``.tif``, or ``.tiff``; ``animation`` takes ``.mp4``;
+``scene`` takes the 3D formats listed in :doc:`json_import_item_schema`; ``file``
+takes any extension. An ``html`` value must contain at least one HTML tag.
 
 Tables
 ------
@@ -145,8 +164,13 @@ If ``xaxis`` and ``yaxis`` are omitted, the first column becomes the x axis and
 the remaining columns become the y axes. When supplied, they must name
 columns.
 
-Anything ADR models but the schema does not promote to a first-class field is
-reachable through ``properties``.
+A table whose cells are all numbers, booleans, or ``null`` is stored as floats.
+A table with any JSON string is stored as text, and numeric-looking strings such
+as ``"001"`` stay unchanged.
+
+Anything ADR models for a table but the schema does not promote to a
+first-class field is reachable through ``properties``. Other item types ignore
+``properties`` with a warning.
 
 Trees
 -----
@@ -167,8 +191,14 @@ position in the tree, so repeated names never collide.
 Error handling
 --------------
 
-Contract violations raise ``ImportValidationError``, which reports **every**
-problem found in one pass, each with its location:
+Contract violations raise ``ImportItemValidationError``, which reports **every**
+problem found in one pass, each with its location. It and
+``ImportItemVersionError`` derive from ``ADRItemImportError`` and are importable
+from ``ansys.dynamicreporting.core.exceptions`` with the other ADR exceptions:
+
+.. code:: python
+
+   from ansys.dynamicreporting.core.exceptions import ImportItemValidationError
 
 .. code:: text
 
@@ -195,7 +225,7 @@ Versioning
 ----------
 
 ``schema_version`` is ``MAJOR.MINOR``. A document whose major exceeds the
-supported major is rejected with ``ImportVersionError``. A newer minor is
+supported major is rejected with ``ImportItemVersionError``. A newer minor is
 accepted and its unrecognized fields are retained.
 
 While the feature is in beta, the shipped version stays at ``1.0``. Treat a
@@ -204,7 +234,7 @@ major bump as the signal that the format changed incompatibly.
 Schema reference
 ----------------
 
-:doc:`json_import_schema` documents every field, its type, and its validation
+:doc:`json_import_item_schema` documents every field, its type, and its validation
 rules.
 
 The machine-readable contract is generated from the same field tables the

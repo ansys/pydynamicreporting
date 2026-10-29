@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Public-API tests for ``ADR.import_from_json``.
+"""Public-API tests for ``ADR.import_items_from_json``.
 
 The delegation tests use a bare ``ADR`` instance and never touch a database;
 the end-to-end test is gated behind ``ado_test``.
@@ -39,6 +39,8 @@ import pytest
 from ansys.dynamicreporting.core.serverless import ADR
 from ansys.dynamicreporting.core.utils.json_item_import import ImportResult
 
+IMPORT_PACKAGE = "ansys.dynamicreporting.core.utils.json_item_import"
+
 
 def _write_document(tmp_path: Path, **overrides) -> Path:
     payload = {"schema_version": "1.0", "app_id": "demo-app"}
@@ -48,51 +50,73 @@ def _write_document(tmp_path: Path, **overrides) -> Path:
     return path
 
 
-@pytest.mark.unit
-def test_import_from_json_delegates_to_the_importer(tmp_path: Path):
-    adr = ADR.__new__(ADR)
+def _adr() -> ADR:
+    # object.__new__ bypasses the singleton so these mocks never leak into
+    # the shared instance the end-to-end tests use.
+    adr = object.__new__(ADR)
     adr._logger = MagicMock()
+    return adr
+
+
+@pytest.mark.unit
+def test_import_from_json_delegates_to_the_shared_importer(tmp_path: Path):
+    adr = _adr()
     path = _write_document(tmp_path)
     expected = ImportResult(schema_version="1.0", app_id="demo-app")
 
-    with patch(
-        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
-    ) as importer_cls:
-        importer_cls.return_value.import_file.return_value = expected
+    with (
+        patch.object(ADR, "ensure_setup"),
+        patch(f"{IMPORT_PACKAGE}.import_items", return_value=expected) as import_items,
+    ):
         result = adr.import_items_from_json(path)
 
     assert result is expected
-    importer_cls.return_value.import_file.assert_called_once_with(
-        path, on_error="collect", base_dir=None, strict_keys=False
-    )
+    document, populate_item = import_items.call_args.args
+    assert document.app_id == "demo-app"
+    # Mirrors load_templates: the backend hands its own model builder to the
+    # shared helper, the way it hands _create_template_with_parent to
+    # populate_template.
+    assert populate_item == adr._populate_item
+    assert import_items.call_args.kwargs == {"on_error": "collect", "logger": adr._logger}
 
 
 @pytest.mark.unit
 def test_import_from_json_forwards_every_option(tmp_path: Path):
-    adr = ADR.__new__(ADR)
-    adr._logger = MagicMock()
+    adr = _adr()
     path = _write_document(tmp_path)
 
-    with patch(
-        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
-    ) as importer_cls:
-        adr.import_items_from_json(path, on_error="raise", base_dir="/media", strict_keys=True)
+    with (
+        patch.object(ADR, "ensure_setup"),
+        patch(f"{IMPORT_PACKAGE}.build_document") as build_document,
+        patch(f"{IMPORT_PACKAGE}.import_items") as import_items,
+    ):
+        adr.import_items_from_json(
+            path,
+            on_error="raise",
+            base_dir="/media",
+            strict_keys=True,
+            allow_external_paths=False,
+        )
 
-    importer_cls.return_value.import_file.assert_called_once_with(
-        path, on_error="raise", base_dir="/media", strict_keys=True
+    build_document.assert_called_once_with(
+        {"schema_version": "1.0", "app_id": "demo-app"},
+        base_dir="/media",
+        strict_keys=True,
+        allow_external_paths=False,
+        logger=adr._logger,
     )
+    assert import_items.call_args.kwargs["on_error"] == "raise"
 
 
 @pytest.mark.unit
 def test_importing_the_package_does_not_load_the_import_machinery():
     # The entry points annotate ImportResult under TYPE_CHECKING and import the
-    # adapter inside the method, so users who never import JSON pay nothing.
+    # shared importer inside the method, so users who never import JSON pay nothing.
     code = (
         "import sys; "
         "import ansys.dynamicreporting.core; "
         "import ansys.dynamicreporting.core.serverless; "
-        "print([n for n in sys.modules if 'json_item_import' in n "
-        "or 'import_item_backend' in n])"
+        "print([n for n in sys.modules if 'json_item_import' in n])"
     )
     completed = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, check=True

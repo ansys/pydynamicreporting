@@ -22,9 +22,10 @@
 
 """Cross-backend parity.
 
-The same document is driven through both adapters and the outcomes are
-compared. This is the gate that keeps the two adapters from drifting; it
-catches divergence that neither adapter's own unit tests can see.
+The same document is driven through ``report_remote_server.Server`` and the
+serverless ``ADR`` and the outcomes are compared. This is the gate that keeps
+the two backends from drifting; it catches divergence that neither backend's
+own unit tests can see.
 """
 
 from __future__ import annotations
@@ -36,19 +37,13 @@ from unittest.mock import MagicMock
 
 import numpy
 import pytest
+import requests
 
-from ansys.dynamicreporting.core.adr_item import Item
-from ansys.dynamicreporting.core.import_item_backend_server import (
-    ITEM_ATTRIBUTE,
-    ServerImportBackend,
-)
-from ansys.dynamicreporting.core.serverless.import_item_backend import (
-    ITEM_CLASS,
-    ServerlessImportBackend,
-)
-from ansys.dynamicreporting.core.utils.json_item_import.enums import ITEM_TYPES
-from ansys.dynamicreporting.core.utils.json_item_import.importer import JSONItemImporter
+from ansys.dynamicreporting.core.serverless import ADR
+from ansys.dynamicreporting.core.utils.json_item_import.importer import import_items
 from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
+from ansys.dynamicreporting.core.utils.json_item_import.spec import ITEM_TYPES
+from ansys.dynamicreporting.core.utils.report_remote_server import Server
 
 DOCUMENT = {
     "schema_version": "1.0",
@@ -69,90 +64,83 @@ DOCUMENT = {
             "name": "mesh",
             "nodes": [{"name": "Assembly", "children": [{"name": "Part A"}]}],
         },
-        {"item_type": "image", "name": "img", "path": "plot.png"},
+        {"item_type": "file", "name": "notes", "path": "notes.txt"},
     ],
 }
 
 
 @dataclass
 class Run:
-    """Everything one adapter produced for the shared document."""
+    """Everything one backend produced for the shared document."""
 
     result: Any
-    items: dict[str, Any] = field(default_factory=dict)
+    contents: dict[str, Any] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
+    sources: dict[str, str] = field(default_factory=dict)
+    table_fields: dict[str, Any] = field(default_factory=dict)
     item_order: list[str] = field(default_factory=list)
-
-    def content(self, name: str) -> Any:
-        """Return the payload the adapter assigned to item ``name``."""
-        return self.items[name].imported_content
-
-    def tags(self, name: str) -> str:
-        """Return the tag string the adapter assigned to item ``name``."""
-        return self.items[name].imported_tags
 
 
 def _run_serverless(base_dir: str) -> Run:
-    adr = MagicMock()
+    adr = object.__new__(ADR)
     adr._logger = MagicMock()
-    items: dict[str, Any] = {}
-    item_order: list[str] = []
+    run = Run(result=None)
+    created: dict[str, Any] = {}
 
     def create_item(item_class, **kwargs):
-        item = MagicMock()
-        item.imported_content = kwargs["content"]
-        item.imported_tags = kwargs["tags"]
-        item.imported_class = item_class
-        item.imported_source = kwargs["source"]
-        items[kwargs["name"]] = item
-        item_order.append(kwargs["name"])
-        return item
+        name = kwargs["name"]
+        run.item_order.append(name)
+        run.contents[name] = kwargs["content"]
+        run.tags[name] = kwargs["tags"]
+        run.sources[name] = kwargs["source"]
+        created[name] = MagicMock()
+        return created[name]
 
-    adr.create_item.side_effect = create_item
+    adr.create_item = create_item
 
     document = build_document(DOCUMENT, base_dir=base_dir)
-    result = JSONItemImporter(ServerlessImportBackend(adr)).import_document(document)
-    return Run(result, items, item_order)
+    run.result = import_items(document, adr._populate_item)
+    table = created["tbl"]
+    run.table_fields = {
+        key: getattr(table, key) for key in ("labels_row", "xaxis", "yaxis", "plot")
+    }
+    return run
 
 
 def _run_server(base_dir: str) -> Run:
-    service = MagicMock()
-    service.logger = MagicMock()
-    items: dict[str, Any] = {}
-    item_order: list[str] = []
+    server = Server()
+    server._api_version = 1.0
+    run = Run(result=None)
 
-    def create_item(obj_name=None, source=None):
-        # A real Item, so the adapter's staged writes behave as they do in
-        # production rather than being absorbed by a permissive mock.
-        item = Item(service=service, obj_name=obj_name, source=source)
-        item.imported_source = source
-        items[obj_name] = item
-        item_order.append(obj_name)
-        return item
+    def put_objects(objects):
+        (item,) = objects
+        payload = item.payloaddata if item.type != "file" else item.fileurl
+        run.item_order.append(item.name)
+        run.contents[item.name] = payload["array"] if item.type == "table" else payload
+        run.tags[item.name] = item.get_tags()
+        run.sources[item.name] = item.source
+        if item.type == "table":
+            run.table_fields = {
+                key: payload[key] for key in ("labels_row", "xaxis", "yaxis", "plot")
+            }
+        return requests.codes.ok
 
-    service.serverobj.get_URL.return_value = None
-    # A distinct REST object per item; the default shared return_value would
-    # make every Item write tags onto the same mock.
-    service.serverobj.create_item.side_effect = lambda **kwargs: MagicMock()
-    service.create_item.side_effect = create_item
+    server.put_objects = put_objects
 
     document = build_document(DOCUMENT, base_dir=base_dir)
-    result = JSONItemImporter(ServerImportBackend(service)).import_document(document)
-
-    # The server adapter assigns the payload to a type-specific attribute.
-    for model in document.items:
-        item = items[model["name"]]
-        item.imported_content = getattr(item, ITEM_ATTRIBUTE[model["item_type"]])
-        item.imported_tags = item.item.set_tags.call_args.args[0]
-    return Run(result, items, item_order)
+    run.result = import_items(document, server._populate_item)
+    return run
 
 
 @pytest.fixture
 def serverless_run(tmp_path: Path) -> Run:
+    (tmp_path / "notes.txt").write_text("notes", encoding="utf-8")
     return _run_serverless(str(tmp_path))
 
 
 @pytest.fixture
 def server_run(tmp_path: Path) -> Run:
+    (tmp_path / "notes.txt").write_text("notes", encoding="utf-8")
     return _run_server(str(tmp_path))
 
 
@@ -162,16 +150,17 @@ def server_run(tmp_path: Path) -> Run:
 
 
 @pytest.mark.unit
-def test_both_adapters_cover_every_item_type():
-    assert set(ITEM_CLASS) == set(ITEM_ATTRIBUTE) == set(ITEM_TYPES)
+def test_both_backends_cover_every_item_type():
+    # _import_item_class raises KeyError for a type the serverless side lacks.
+    assert all(ADR._import_item_class(item_type) for item_type in ITEM_TYPES)
+    assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
 
 
 @pytest.mark.unit
 def test_both_backends_store_the_same_source(serverless_run: Run, server_run: Run):
-    # An adapter-local default would make the same document produce different
+    # A backend-local default would make the same document produce different
     # queryable metadata on the two backends.
-    for name in ("txt", "tbl"):
-        assert serverless_run.items[name].imported_source == server_run.items[name].imported_source
+    assert serverless_run.sources == server_run.sources
 
 
 # --------------------------------------------------------------------------
@@ -188,61 +177,52 @@ def test_both_backends_report_the_same_result(serverless_run: Run, server_run: R
 
 
 @pytest.mark.unit
-def test_neither_backend_creates_report_structure(serverless_run: Run, server_run: Run):
-    # Report structure is imported by load_templates*; neither adapter may
-    # grow a template path without the other.
-    assert not hasattr(serverless_run.result, "templates_created")
-    assert not hasattr(server_run.result, "templates_created")
-
-
-@pytest.mark.unit
 def test_both_backends_create_the_same_items_in_order(serverless_run: Run, server_run: Run):
-    expected = ["txt", "htm", "tbl", "mesh", "img"]
+    expected = ["txt", "htm", "tbl", "mesh", "notes"]
     assert serverless_run.item_order == server_run.item_order == expected
 
 
 @pytest.mark.unit
 def test_both_backends_produce_the_same_table_array(serverless_run: Run, server_run: Run):
-    serverless_array = serverless_run.content("tbl")
-    server_array = server_run.content("tbl")
+    serverless_array = serverless_run.contents["tbl"]
+    server_array = server_run.contents["tbl"]
     assert serverless_array.shape == server_array.shape == (3, 2)
     assert numpy.array_equal(serverless_array, server_array)
 
 
 @pytest.mark.unit
 def test_both_backends_label_the_table_identically(serverless_run: Run, server_run: Run):
-    serverless_item = serverless_run.items["tbl"]
-    server_item = server_run.items["tbl"]
-    assert serverless_item.labels_row == server_item.labels_row == ["time", "T_max", "T_min"]
-    assert serverless_item.xaxis == server_item.xaxis == "time"
-    assert serverless_item.yaxis == server_item.yaxis == ["T_max", "T_min"]
-    assert serverless_item.plot == server_item.plot == "line"
+    assert serverless_run.table_fields == server_run.table_fields
+    assert server_run.table_fields == {
+        "labels_row": ["time", "T_max", "T_min"],
+        "xaxis": "time",
+        "yaxis": ["T_max", "T_min"],
+        "plot": "line",
+    }
 
 
 @pytest.mark.unit
 def test_both_backends_produce_the_same_flattened_tree(serverless_run: Run, server_run: Run):
-    serverless_tree = serverless_run.content("mesh")
-    server_tree = server_run.content("mesh")
-    assert serverless_tree == server_tree
-    # Children must survive in both; a non-recursive flatten in one adapter
+    assert serverless_run.contents["mesh"] == server_run.contents["mesh"]
+    # Children must survive in both; a non-recursive flatten in one backend
     # would silently drop them.
-    assert server_tree[0]["children"][0]["name"] == "Part A"
+    assert server_run.contents["mesh"][0]["children"][0]["name"] == "Part A"
 
 
 @pytest.mark.unit
 def test_both_backends_merge_tags_identically(serverless_run: Run, server_run: Run):
-    assert serverless_run.tags("txt") == server_run.tags("txt") == "report=parity section=intro"
+    assert serverless_run.tags["txt"] == server_run.tags["txt"] == "report=parity section=intro"
 
 
 @pytest.mark.unit
 def test_both_backends_resolve_media_paths_identically(
     serverless_run: Run, server_run: Run, tmp_path: Path
 ):
-    expected = str(tmp_path / "plot.png")
-    assert serverless_run.content("img") == server_run.content("img") == expected
+    expected = str(tmp_path / "notes.txt")
+    assert serverless_run.contents["notes"] == server_run.contents["notes"] == expected
 
 
 @pytest.mark.unit
 def test_both_backends_carry_the_same_inline_values(serverless_run: Run, server_run: Run):
-    assert serverless_run.content("txt") == server_run.content("txt") == "body"
-    assert serverless_run.content("htm") == server_run.content("htm") == "<p>body</p>"
+    assert serverless_run.contents["txt"] == server_run.contents["txt"] == "body"
+    assert serverless_run.contents["htm"] == server_run.contents["htm"] == "<p>body</p>"

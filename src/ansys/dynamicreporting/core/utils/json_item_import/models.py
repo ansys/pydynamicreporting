@@ -20,7 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Document envelope objects for the ADR import item document."""
+"""Document envelope and import result objects for the ADR import item layer.
+
+The exceptions raised by the import live with the other public exceptions in
+:mod:`ansys.dynamicreporting.core.exceptions`.
+"""
 
 from __future__ import annotations
 
@@ -69,3 +73,52 @@ class ImportDocument:
     items: tuple[dict[str, Any], ...] = ()
     extra: dict[str, Any] = field(default_factory=dict)
     base_dir: str | None = None
+
+
+@dataclass
+class ItemFailure:
+    """A single item that could not be saved.
+
+    Parameters
+    ----------
+    index : int
+        Zero-based position of the item in the document ``items`` array.
+    name : str
+        Item name, used instead of an index in log messages.
+    item_type : str
+        Wire ``item_type`` of the failed item.
+    error : str
+        Rendered exception text.
+    """
+
+    index: int
+    name: str
+    item_type: str
+    error: str
+
+
+@dataclass
+class ImportResult:
+    """Summary of a single document import.
+
+    Parameters
+    ----------
+    schema_version : str
+        Resolved schema version of the imported document.
+    app_id : str
+        ``app_id`` declared by the document.
+    items_saved : int
+        Number of items successfully persisted.
+    failures : list of ItemFailure
+        Per-item failures collected when ``on_error="collect"``.
+    """
+
+    schema_version: str
+    app_id: str
+    items_saved: int = 0
+    failures: list[ItemFailure] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        """Whether every item in the document was saved."""
+        return not self.failures

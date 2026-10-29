@@ -20,22 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Backend-neutral mapping helpers shared by every import item adapter."""
+"""Shared helpers for the JSON item import tests."""
 
-from ._common import (
-    apply_properties,
-    column_labels,
-    derive_axes,
-    flatten_tree,
-    resolve_path,
-    rows_to_array,
-)
+from __future__ import annotations
 
-__all__ = [
-    "apply_properties",
-    "column_labels",
-    "derive_axes",
-    "flatten_tree",
-    "resolve_path",
-    "rows_to_array",
-]
+from typing import Any
+
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
+
+
+def build_item(raw: dict[str, Any], base_dir: str | None = None) -> dict[str, Any]:
+    """Validate one raw item inside a minimal document and return its mapping."""
+    document = build_document(
+        {"schema_version": "1.0", "app_id": "demo", "items": [raw]}, base_dir=base_dir
+    )
+    return document.items[0]

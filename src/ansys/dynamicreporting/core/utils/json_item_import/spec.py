@@ -24,17 +24,164 @@
 
 This module is the single source of truth for the item import contract. The
 parser validates against these tables, and ``scripts/gen_import_schema.py``
-renders them to the committed JSON Schema artifact, so the two cannot drift.
+renders them to the committed JSON Schema artifact. The parser additionally
+enforces the cross-field rules JSON Schema cannot express, such as equal row
+widths and axis names that match a column.
+
+It also holds the closed wire vocabularies and the schema version helpers. It
+must not import any backend module, so that the import core stays
+backend-agnostic; the drift guard asserts the vocabularies stay in sync with
+the backend registries.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from html.parser import HTMLParser
+import math
+from pathlib import PurePath
+import re
 from typing import Any
 
-from .enums import ITEM_TYPES
-from .version import SCHEMA_VERSION
+from ...exceptions import ImportItemVersionError
+
+# --------------------------------------------------------------------------
+# Wire vocabularies
+# --------------------------------------------------------------------------
+
+ITEM_TYPE_TO_ADR_TYPE: dict[str, str] = {
+    "text": "string",
+    "html": "html",
+    "table": "table",
+    "tree": "tree",
+    "image": "image",
+    "animation": "anim",
+    "scene": "scene",
+    "file": "file",
+}
+"""Wire ``item_type`` to the canonical ``serverless.item.ItemType`` value.
+
+The wire vocabulary is deliberately more readable than the stored one
+(``text`` rather than ``string``, ``animation`` rather than ``anim``). This
+table is the only place that translation is allowed to live; the serverless
+backend resolves its :class:`Item` subclass through it.
+"""
+
+ITEM_TYPES: tuple[str, ...] = tuple(ITEM_TYPE_TO_ADR_TYPE)
+"""Closed set of ``item_type`` discriminator values."""
+
+MEDIA_EXTENSIONS: dict[str, tuple[str, ...] | None] = {
+    "image": ("png", "jpg", "tif", "tiff"),
+    "animation": ("mp4",),
+    "scene": ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"),
+    "file": None,
+}
+"""Accepted lowercase file extensions per media ``item_type``; ``None`` accepts any.
+
+Copied from the serverless content validators, which are the strictest
+backend, because importing them would load Django. The drift guard asserts
+these stay equal to the serverless ``ALLOWED_EXT`` tuples and to the lists the
+REST payload setters accept.
+"""
+
+# --------------------------------------------------------------------------
+# Schema version
+# --------------------------------------------------------------------------
+
+SCHEMA_VERSION = "1.0"
+"""Schema version emitted and fully understood by this importer."""
+
+SUPPORTED_MAJOR = 1
+"""Highest document major version this importer accepts."""
+
+# The format is deliberately 'MAJOR.MINOR' and not semver: a third component
+# would have no defined meaning for this contract, so it is rejected instead of
+# being silently ignored.
+_VERSION_RE = re.compile(r"([0-9]+)\.([0-9]+)")
+
+
+def parse_version(version: str) -> tuple[int, int]:
+    """Parse a ``"MAJOR.MINOR"`` schema version string.
+
+    Parameters
+    ----------
+    version : str
+        Version string, for example ``"1.3"``.
+
+    Returns
+    -------
+    tuple of (int, int)
+        The major and minor components.
+
+    Raises
+    ------
+    ImportItemVersionError
+        If ``version`` is not exactly two dot-separated integers.
+    """
+    if not isinstance(version, str):
+        raise ImportItemVersionError(
+            f"expected a 'MAJOR.MINOR' version string, got {type(version).__name__}"
+        )
+    match = _VERSION_RE.fullmatch(version)
+    if match is None:
+        raise ImportItemVersionError(
+            f"{version!r} is not a valid schema version; expected 'MAJOR.MINOR', for example '1.0'"
+        )
+    return int(match.group(1)), int(match.group(2))
+
+
+def check_version(version: str | None, logger: object | None = None) -> str:
+    """Validate a document schema version against this importer.
+
+    Parameters
+    ----------
+    version : str or None
+        Version declared by the document. ``None`` is treated as
+        :data:`SCHEMA_VERSION` with a logged warning.
+    logger : object, optional
+        Logger used for the missing-version warning and the
+        forward-compatibility note.
+
+    Returns
+    -------
+    str
+        The resolved version string.
+
+    Raises
+    ------
+    ImportItemVersionError
+        If the version is malformed or its major exceeds
+        :data:`SUPPORTED_MAJOR`.
+    """
+    if version is None:
+        if logger is not None:
+            logger.warning(
+                "No 'schema_version' in the import document; assuming %s.", SCHEMA_VERSION
+            )
+        return SCHEMA_VERSION
+
+    major, minor = parse_version(version)
+    if major > SUPPORTED_MAJOR:
+        raise ImportItemVersionError(
+            f"document major version {major} is newer than the supported major "
+            f"{SUPPORTED_MAJOR}; upgrade ansys-dynamicreporting-core to import it"
+        )
+
+    supported_major, supported_minor = parse_version(SCHEMA_VERSION)
+    if major == supported_major and minor > supported_minor and logger is not None:
+        logger.info(
+            "Import document declares schema version %s, newer than the supported %s; "
+            "unrecognized fields are retained but not interpreted.",
+            version,
+            SCHEMA_VERSION,
+        )
+    return version
+
+
+# --------------------------------------------------------------------------
+# Field specification
+# --------------------------------------------------------------------------
 
 ANY = object
 """Sentinel :attr:`FieldSpec.kind` meaning 'any JSON value'."""
@@ -57,8 +204,6 @@ class FieldSpec:
         Value used when the field is absent.
     default_factory : callable, optional
         Called to build the default. Takes precedence over ``default``.
-    alias : str, optional
-        Deprecated wire name also accepted for this field.
     choices : tuple, optional
         Closed set of accepted values.
     item_kind : type or tuple of type, optional
@@ -83,7 +228,6 @@ class FieldSpec:
     required: bool = False
     default: Any = None
     default_factory: Callable[[], Any] | None = None
-    alias: str | None = None
     choices: tuple[Any, ...] | None = None
     item_kind: Any = None
     coerce: Callable[[Any], Any] | None = None
@@ -93,32 +237,89 @@ class FieldSpec:
     json_items: dict[str, Any] | None = None
     description: str = ""
 
+    def default_value(self) -> Any:
+        """Value used when the field is absent, invalid, or an optional null."""
+        return self.default_factory() if self.default_factory else self.default
+
+
+# --------------------------------------------------------------------------
+# Validators
+# --------------------------------------------------------------------------
+
+
+NON_FINITE_MESSAGE = "NaN and Infinity are not valid JSON; use null for a missing number"
+"""Problem message for a non-finite number anywhere in a document."""
+
+
+def is_non_finite(value: Any) -> bool:
+    """Whether ``value`` is a NaN or infinite float.
+
+    Python's ``json`` accepts the ``NaN``/``Infinity`` literals, but they are
+    not valid JSON and the published schema rejects them.
+    """
+    return isinstance(value, float) and not math.isfinite(value)
+
+
+class _TagDetector(HTMLParser):
+    """Records whether at least one start tag was seen."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.found = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.found = True
+
+
+def validate_html(value: str) -> str | None:
+    """Require at least one HTML tag.
+
+    Mirrors the serverless ``HTMLContent`` validator, so an ``html`` item that
+    the serverless backend would reject fails validation for both backends.
+    """
+    detector = _TagDetector()
+    detector.feed(value)
+    return None if detector.found else "must contain at least one HTML tag"
+
+
+def _extension_validator(allowed: tuple[str, ...]) -> Callable[[str], str | None]:
+    """Build a ``path`` validator that accepts only the ``allowed`` extensions."""
+    listed = ", ".join(f"'.{extension}'" for extension in allowed)
+
+    def _validate(path: str) -> str | None:
+        extension = PurePath(path).suffix.lower().lstrip(".")
+        if extension in allowed:
+            return None
+        found = f"'.{extension}'" if extension else "no extension"
+        return f"file type {found} is not supported; expected one of [{listed}]"
+
+    return _validate
+
 
 # --------------------------------------------------------------------------
 # Coercers
 # --------------------------------------------------------------------------
 
 
+_TAG_VALUE_TYPES = (str, int, float, bool)
+"""Tag value types; mirrors the ``tagObject`` definition in the JSON Schema."""
+
+
 def coerce_tag_list(value: Any) -> tuple[dict[str, Any], ...]:
-    """Normalize tags to the canonical list-of-objects form."""
-    if isinstance(value, dict):
-        return (dict(value),)
+    """Freeze tag objects, rejecting empty objects and non-scalar or non-finite values."""
     out: list[dict[str, Any]] = []
     for index, entry in enumerate(value):
-        if isinstance(entry, dict):
-            out.append(dict(entry))
-        elif isinstance(entry, str):
-            key, sep, val = entry.partition("=")
-            if not sep:
+        if not entry:
+            raise ValueError(f"tag [{index}] must have at least one key")
+        for key, tag_value in entry.items():
+            if not isinstance(tag_value, _TAG_VALUE_TYPES):
                 raise ValueError(
-                    f"tag [{index}] {entry!r} is not a 'key=value' string or an object"
+                    f"tag [{index}] {key!r} must be a string, number, or boolean, "
+                    f"got {type(tag_value).__name__}"
                 )
-            out.append({key: val})
-        else:
-            raise ValueError(
-                f"tag [{index}] must be an object or a 'key=value' string, "
-                f"got {type(entry).__name__}"
-            )
+            if is_non_finite(tag_value):
+                raise ValueError(f"tag [{index}] {key!r}: {NON_FINITE_MESSAGE}")
+        out.append(dict(entry))
     return tuple(out)
 
 
@@ -149,23 +350,44 @@ def coerce_dict_tuple(value: Any) -> tuple[dict[str, Any], ...]:
     return tuple(dict(entry) for entry in value)
 
 
-def coerce_str_tuple(value: Any) -> tuple[str, ...]:
-    """Freeze a list of strings."""
-    return tuple(value)
+def _array(
+    name: str,
+    item_kind: Any,
+    items: str | dict[str, Any],
+    description: str,
+    *,
+    required: bool = False,
+    default_factory: Callable[[], Any] | None = None,
+    coerce: Callable[[Any], Any] | None = None,
+) -> FieldSpec:
+    """Build a JSON array field; a string ``items`` names a ``$defs`` entry."""
+    return FieldSpec(
+        name,
+        list,
+        required=required,
+        default_factory=default_factory,
+        item_kind=item_kind,
+        coerce=coerce,
+        json_type="array",
+        json_items={"$ref": f"#/$defs/{items}"} if isinstance(items, str) else items,
+        description=description,
+    )
+
+
+_NOT_APPLIED = "Accepted and retained in v1.0, but not applied to created items."
 
 
 # --------------------------------------------------------------------------
 # Shared field groups
 # --------------------------------------------------------------------------
 
-_TAGS = FieldSpec(
+_TAGS = _array(
     "tags",
-    (list, dict),
+    dict,
+    "tagObject",
+    "Tags applied to this object.",
     default_factory=tuple,
     coerce=coerce_tag_list,
-    json_type="array",
-    json_items={"$ref": "#/$defs/tagObject"},
-    description="Tags applied to this object.",
 )
 
 ITEM_COMMON: tuple[FieldSpec, ...] = (
@@ -186,90 +408,82 @@ ITEM_COMMON: tuple[FieldSpec, ...] = (
         json_type="integer",
         description="Ordering hint within a report.",
     ),
-    FieldSpec(
+    _array(
         "properties",
-        list,
+        dict,
+        "propertyObject",
+        "Escape hatch for table fields not promoted to first class. "
+        "Ignored with a warning on other item types.",
         default_factory=tuple,
-        item_kind=dict,
         coerce=coerce_dict_tuple,
-        json_type="array",
-        json_items={"$ref": "#/$defs/propertyObject"},
-        description="Escape hatch for ADR fields not promoted to first class.",
     ),
 )
 ITEM_COMMON_NAMES = frozenset(spec.name for spec in ITEM_COMMON)
 
-# Declared once and shared by all four media types. Duplicating the 'src'
-# alias per type is how the contract drifts.
-_PATH = FieldSpec(
-    "path",
-    str,
-    required=True,
-    min_len=1,
-    alias="src",
-    description="Path to the payload file, absolute or relative to the document.",
-)
+
+def _path_spec(item_type: str) -> FieldSpec:
+    """Build the ``path`` field of a media item type, with its extension check."""
+    allowed = MEDIA_EXTENSIONS[item_type]
+    description = "Path to the payload file, absolute or relative to the document."
+    if allowed is not None:
+        listed = ", ".join(f".{extension}" for extension in allowed)
+        description += f" Accepted extensions (case-insensitive): {listed}."
+    return FieldSpec(
+        "path",
+        str,
+        required=True,
+        min_len=1,
+        validate=_extension_validator(allowed) if allowed is not None else None,
+        description=description,
+    )
+
 
 _VALUE = FieldSpec("value", str, required=True, description="Inline payload body.")
 
+_HTML_VALUE = FieldSpec(
+    "value",
+    str,
+    required=True,
+    validate=validate_html,
+    description="Inline HTML body; must contain at least one HTML tag.",
+)
+
 TABLE_FIELDS: tuple[FieldSpec, ...] = (
-    FieldSpec(
+    _array(
         "columns",
-        list,
+        (str, dict),
+        "tableColumn",
+        "Column definitions, in wire (record) order.",
         required=True,
-        item_kind=(str, dict),
         coerce=coerce_columns,
-        json_type="array",
-        json_items={"$ref": "#/$defs/tableColumn"},
-        description="Column definitions, in wire (record) order.",
     ),
-    FieldSpec(
+    _array(
         "rows",
         list,
+        {"type": "array", "items": {"type": ["string", "number", "boolean", "null"]}},
+        "Record-oriented rows; one inner list per record.",
         required=True,
-        item_kind=list,
         coerce=coerce_rows,
-        json_type="array",
-        json_items={
-            "type": "array",
-            "items": {"type": ["string", "number", "boolean", "null"]},
-        },
-        description="Record-oriented rows; one inner list per record.",
     ),
     FieldSpec("plot", str, description="Plot style, for example 'line'."),
     FieldSpec("format", str, description="Cell value format."),
     FieldSpec("xaxis", str, description="Explicit x-axis label; must name a column."),
-    FieldSpec(
+    _array(
         "yaxis",
-        list,
-        item_kind=str,
-        coerce=coerce_str_tuple,
-        json_type="array",
-        json_items={"type": "string"},
-        description="Explicit y-axis labels; each must name a column.",
+        str,
+        {"type": "string"},
+        "Explicit y-axis labels; each must name a column.",
+        coerce=tuple,
     ),
 )
 
 ITEM_SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "text": ITEM_COMMON + (_VALUE,),
-    "html": ITEM_COMMON + (_VALUE,),
+    "html": ITEM_COMMON + (_HTML_VALUE,),
     "table": ITEM_COMMON + TABLE_FIELDS,
     "tree": ITEM_COMMON
-    + (
-        FieldSpec(
-            "nodes",
-            list,
-            required=True,
-            item_kind=dict,
-            json_type="array",
-            json_items={"$ref": "#/$defs/treeNode"},
-            description="Root nodes of the tree.",
-        ),
-    ),
-    "image": ITEM_COMMON + (_PATH,),
-    "animation": ITEM_COMMON + (_PATH,),
-    "scene": ITEM_COMMON + (_PATH,),
-    "file": ITEM_COMMON + (_PATH,),
+    + (_array("nodes", dict, "treeNode", "Root nodes of the tree.", required=True),),
+    **{item_type: ITEM_COMMON + (_path_spec(item_type),) for item_type in MEDIA_EXTENSIONS},
 }
 """Field tables keyed by ``item_type``."""
 
@@ -280,17 +494,10 @@ TREE_NODE_SPEC: tuple[FieldSpec, ...] = (
         "value",
         ANY,
         json_type=("string", "number", "boolean", "null", "array"),
+        json_items={"type": ["string", "number", "boolean", "null"]},
         description="Node value. Defaults to the node name.",
     ),
-    FieldSpec(
-        "children",
-        list,
-        default_factory=tuple,
-        item_kind=dict,
-        json_type="array",
-        json_items={"$ref": "#/$defs/treeNode"},
-        description="Child nodes.",
-    ),
+    _array("children", dict, "treeNode", "Child nodes.", default_factory=tuple),
 )
 
 SESSION_SPEC: tuple[FieldSpec, ...] = (
@@ -329,31 +536,7 @@ DOCUMENT_SPEC: tuple[FieldSpec, ...] = (
         json_type="object",
         description="Free-form producer metadata. Retained but not interpreted.",
     ),
-    FieldSpec(
-        "sessions",
-        list,
-        default_factory=tuple,
-        item_kind=dict,
-        json_type="array",
-        json_items={"$ref": "#/$defs/session"},
-        description="Accepted and retained in v1.0, but not applied to created items.",
-    ),
-    FieldSpec(
-        "datasets",
-        list,
-        default_factory=tuple,
-        item_kind=dict,
-        json_type="array",
-        json_items={"$ref": "#/$defs/dataset"},
-        description="Accepted and retained in v1.0, but not applied to created items.",
-    ),
-    FieldSpec(
-        "items",
-        list,
-        default_factory=tuple,
-        item_kind=dict,
-        json_type="array",
-        json_items={"$ref": "#/$defs/item"},
-        description="Report items to create.",
-    ),
+    _array("sessions", dict, "session", _NOT_APPLIED, default_factory=tuple),
+    _array("datasets", dict, "dataset", _NOT_APPLIED, default_factory=tuple),
+    _array("items", dict, "item", "Report items to create.", default_factory=tuple),
 )

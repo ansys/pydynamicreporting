@@ -36,9 +36,12 @@ from ansys.dynamicreporting.core.utils.json_item_import.mapping import (
     column_labels,
     derive_axes,
     flatten_tree,
+    item_content,
     resolve_path,
     rows_to_array,
+    table_fields,
 )
+from tests.json_import.helpers import build_item as _model
 
 COLUMNS = ({"name": "time"}, {"name": "T_max"}, {"name": "T_min"})
 
@@ -75,6 +78,25 @@ def test_rows_to_array_falls_back_to_bytes_for_text():
     array = rows_to_array((("alpha", 1), ("beta", 2)))
     assert array.dtype.kind == "S"
     assert array.shape == (2, 2)
+
+
+@pytest.mark.unit
+def test_rows_to_array_keeps_numeric_looking_strings_as_text():
+    # JSON strings stay text even when NumPy could parse them as numbers;
+    # otherwise identifiers such as "001" would silently become 1.0.
+    array = rows_to_array((("001", "90210"), ("007", "10001")))
+    assert array.dtype.kind == "S"
+    assert [cell.decode() for cell in array[0]] == ["001", "007"]
+    assert [cell.decode() for cell in array[1]] == ["90210", "10001"]
+
+
+@pytest.mark.unit
+def test_rows_to_array_treats_booleans_and_nulls_as_numeric():
+    array = rows_to_array(((True, None), (False, 2)))
+    assert array.dtype.kind == "f"
+    assert list(array[0]) == [1.0, 0.0]
+    assert numpy.isnan(array[1][0])
+    assert array[1][1] == 2.0
 
 
 @pytest.mark.unit
@@ -356,3 +378,64 @@ def test_resolve_path_without_a_base_dir_is_unchanged():
 def test_resolve_path_handles_a_nested_relative_path(tmp_path: Path):
     resolved = resolve_path(os.path.join("media", "plot.png"), str(tmp_path))
     assert resolved == str(tmp_path / "media" / "plot.png")
+
+
+# --------------------------------------------------------------------------
+# item_content / table_fields - the values both backends feed their models
+# --------------------------------------------------------------------------
+
+
+def _table(**overrides):
+    raw = {"item_type": "table", "name": "t", "columns": ["x", "y", "z"], "rows": [[0, 1, 2]]}
+    return _model({**raw, **overrides})
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("item_type", "value"), [("text", "v"), ("html", "<p>v</p>")])
+def test_item_content_is_the_inline_value(item_type, value):
+    assert item_content(_model({"item_type": item_type, "name": "n", "value": value})) == value
+
+
+@pytest.mark.unit
+def test_item_content_transposes_a_table():
+    assert item_content(_table()).shape == (3, 1)
+
+
+@pytest.mark.unit
+def test_item_content_flattens_a_tree():
+    model = _model({"item_type": "tree", "name": "t", "nodes": [{"name": "root"}]})
+    assert item_content(model)[0]["name"] == "root"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("item_type", "name"),
+    [("image", "a.png"), ("animation", "a.mp4"), ("scene", "a.avz"), ("file", "a.bin")],
+)
+def test_item_content_resolves_media_paths(item_type, name, tmp_path: Path):
+    model = _model({"item_type": item_type, "name": "n", "path": name}, str(tmp_path))
+    assert item_content(model) == str(tmp_path / name)
+
+
+@pytest.mark.unit
+def test_table_fields_derive_labels_and_axes():
+    assert table_fields(_table()) == {
+        "labels_row": ["x", "y", "z"],
+        "xaxis": "x",
+        "yaxis": ["y", "z"],
+    }
+
+
+@pytest.mark.unit
+def test_table_fields_include_explicit_display_fields():
+    fields = table_fields(_table(xaxis="y", yaxis=["z"], plot="line", format="floatdot1"))
+    assert fields["xaxis"] == "y"
+    assert fields["yaxis"] == ["z"]
+    assert fields["plot"] == "line"
+    assert fields["format"] == "floatdot1"
+
+
+@pytest.mark.unit
+def test_table_fields_omit_an_empty_y_axis():
+    model = _model({"item_type": "table", "name": "t", "columns": ["x"], "rows": [[0]]})
+    assert table_fields(model) == {"labels_row": ["x"], "xaxis": "x"}

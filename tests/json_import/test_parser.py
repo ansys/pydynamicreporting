@@ -30,7 +30,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_item_import.errors import (
+from ansys.dynamicreporting.core.exceptions import (
     ImportItemValidationError,
     ImportItemVersionError,
 )
@@ -38,6 +38,7 @@ from ansys.dynamicreporting.core.utils.json_item_import.parser import (
     MAX_TREE_DEPTH,
     build_document,
     load_document,
+    read_document,
 )
 
 
@@ -186,6 +187,180 @@ def test_property_shadowing_a_first_class_field_is_warned():
     assert any("overrides the first-class" in str(c) for c in logger.warning.call_args_list)
 
 
+def _table_with_properties(properties):
+    return _document(
+        items=[
+            {
+                "item_type": "table",
+                "name": "t",
+                "columns": ["a"],
+                "rows": [[1]],
+                "properties": properties,
+            }
+        ]
+    )
+
+
+@pytest.mark.unit
+def test_property_overriding_the_derived_labels_row_is_warned():
+    logger = MagicMock()
+    build_document(_table_with_properties([{"labels_row": ["b"]}]), logger=logger)
+    assert any("derived from 'columns'" in str(c) for c in logger.warning.call_args_list)
+
+
+@pytest.mark.unit
+def test_property_set_more_than_once_is_warned():
+    logger = MagicMock()
+    build_document(_table_with_properties([{"plot": "bar"}, {"plot": "line"}]), logger=logger)
+    assert any("set more than once" in str(c) for c in logger.warning.call_args_list)
+
+
+@pytest.mark.unit
+def test_distinct_properties_raise_no_conflict_warning():
+    logger = MagicMock()
+    build_document(_table_with_properties([{"line_width": 2}, {"nan_display": "-"}]), logger=logger)
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), [1.0, float("-inf")]])
+def test_non_finite_tree_values_are_rejected(value):
+    node = {"name": "root", "value": value}
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
+    assert any(
+        location.startswith("items[0].nodes[0].value") and "NaN and Infinity" in message
+        for location, message in excinfo.value.problems
+    )
+
+
+@pytest.mark.unit
+def test_finite_tree_values_are_accepted():
+    node = {"name": "root", "value": [1.5, None, "x"]}
+    doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
+    assert doc.items[0]["nodes"][0]["value"] == [1.5, None, "x"]
+
+
+@pytest.mark.unit
+def test_non_finite_tag_values_are_rejected():
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_document(tags=[{"run": float("nan")}]))
+    assert "tags" in _locations(excinfo)
+    assert any("NaN and Infinity" in message for _, message in excinfo.value.problems)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", ["plain text", "a < b", "<p", ""])
+def test_html_without_a_tag_is_rejected(value):
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_document(items=[{"item_type": "html", "name": "n", "value": value}]))
+    assert "items[0].value" in _locations(excinfo)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", ["<p>x</p>", "<br/>", "text then <b>bold</b>"])
+def test_html_with_a_tag_is_accepted(value):
+    doc = build_document(_document(items=[{"item_type": "html", "name": "n", "value": value}]))
+    assert doc.items[0]["value"] == value
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("item_type", "path"),
+    [
+        ("image", "plot.jpeg"),
+        ("image", "plot.bmp"),
+        ("animation", "clip.avi"),
+        ("scene", "model.png"),
+        ("image", "no_extension"),
+    ],
+)
+def test_unsupported_media_extensions_are_rejected(item_type, path):
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_document(items=[{"item_type": item_type, "name": "n", "path": path}]))
+    assert "items[0].path" in _locations(excinfo)
+    assert any("is not supported" in message for _, message in excinfo.value.problems)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("item_type", "path"),
+    [
+        ("image", "plot.PNG"),
+        ("image", "plot.tiff"),
+        ("animation", "clip.mp4"),
+        ("scene", "model.glb"),
+        ("file", "notes"),
+        ("file", "archive.tar.gz"),
+    ],
+)
+def test_supported_media_extensions_are_accepted(item_type, path):
+    doc = build_document(_document(items=[{"item_type": item_type, "name": "n", "path": path}]))
+    assert doc.items[0]["path"] == path
+
+
+# --------------------------------------------------------------------------
+# Path containment (allow_external_paths)
+# --------------------------------------------------------------------------
+
+
+def _image_document(path):
+    return _document(items=[{"item_type": "image", "name": "n", "path": path}])
+
+
+@pytest.mark.unit
+def test_external_paths_are_allowed_by_default(tmp_path: Path):
+    outside = str(tmp_path.parent / "elsewhere.png")
+    doc = build_document(_image_document(outside), base_dir=tmp_path)
+    assert doc.items[0]["path"] == outside
+    doc = build_document(_image_document("../up.png"), base_dir=tmp_path)
+    assert doc.items[0]["path"] == "../up.png"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("path", ["../up.png", "media/../../up.png"])
+def test_relative_escape_is_rejected_when_external_paths_are_disallowed(path, tmp_path: Path):
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_image_document(path), base_dir=tmp_path, allow_external_paths=False)
+    assert "items[0].path" in _locations(excinfo)
+    assert any("resolves outside" in message for _, message in excinfo.value.problems)
+
+
+@pytest.mark.unit
+def test_absolute_path_outside_is_rejected_when_external_paths_are_disallowed(tmp_path: Path):
+    outside = str(tmp_path.parent / "elsewhere.png")
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_image_document(outside), base_dir=tmp_path, allow_external_paths=False)
+    assert "items[0].path" in _locations(excinfo)
+
+
+@pytest.mark.unit
+def test_paths_inside_base_dir_are_accepted_when_external_paths_are_disallowed(tmp_path: Path):
+    inside_absolute = str(tmp_path / "media" / "a.png")
+    for path in ("media/a.png", "media/../b.png", inside_absolute):
+        doc = build_document(_image_document(path), base_dir=tmp_path, allow_external_paths=False)
+        assert doc.items[0]["path"] == path
+
+
+@pytest.mark.unit
+def test_inline_items_ignore_the_containment_check(tmp_path: Path):
+    doc = build_document(
+        _document(items=[{"item_type": "text", "name": "n", "value": "../not/a/path"}]),
+        base_dir=tmp_path,
+        allow_external_paths=False,
+    )
+    assert doc.items[0]["value"] == "../not/a/path"
+
+
+@pytest.mark.unit
+def test_load_document_forwards_allow_external_paths(tmp_path: Path):
+    path = tmp_path / "report.json"
+    path.write_text(json.dumps(_image_document("../up.png")), encoding="utf-8")
+    assert load_document(path).items[0]["path"] == "../up.png"
+    with pytest.raises(ImportItemValidationError):
+        load_document(path, allow_external_paths=False)
+
+
 @pytest.mark.unit
 def test_unknown_keys_are_errors_in_strict_mode():
     with pytest.raises(ImportItemValidationError) as excinfo:
@@ -296,7 +471,7 @@ def test_item_sequence_rejects_a_boolean():
 
 
 @pytest.mark.unit
-def test_item_tags_accept_objects_and_key_value_strings():
+def test_item_tags_accept_objects():
     doc = build_document(
         _document(
             items=[
@@ -304,31 +479,45 @@ def test_item_tags_accept_objects_and_key_value_strings():
                     "item_type": "text",
                     "name": "n",
                     "value": "v",
-                    "tags": [{"section": "intro"}, "dp=1"],
+                    "tags": [{"section": "intro"}, {"dp": 1}],
                 }
             ]
         )
     )
-    assert doc.items[0]["tags"] == ({"section": "intro"}, {"dp": "1"})
+    assert doc.items[0]["tags"] == ({"section": "intro"}, {"dp": 1})
 
 
 @pytest.mark.unit
 def test_item_tags_reject_a_bare_string_entry():
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
-            _document(items=[{"item_type": "text", "name": "n", "value": "v", "tags": ["oops"]}])
+            _document(items=[{"item_type": "text", "name": "n", "value": "v", "tags": ["a=1"]}])
+        )
+    assert "items[0].tags[0]" in _locations(excinfo)
+
+
+@pytest.mark.unit
+def test_item_tags_reject_a_single_mapping():
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(
+            _document(
+                items=[
+                    {"item_type": "text", "name": "n", "value": "v", "tags": {"section": "intro"}}
+                ]
+            )
         )
     assert "items[0].tags" in _locations(excinfo)
 
 
 @pytest.mark.unit
-def test_item_tags_accept_a_single_mapping():
-    doc = build_document(
-        _document(
-            items=[{"item_type": "text", "name": "n", "value": "v", "tags": {"section": "intro"}}]
+@pytest.mark.parametrize("tag", [{}, {"k": {"x": 1}}, {"k": [1]}, {"k": None}])
+def test_item_tags_reject_what_the_schema_rejects(tag):
+    # Mirrors the schema's tagObject: at least one key, scalar values only.
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(
+            _document(items=[{"item_type": "text", "name": "n", "value": "v", "tags": [tag]}])
         )
-    )
-    assert doc.items[0]["tags"] == ({"section": "intro"},)
+    assert "items[0].tags" in _locations(excinfo)
 
 
 @pytest.mark.unit
@@ -340,6 +529,53 @@ def test_item_properties_must_be_objects():
             )
         )
     assert "items[0].properties[0]" in _locations(excinfo)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"item_type": "text", "name": "n", "value": "v"},
+        {"item_type": "image", "name": "n", "path": "a.png"},
+        {"item_type": "tree", "name": "n", "nodes": [{"name": "root"}]},
+    ],
+    ids=lambda raw: raw["item_type"],
+)
+def test_properties_on_a_non_table_item_are_warned_and_dropped(raw):
+    # Only tables persist properties, so keeping them would let both backends
+    # discard them without a trace.
+    logger = MagicMock()
+    doc = build_document(
+        _document(items=[{**raw, "properties": [{"line_width": 2}, {"plot_title": "t"}]}]),
+        logger=logger,
+    )
+    assert doc.items[0]["properties"] == ()
+    messages = [str(c) for c in logger.warning.call_args_list]
+    assert sum("only table items accept properties" in m for m in messages) == 2
+    assert any("line_width" in m for m in messages)
+
+
+@pytest.mark.unit
+def test_properties_on_a_table_item_are_kept():
+    logger = MagicMock()
+    doc = build_document(
+        _document(
+            items=[
+                {
+                    "item_type": "table",
+                    "name": "t",
+                    "columns": ["a"],
+                    "rows": [[1]],
+                    "properties": [{"line_width": 2}],
+                }
+            ]
+        ),
+        logger=logger,
+    )
+    assert doc.items[0]["properties"] == ({"line_width": 2},)
+    assert not any(
+        "only table items accept properties" in str(c) for c in logger.warning.call_args_list
+    )
 
 
 # --------------------------------------------------------------------------
@@ -356,10 +592,10 @@ def test_inline_items_require_a_value(item_type):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("item_type", ["text", "html"])
-def test_inline_items_carry_their_value(item_type):
-    doc = build_document(_document(items=[{"item_type": item_type, "name": "n", "value": "body"}]))
-    assert doc.items[0]["value"] == "body"
+@pytest.mark.parametrize(("item_type", "value"), [("text", "body"), ("html", "<p>body</p>")])
+def test_inline_items_carry_their_value(item_type, value):
+    doc = build_document(_document(items=[{"item_type": item_type, "name": "n", "value": value}]))
+    assert doc.items[0]["value"] == value
     assert doc.items[0]["item_type"] == item_type
 
 
@@ -384,32 +620,10 @@ def test_media_items_require_a_path(item_type):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("item_type", ["image", "animation", "scene", "file"])
-def test_media_items_accept_the_legacy_src_alias(item_type):
-    logger = MagicMock()
-    doc = build_document(
-        _document(items=[{"item_type": item_type, "name": "n", "src": "payload.bin"}]),
-        logger=logger,
-    )
-    assert doc.items[0]["path"] == "payload.bin"
-    assert any("deprecated" in str(call) for call in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
-def test_path_wins_when_both_path_and_src_are_present():
-    logger = MagicMock()
-    doc = build_document(
-        _document(items=[{"item_type": "image", "name": "n", "path": "new.png", "src": "old.png"}]),
-        logger=logger,
-    )
-    assert doc.items[0]["path"] == "new.png"
-    assert any("both" in str(call) for call in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
-def test_src_is_not_reported_as_an_unknown_key():
-    doc = build_document(_document(items=[{"item_type": "image", "name": "n", "src": "a.png"}]))
-    assert doc.items[0]["extra"] == {}
+def test_src_is_not_an_alias_for_path():
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_document(items=[{"item_type": "image", "name": "n", "src": "a.png"}]))
+    assert "items[0].path" in _locations(excinfo)
 
 
 @pytest.mark.unit
@@ -419,6 +633,16 @@ def test_base_dir_is_attached_to_items():
         base_dir="/runs/42",
     )
     assert doc.items[0]["base_dir"] == "/runs/42"
+
+
+@pytest.mark.unit
+def test_base_dir_accepts_a_path(tmp_path: Path):
+    doc = build_document(
+        _document(items=[{"item_type": "image", "name": "n", "path": "a.png"}]),
+        base_dir=tmp_path,
+    )
+    assert doc.base_dir == str(tmp_path)
+    assert doc.items[0]["base_dir"] == str(tmp_path)
 
 
 # --------------------------------------------------------------------------
@@ -511,41 +735,20 @@ def test_table_accepts_explicit_axes_that_name_columns():
 
 
 @pytest.mark.unit
-def test_table_data_wrapper_is_accepted():
-    doc = build_document(
-        _document(
-            items=[
-                {
-                    "item_type": "table",
-                    "name": "t",
-                    "data": {"columns": ["a", "b"], "rows": [[1, 2]]},
-                }
-            ]
-        )
-    )
-    item = doc.items[0]
-    assert item["columns"] == (
-        {"name": "a", "type": "string"},
-        {"name": "b", "type": "string"},
-    )
-    assert item["rows"] == ((1, 2),)
-    assert "data" not in item
-
-
-@pytest.mark.unit
-def test_table_top_level_wins_over_the_data_wrapper():
-    logger = MagicMock()
-    doc = build_document(
-        _document(items=[_table(data={"columns": ["x"], "rows": [[9]]})]), logger=logger
-    )
-    assert doc.items[0]["columns"][0]["name"] == "time"
-
-
-@pytest.mark.unit
-def test_table_data_wrapper_must_be_an_object():
+def test_table_data_wrapper_is_not_accepted():
     with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[{"item_type": "table", "name": "t", "data": "nope"}]))
-    assert "items[0].data" in _locations(excinfo)
+        build_document(
+            _document(
+                items=[
+                    {
+                        "item_type": "table",
+                        "name": "t",
+                        "data": {"columns": ["a", "b"], "rows": [[1, 2]]},
+                    }
+                ]
+            )
+        )
+    assert {"items[0].columns", "items[0].rows"} <= _locations(excinfo)
 
 
 @pytest.mark.unit
@@ -752,9 +955,55 @@ def test_load_document_reports_invalid_json(tmp_path: Path):
 
 
 @pytest.mark.unit
+def test_load_document_reports_a_non_utf8_file(tmp_path: Path):
+    path = tmp_path / "not_utf8.json"
+    path.write_bytes(b'{"app_id": "demo\xff"}')
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        load_document(path)
+    assert "not valid UTF-8" in str(excinfo.value)
+
+
+@pytest.mark.unit
+def test_load_document_reports_an_unreadable_path(tmp_path: Path):
+    # A directory cannot be opened as a file on any platform; the OS error
+    # differs (IsADirectoryError vs PermissionError) but is wrapped the same.
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        load_document(tmp_path)
+    assert "cannot be read" in str(excinfo.value)
+
+
+@pytest.mark.unit
+def test_load_document_accepts_a_path_base_dir(tmp_path: Path):
+    path = tmp_path / "report.json"
+    path.write_text(json.dumps(_document()), encoding="utf-8")
+    assert load_document(path, base_dir=tmp_path / "media").base_dir == str(tmp_path / "media")
+
+
+@pytest.mark.unit
 def test_load_document_accepts_a_utf8_bom(tmp_path: Path):
     # Several Windows editors and writers prepend a BOM; plain utf-8 decoding
     # would reject the file as invalid JSON.
     path = tmp_path / "bom.json"
     path.write_text(json.dumps(_document(items=[])), encoding="utf-8-sig")
     assert load_document(path).app_id == "demo-app"
+
+
+# --------------------------------------------------------------------------
+# read_document
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_read_document_decodes_without_validating(tmp_path: Path):
+    # Validation belongs to build_document, so a contract violation still
+    # decodes; the dict entry points validate it afterwards.
+    path = tmp_path / "report.json"
+    path.write_text(json.dumps({"surprise": 1}), encoding="utf-8")
+    assert read_document(path) == {"surprise": 1}
+
+
+@pytest.mark.unit
+def test_read_document_reports_a_missing_file(tmp_path: Path):
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        read_document(tmp_path / "absent.json")
+    assert "does not exist" in str(excinfo.value)

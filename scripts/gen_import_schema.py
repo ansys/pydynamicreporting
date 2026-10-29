@@ -32,25 +32,23 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ansys.dynamicreporting.core.utils.json_item_import.enums import ITEM_TYPES
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     DATASET_SPEC,
     DOCUMENT_SPEC,
+    ITEM_COMMON_NAMES,
     ITEM_SPECS,
+    ITEM_TYPES,
+    SCHEMA_VERSION,
     SESSION_SPEC,
     TREE_NODE_SPEC,
     FieldSpec,
 )
-from ansys.dynamicreporting.core.utils.json_item_import.version import SCHEMA_VERSION
 
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "adr_item_import.schema.json"
 
 SCHEMA_ID = (
     f"https://schemas.ansys.com/adr/item-import/{SCHEMA_VERSION}/adr-item-import.schema.json"
 )
-
-# Item fields carried by every type; the per-type tables extend this.
-_COMMON_ITEM_NAMES = {"item_type", "name", "tags", "source", "sequence", "properties"}
 
 
 def _field_schema(spec: FieldSpec) -> dict[str, Any]:
@@ -100,7 +98,7 @@ def _object_schema(
 
 def _item_variant(item_type: str) -> dict[str, Any]:
     """Render one item type as an ``allOf`` extension of the shared base."""
-    specific = tuple(spec for spec in ITEM_SPECS[item_type] if spec.name not in _COMMON_ITEM_NAMES)
+    specific = tuple(spec for spec in ITEM_SPECS[item_type] if spec.name not in ITEM_COMMON_NAMES)
     extension = _object_schema(specific)
     extension["properties"]["item_type"] = {"const": item_type}
     extension.setdefault("required", [])
@@ -133,8 +131,11 @@ def build_schema() -> dict[str, Any]:
                     "type": "object",
                     "required": ["name"],
                     "properties": {
-                        "name": {"type": "string"},
-                        "type": {"type": "string"},
+                        "name": {"type": "string", "minLength": 1},
+                        "type": {
+                            "type": "string",
+                            "description": "Informational; not interpreted by the importer.",
+                        },
                     },
                 },
             ]
@@ -143,7 +144,7 @@ def build_schema() -> dict[str, Any]:
         "dataset": _object_schema(DATASET_SPEC),
         "treeNode": _object_schema(TREE_NODE_SPEC),
         "itemBase": _object_schema(
-            tuple(spec for spec in ITEM_SPECS["text"] if spec.name in _COMMON_ITEM_NAMES),
+            tuple(spec for spec in ITEM_SPECS["text"] if spec.name in ITEM_COMMON_NAMES),
             overrides={"item_type": {"type": "string"}},
         ),
     }

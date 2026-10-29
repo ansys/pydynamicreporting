@@ -38,6 +38,7 @@ import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
+from typing import TYPE_CHECKING
 import urllib
 from urllib.parse import urlparse
 import uuid
@@ -56,6 +57,10 @@ from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException, InvalidAnsysPath, UnsupportedServerVersionError
 from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
+
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from .json_item_import import ImportResult
+    from .json_item_import.importer import OnError
 
 QtCore = None
 QtGui = None
@@ -1433,6 +1438,182 @@ class Server:
 
         for child_id_str in children_id_strs:
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
+
+    _IMPORT_PAYLOAD_SETTERS: dict[str, str] = {
+        "text": "set_payload_string",
+        "html": "set_payload_html",
+        "table": "set_payload_table",
+        "tree": "set_payload_tree",
+        "image": "set_payload_image",
+        "animation": "set_payload_animation",
+        "scene": "set_payload_scene",
+        "file": "set_payload_file",
+    }
+    """Wire ``item_type`` to the :class:`report_objects.ItemREST` payload setter."""
+
+    def import_items_from_json(
+        self,
+        json_file_path: str | Path,
+        *,
+        on_error: "OnError" = "collect",
+        base_dir: str | Path | None = None,
+        strict_keys: bool = False,
+        allow_external_paths: bool = True,
+        logger: logging.Logger | None = None,
+    ) -> "ImportResult":
+        """Import report items from a JSON file into this server.
+
+        Backs :meth:`ansys.dynamicreporting.core.Service.import_items_from_json`,
+        which documents every parameter; ``logger`` receives validation warnings
+        and per-item failures. Reads the file and delegates to
+        :meth:`import_items`, the way :meth:`load_templates_from_file`
+        delegates to :meth:`load_templates`.
+        """
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from .json_item_import import read_document
+
+        return self.import_items(
+            read_document(json_file_path),
+            on_error=on_error,
+            base_dir=base_dir if base_dir is not None else Path(json_file_path).parent,
+            strict_keys=strict_keys,
+            allow_external_paths=allow_external_paths,
+            logger=logger,
+        )
+
+    def import_items(
+        self,
+        document: dict,
+        *,
+        on_error: "OnError" = "collect",
+        base_dir: str | Path | None = None,
+        strict_keys: bool = False,
+        allow_external_paths: bool = True,
+        logger: logging.Logger | None = None,
+    ) -> "ImportResult":
+        """Import report items from an already-decoded JSON document.
+
+        Validation and the per-item error policy are shared with the
+        serverless ``ADR.import_items``; this method only builds and pushes
+        :class:`report_objects.ItemREST` objects.
+
+        Parameters
+        ----------
+        document : dict
+            Decoded import document, for example the result of ``json.load``.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str or pathlib.Path, optional
+            Directory that relative media paths resolve against. When omitted,
+            they resolve against the current working directory.
+        strict_keys : bool, default: False
+            Treat unknown keys in the document as validation errors.
+        allow_external_paths : bool, default: True
+            Accept media paths that resolve outside ``base_dir``.
+        logger : logging.Logger, optional
+            Receives validation warnings and per-item failures.
+
+        Returns
+        -------
+        ImportResult
+            Counts and any per-item failures.
+
+        Raises
+        ------
+        ImportItemValidationError
+            If the document violates the item import contract.
+        ImportItemVersionError
+            If the document schema version is unsupported.
+        """
+        from .json_item_import import build_document
+        from .json_item_import import import_items as import_document_items
+
+        validated = build_document(
+            document,
+            base_dir=base_dir,
+            strict_keys=strict_keys,
+            allow_external_paths=allow_external_paths,
+            logger=logger,
+        )
+        return import_document_items(
+            validated,
+            functools.partial(self._populate_item, logger=logger),
+            on_error=on_error,
+            logger=logger,
+        )
+
+    def _populate_item(
+        self, item_data: dict, doc_tags: str, logger: logging.Logger | None = None
+    ) -> report_objects.ItemREST:
+        """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
+        from ..exceptions import ADRItemImportError
+        from .json_item_import import combine_tags
+        from .json_item_import.mapping import apply_properties, item_content, table_fields
+
+        item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
+        # create_item() skips a falsy source; the document value is stored verbatim.
+        item.source = item_data["source"]
+        item.set_tags(combine_tags(doc_tags, item_data["tags"]))
+
+        item_type = item_data["item_type"]
+        content = item_content(item_data)
+        if item_type == "table":
+            # Display fields and properties travel inside the table payload,
+            # the same dictionary adr_item.Item builds for set_payload_table.
+            # Only tables persist properties; the parser drops them elsewhere.
+            properties: dict = {}
+
+            def _collect(_item, key, value):
+                properties[key] = value
+
+            apply_properties(item, item_data["properties"], logger, setter=_collect)
+            content = {"array": content, **table_fields(item_data), **properties}
+        elif item_type == "image":
+            content = self._read_import_image(content)
+        getattr(item, self._IMPORT_PAYLOAD_SETTERS[item_type])(content)
+
+        status = self.put_objects([item])
+        if status != requests.codes.ok:
+            error = self._last_error
+            # put_objects() creates the item record before uploading its
+            # payload file, so a failed upload leaves an item without a
+            # payload behind. Remove it, as the serverless backend does.
+            self._delete_partial_import_item(item, logger)
+            raise ADRItemImportError(
+                f"the server rejected item {item_data['name']!r} (HTTP {status}): {error}"
+            )
+        return item
+
+    def _delete_partial_import_item(
+        self, item: report_objects.ItemREST, logger: logging.Logger | None
+    ) -> None:
+        """Delete an item whose push failed, logging rather than masking the push error."""
+        try:
+            status = self.del_objects([item])
+        except Exception as exc:
+            # The push failure is the error to report; a failed cleanup is secondary.
+            if logger is not None:
+                logger.warning("Could not remove partially imported item %r: %s", item.name, exc)
+            return
+        # 404 means the record was never created, which needs no cleanup.
+        if status not in (requests.codes.ok, requests.codes.not_found) and logger is not None:
+            logger.warning(
+                "Could not remove partially imported item %r (HTTP %s).", item.name, status
+            )
+
+    @staticmethod
+    def _read_import_image(path: str) -> bytes:
+        """Read an image file into the bytes ``ItemREST.set_payload_image`` expects.
+
+        Mirrors ``adr_item.Item``: PNG files are passed through, and any other
+        format is converted to PNG first.
+        """
+        if path.lower().endswith(".png"):
+            with open(path, "rb") as handle:
+                return handle.read()
+        return report_utils.PIL_image_to_data(path)["file_data"]
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None
