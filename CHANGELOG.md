@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Raise the minimum runtime dependency versions to the versions bundled with
+  ADR 26.1: requests 2.32.4, Pillow 11.1.0, python-dateutil 2.9.0.post0,
+  pytz 2024.2, psutil 7.2.1, psycopg 3.2.12, and bleach 6.3.0.
+
 ### Removed
 
 - Python 3.10 support. The package now requires Python 3.11 through 3.14. Python
