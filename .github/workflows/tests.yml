@@ -71,7 +71,7 @@ jobs:
       - name: Install DPF
         id: set-server-path
         if: false
-        uses: ansys/pydpf-actions/install-dpf-server@v2.3
+        uses: ansys/pydpf-actions/install-dpf-server@v2.4
         with:
           dpf-standalone-TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           standalone_suffix: ${{ env.DPF_STANDALONE_SUFFIX }}
