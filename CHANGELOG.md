@@ -7,15 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- [BETA] JSON report item import: `import_items_from_json` on both `Service` and
-  serverless `ADR` creates report items from a single versioned JSON document,
-  covering text, HTML, tables, trees, images, animations, scenes, and files.
-  Every contract violation in a document is reported in one pass with its
-  location. The contract is published as `adr_item_import.schema.json` and is
-  generated from the same definitions the importer validates against. Report
-  structure remains with `load_templates` / `load_templates_from_file`.
+- Document ADR's return to multiple releases per year while retaining the
+  annual product-line compatibility policy.
+- Exclude development marker tags (`v*.dev*`) from the CI-CD and
+  Create Draft Release workflows.
+
+### Security
+
+- Update the development lockfile to Django 5.2.18 for its security fixes.
 
 ## [1.0.0rc3] - 2026-09-21
 
