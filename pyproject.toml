@@ -31,6 +31,9 @@ dependencies = [
     "bleach>=6.3.0",
     # Browser-PDF uses the Playwright browser package shipped by ADR; keep this pin
     # aligned with that product packaging source rather than a runtime version check.
+    # Playwright only launches the Chromium build that matches its own version, and ADR 27.1
+    # ships chromium_headless_shell-1248 for 1.64.1. Keep this pin for all of 1.x: changing it
+    # breaks browser-PDF for ADR 27.1 users who upgrade this package.
     "playwright==1.64.1",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
