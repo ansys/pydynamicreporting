@@ -29,9 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- Require certifi 2026.10.19 or later, which removes trust in the CA used by the
-  compromised eMudhra intermediates. See `SECURITY.md` for the other trust stores
-  that need updating.
 - Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
 - Lock Pillow 13.0.0 and Django 5.2.18 for development installs, and support
   Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were

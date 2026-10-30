@@ -17,9 +17,9 @@ Provide the PyAnsys Core team with this information:
 
 ## TLS security after the eMudhra incident
 
-This package requires certifi 2026.10.19 or later, which removes trust in the
-CA used by the compromised eMudhra intermediates. Other trust stores in your
-environment need separate updates:
+Update certifi to 2026.10.19 or later, which removes trust in the CA used by the
+compromised eMudhra intermediates. Other trust stores in your environment need
+separate updates:
 
 - **Python:** use CPython 3.11.18+, 3.12.16+, 3.13.18+, or 3.14.10+. See the
   [Python security announcement](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576).
