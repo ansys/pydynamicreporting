@@ -142,14 +142,15 @@ Local browser requirement
 
 Rendering happens on the machine that runs PyDynamicReporting, even when the
 report service is remote. The local ``Service`` therefore needs ADR 27.1
-installation metadata and the complete product-shipped browser package.
-PyDynamicReporting does not fall back to a machine-wide Playwright browser
-cache.
+installation metadata and the complete product-shipped browser package. You
+don't need to install a browser separately.
 
-During a render, PyDynamicReporting temporarily points
-``PLAYWRIGHT_BROWSERS_PATH`` at the product browser and restores the caller's
-original value afterward. Because this environment variable is process-wide,
-do not run browser-PDF exports concurrently in the same process.
+An export changes process-wide settings while it runs, so run one browser-PDF
+export at a time in each Python process.
+
+If the ADR installation ships a different browser build than this
+PyDynamicReporting release expects, the export still uses the browser from the
+ADR installation and logs a warning.
 
 Missing or incomplete product browser packages are reported through the ADR
 export error. Browser and context cleanup failures are logged for diagnostics

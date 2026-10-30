@@ -192,6 +192,29 @@ def create_new_pil_image(pil_image):
     return images
 
 
+def png_compatible_image(pil_image):
+    """
+    Return an image that Pillow can save as PNG.
+
+    Pillow 13 no longer writes 32-bit integer (``I`` mode) images as PNG. Earlier
+    releases clipped them to 16 bits on save, so convert to ``I;16`` to keep that
+    output.
+
+    Parameters
+    ----------
+    pil_image:
+        the PIL image to be saved as PNG
+
+    Returns
+    -------
+    PIL.Image.Image:
+        the ``I;16`` conversion for ``I`` mode images, otherwise ``pil_image`` itself
+    """
+    if pil_image.mode == "I":
+        return pil_image.convert("I;16")
+    return pil_image
+
+
 def save_tif_stripped(pil_image, data, metadata):
     """
     Convert the existing pil image into a new TIF picture which can be used for
@@ -268,7 +291,7 @@ def PIL_image_to_data(img, guid=None):
         data = save_tif_stripped(image, data, metadata)
     else:
         buff = io.BytesIO()
-        image.save(buff, "PNG")
+        png_compatible_image(image).save(buff, "PNG")
         buff.seek(0)
         data["file_data"] = buff.read()
     if imghandle:
