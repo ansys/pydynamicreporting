@@ -2677,15 +2677,34 @@ def test_product_browser_launch_options_keep_playwright_lookup_for_matching_buil
 
 
 @pytest.mark.unit
-def test_product_browser_launch_options_keep_playwright_lookup_for_unknown_build(tmp_path):
+def test_product_browser_launch_options_launch_packaged_shell_for_unknown_build(tmp_path):
+    chromium = Mock(executable_path=str(tmp_path / "custom-browser" / "chrome.exe"))
+    packaged_dir = "chromium_headless_shell-1223"
+    executable = _create_packaged_headless_shell(tmp_path, packaged_dir)
+    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
+    logger = Mock()
+
+    launch_options = pdf_renderer_module._product_browser_launch_options(
+        chromium, binary_info, logger
+    )
+
+    assert launch_options == {"executable_path": str(executable)}
+    logger.warning.assert_called_once()
+    warning_args = logger.warning.call_args.args
+    assert "cannot determine" in warning_args[0]
+    assert packaged_dir in warning_args
+
+
+@pytest.mark.unit
+def test_product_browser_launch_options_reject_unknown_build_without_packaged_shell(tmp_path):
     chromium = Mock(executable_path=str(tmp_path / "custom-browser" / "chrome.exe"))
     binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
 
-    launch_options = pdf_renderer_module._product_browser_launch_options(
-        chromium, binary_info, Mock()
-    )
-
-    assert launch_options == {}
+    with pytest.raises(
+        ADRException,
+        match="cannot determine which browser build it expects.*is incomplete",
+    ):
+        pdf_renderer_module._product_browser_launch_options(chromium, binary_info, Mock())
 
 
 @pytest.mark.unit

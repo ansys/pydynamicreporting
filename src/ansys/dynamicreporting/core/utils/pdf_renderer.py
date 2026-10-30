@@ -308,11 +308,13 @@ def _product_browser_launch_options(
     builds differ, for example a newer client against an older product release, launch the
     packaged headless shell through ``executable_path`` so browser-PDF keeps working without
     a product update. Playwright only guarantees the build it was released with, so log a
-    warning that names both builds. If the expected build cannot be determined, keep the
-    standard lookup rather than guess.
+    warning that names both builds. If the expected build cannot be determined, for example
+    because a later Playwright names its cache directories differently, also launch the
+    packaged headless shell: the standard lookup would only search the product folder for a
+    build it cannot confirm is there, and never falls back to another browser.
     """
     expected_dir = _playwright_expected_headless_shell_dir(str(chromium.executable_path))
-    if expected_dir is None or expected_dir == binary_info.packaged_binary_dir:
+    if expected_dir == binary_info.packaged_binary_dir:
         return {}
 
     executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
@@ -322,17 +324,30 @@ def _product_browser_launch_options(
         else binary_info.path / binary_info.packaged_binary_dir / executable_relpath
     )
     if executable is None or not executable.is_file():
+        expectation = (
+            "cannot determine which browser build it expects"
+            if expected_dir is None
+            else f"expects browser build {expected_dir}"
+        )
         raise ADRException(
-            f"Browser PDF export expects browser build {expected_dir}, and the browser build "
+            f"Browser PDF export {expectation}, and the browser build "
             f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
         )
 
-    (logger or get_logger()).warning(
-        "This PyDynamicReporting release expects browser build %s, but the Ansys installation "
-        "ships %s. Using the browser from the Ansys installation.",
-        expected_dir,
-        binary_info.packaged_binary_dir,
-    )
+    logger = logger or get_logger()
+    if expected_dir is None:
+        logger.warning(
+            "This PyDynamicReporting release cannot determine which browser build it expects. "
+            "Using the browser build %s from the Ansys installation.",
+            binary_info.packaged_binary_dir,
+        )
+    else:
+        logger.warning(
+            "This PyDynamicReporting release expects browser build %s, but the Ansys "
+            "installation ships %s. Using the browser from the Ansys installation.",
+            expected_dir,
+            binary_info.packaged_binary_dir,
+        )
     return {"executable_path": str(executable)}
 
 
