@@ -2717,7 +2717,7 @@ def test_product_browser_launch_options_reject_other_build_without_packaged_shel
 
     with pytest.raises(
         ADRException,
-        match="expects browser build chromium_headless_shell-1248.*has no headless shell",
+        match="expects browser build chromium_headless_shell-1248.*is incomplete",
     ):
         pdf_renderer_module._product_browser_launch_options(chromium, binary_info, Mock())
 

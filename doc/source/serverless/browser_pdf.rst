@@ -169,19 +169,16 @@ signal and can still be captured before it finishes.
 Browser and process requirements
 --------------------------------
 
-PyDynamicReporting uses the Chromium package from the configured ADR 27.1
-installation; it does not use a machine-wide Playwright browser cache. A
-missing or incomplete product browser package raises an ADR-owned error.
+PyDynamicReporting uses the browser from the configured ADR 27.1 installation.
+You don't need to install a browser separately. A missing or incomplete
+product browser package raises an ADR-owned error.
 
-During rendering, PyDynamicReporting temporarily points
-``PLAYWRIGHT_BROWSERS_PATH`` at the product browser and restores the caller's
-original value afterward. Because this environment variable is process-wide,
-do not run browser-PDF exports concurrently in the same process.
+An export changes process-wide settings while it runs, so run one browser-PDF
+export at a time in each Python process.
 
-If the ADR installation ships a different Chromium build than the installed
-Playwright version expects, PyDynamicReporting launches the product browser
-directly and logs a warning. Playwright only guarantees the build it was
-released with.
+If the ADR installation ships a different browser build than this
+PyDynamicReporting release expects, the export still uses the browser from the
+ADR installation and logs a warning.
 
 Temporary offline bundles are removed after the operation. Cleanup failures
 are retained for debug logging and do not mask a successful PDF or the primary

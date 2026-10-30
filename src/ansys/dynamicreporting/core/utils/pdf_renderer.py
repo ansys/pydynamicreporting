@@ -323,14 +323,13 @@ def _product_browser_launch_options(
     )
     if executable is None or not executable.is_file():
         raise ADRException(
-            f"Browser PDF export expects browser build {expected_dir}, and the packaged build "
-            f"{binary_info.packaged_binary_dir} has no headless shell executable to launch "
-            "instead."
+            f"Browser PDF export expects browser build {expected_dir}, and the browser build "
+            f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
         )
 
     (logger or get_logger()).warning(
-        "This Playwright version expects browser build %s, but the Ansys installation ships "
-        "%s. Launching the packaged browser directly.",
+        "This PyDynamicReporting release expects browser build %s, but the Ansys installation "
+        "ships %s. Using the browser from the Ansys installation.",
         expected_dir,
         binary_info.packaged_binary_dir,
     )
@@ -604,7 +603,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     **launch_options,
                 )
                 if launch_options:
-                    self._logger.info("Launched packaged Chromium %s.", browser.version)
+                    self._logger.info("Using Ansys installation browser %s.", browser.version)
                 context = None
 
                 try:
