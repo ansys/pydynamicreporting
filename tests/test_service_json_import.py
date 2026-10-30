@@ -60,31 +60,19 @@ def test_import_from_json_delegates_to_the_server(tmp_path: Path):
 
     assert result is expected
     service.serverobj.import_items_from_json.assert_called_once_with(
-        path,
-        on_error="collect",
-        base_dir=None,
-        strict_keys=False,
-        allow_external_paths=True,
-        logger=service.logger,
+        path, on_error="collect", base_dir=None, logger=service.logger
     )
 
 
 @pytest.mark.unit
-def test_import_from_json_forwards_every_option(tmp_path: Path):
+def test_import_from_json_forwards_every_option():
     service = _service(MagicMock())
-    path = _write_document(tmp_path)
+    document = {"schema_version": "1.0", "app_id": "demo-app"}
 
-    service.import_items_from_json(
-        path, on_error="raise", base_dir="/media", strict_keys=True, allow_external_paths=False
-    )
+    service.import_items_from_json(document, on_error="raise", base_dir="/media")
 
     service.serverobj.import_items_from_json.assert_called_once_with(
-        path,
-        on_error="raise",
-        base_dir="/media",
-        strict_keys=True,
-        allow_external_paths=False,
-        logger=service.logger,
+        document, on_error="raise", base_dir="/media", logger=service.logger
     )
 
 

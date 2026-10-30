@@ -209,24 +209,6 @@ def test_table_payload_carries_the_array_and_display_fields(rest_server):
 
 
 @pytest.mark.unit
-def test_table_properties_reach_the_payload_and_win(rest_server):
-    model = _table_model(plot="line", properties=[{"line_width": 2}, {"plot": "bar"}])
-    item = rest_server._populate_item(model, "")
-    assert item.payloaddata["line_width"] == 2
-    assert item.payloaddata["plot"] == "bar"
-
-
-@pytest.mark.unit
-def test_unknown_property_is_reported_and_not_applied(rest_server):
-    logger = MagicMock()
-    item = rest_server._populate_item(
-        _table_model(properties=[{"not_an_adr_field": 1}]), "", logger=logger
-    )
-    assert "not_an_adr_field" not in item.payloaddata
-    assert any("not a known ADR field" in str(c) for c in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
 def test_tree_children_are_not_dropped(rest_server):
     model = _item(
         {
@@ -283,26 +265,8 @@ def test_import_forwards_on_error(rest_server, tmp_path: Path):
         rest_server.import_items_from_json(path, on_error="raise")
 
 
-@pytest.mark.unit
-def test_import_forwards_strict_keys(rest_server, tmp_path: Path):
-    path = _write(tmp_path, surprise=1)
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        rest_server.import_items_from_json(path, strict_keys=True)
-    assert "unknown key" in str(excinfo.value)
-    rest_server.put_objects.assert_not_called()
-
-
-@pytest.mark.unit
-def test_import_forwards_allow_external_paths(rest_server, tmp_path: Path):
-    path = _write(tmp_path, items=[{"item_type": "image", "name": "i", "path": "../x.png"}])
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        rest_server.import_items_from_json(path, allow_external_paths=False)
-    assert "resolves outside" in str(excinfo.value)
-    rest_server.put_objects.assert_not_called()
-
-
 # --------------------------------------------------------------------------
-# Server.import_items (dict entry point)
+# Dict documents
 # --------------------------------------------------------------------------
 
 
@@ -311,26 +275,7 @@ def _document(**overrides) -> dict:
 
 
 @pytest.mark.unit
-def test_import_from_json_delegates_to_import_items(rest_server, tmp_path: Path):
-    # Mirrors load_templates_from_file -> load_templates.
-    path = _write(tmp_path)
-    rest_server.import_items = MagicMock()
-    logger = MagicMock()
-
-    rest_server.import_items_from_json(path, on_error="raise", strict_keys=True, logger=logger)
-
-    rest_server.import_items.assert_called_once_with(
-        _document(),
-        on_error="raise",
-        base_dir=tmp_path,
-        strict_keys=True,
-        allow_external_paths=True,
-        logger=logger,
-    )
-
-
-@pytest.mark.unit
-def test_import_items_accepts_a_decoded_document(rest_server, tmp_path: Path):
+def test_import_accepts_a_decoded_document(rest_server, tmp_path: Path):
     shutil.copy(PNG, tmp_path / "plot.png")
     document = _document(
         items=[
@@ -339,28 +284,28 @@ def test_import_items_accepts_a_decoded_document(rest_server, tmp_path: Path):
         ]
     )
 
-    result = rest_server.import_items(document, base_dir=tmp_path)
+    result = rest_server.import_items_from_json(document, base_dir=tmp_path)
 
     assert result.ok, result.failures
     assert result.items_saved == 2
 
 
 @pytest.mark.unit
-def test_import_items_resolves_relative_media_against_the_working_directory(
+def test_a_dict_resolves_relative_media_against_the_working_directory(
     rest_server, tmp_path: Path, monkeypatch
 ):
     shutil.copy(PNG, tmp_path / "plot.png")
     monkeypatch.chdir(tmp_path)
     document = _document(items=[{"item_type": "image", "name": "i", "path": "plot.png"}])
 
-    result = rest_server.import_items(document)
+    result = rest_server.import_items_from_json(document)
 
     assert result.ok, result.failures
 
 
 @pytest.mark.unit
-def test_import_items_validates_before_pushing(rest_server):
+def test_import_validates_before_pushing(rest_server):
     with pytest.raises(ImportItemValidationError) as excinfo:
-        rest_server.import_items({"schema_version": "1.0"})
+        rest_server.import_items_from_json({"schema_version": "1.0"})
     assert "app_id" in str(excinfo.value)
     rest_server.put_objects.assert_not_called()

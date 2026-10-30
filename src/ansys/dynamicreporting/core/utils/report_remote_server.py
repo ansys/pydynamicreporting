@@ -1453,91 +1453,26 @@ class Server:
 
     def import_items_from_json(
         self,
-        json_file_path: str | Path,
+        document: str | Path | dict,
         *,
         on_error: "OnError" = "collect",
         base_dir: str | Path | None = None,
-        strict_keys: bool = False,
-        allow_external_paths: bool = True,
         logger: logging.Logger | None = None,
     ) -> "ImportResult":
-        """Import report items from a JSON file into this server.
+        """Import report items from a JSON document into this server.
 
         Backs :meth:`ansys.dynamicreporting.core.Service.import_items_from_json`,
         which documents every parameter; ``logger`` receives validation warnings
-        and per-item failures. Reads the file and delegates to
-        :meth:`import_items`, the way :meth:`load_templates_from_file`
-        delegates to :meth:`load_templates`.
+        and per-item failures. Validation and the per-item error policy are
+        shared with the serverless ``ADR.import_items_from_json``; this method
+        only builds and pushes :class:`report_objects.ItemREST` objects.
         """
         # Imported lazily so that importing the package does not pull the
         # import machinery for users who never call this.
-        from .json_item_import import read_document
+        from .json_item_import import import_items, load_document
 
-        return self.import_items(
-            read_document(json_file_path),
-            on_error=on_error,
-            base_dir=base_dir if base_dir is not None else Path(json_file_path).parent,
-            strict_keys=strict_keys,
-            allow_external_paths=allow_external_paths,
-            logger=logger,
-        )
-
-    def import_items(
-        self,
-        document: dict,
-        *,
-        on_error: "OnError" = "collect",
-        base_dir: str | Path | None = None,
-        strict_keys: bool = False,
-        allow_external_paths: bool = True,
-        logger: logging.Logger | None = None,
-    ) -> "ImportResult":
-        """Import report items from an already-decoded JSON document.
-
-        Validation and the per-item error policy are shared with the
-        serverless ``ADR.import_items``; this method only builds and pushes
-        :class:`report_objects.ItemREST` objects.
-
-        Parameters
-        ----------
-        document : dict
-            Decoded import document, for example the result of ``json.load``.
-        on_error : {'collect', 'raise'}, default: 'collect'
-            ``'collect'`` records per-item failures and continues;
-            ``'raise'`` stops at the first failure.
-        base_dir : str or pathlib.Path, optional
-            Directory that relative media paths resolve against. When omitted,
-            they resolve against the current working directory.
-        strict_keys : bool, default: False
-            Treat unknown keys in the document as validation errors.
-        allow_external_paths : bool, default: True
-            Accept media paths that resolve outside ``base_dir``.
-        logger : logging.Logger, optional
-            Receives validation warnings and per-item failures.
-
-        Returns
-        -------
-        ImportResult
-            Counts and any per-item failures.
-
-        Raises
-        ------
-        ImportItemValidationError
-            If the document violates the item import contract.
-        ImportItemVersionError
-            If the document schema version is unsupported.
-        """
-        from .json_item_import import build_document
-        from .json_item_import import import_items as import_document_items
-
-        validated = build_document(
-            document,
-            base_dir=base_dir,
-            strict_keys=strict_keys,
-            allow_external_paths=allow_external_paths,
-            logger=logger,
-        )
-        return import_document_items(
+        validated = load_document(document, base_dir=base_dir, logger=logger)
+        return import_items(
             validated,
             functools.partial(self._populate_item, logger=logger),
             on_error=on_error,
@@ -1550,7 +1485,7 @@ class Server:
         """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
         from ..exceptions import ADRItemImportError
         from .json_item_import import combine_tags
-        from .json_item_import.mapping import apply_properties, item_content, table_fields
+        from .json_item_import.mapping import item_content, table_fields
 
         item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
         # create_item() skips a falsy source; the document value is stored verbatim.
@@ -1560,16 +1495,9 @@ class Server:
         item_type = item_data["item_type"]
         content = item_content(item_data)
         if item_type == "table":
-            # Display fields and properties travel inside the table payload,
-            # the same dictionary adr_item.Item builds for set_payload_table.
-            # Only tables persist properties; the parser drops them elsewhere.
-            properties: dict = {}
-
-            def _collect(_item, key, value):
-                properties[key] = value
-
-            apply_properties(item, item_data["properties"], logger, setter=_collect)
-            content = {"array": content, **table_fields(item_data), **properties}
+            # Display fields travel inside the table payload, the same
+            # dictionary adr_item.Item builds for set_payload_table.
+            content = {"array": content, **table_fields(item_data)}
         elif item_type == "image":
             content = self._read_import_image(content)
         getattr(item, self._IMPORT_PAYLOAD_SETTERS[item_type])(content)

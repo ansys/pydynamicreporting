@@ -22,8 +22,8 @@
 
 """Render the declarative field spec to the committed JSON Schema artifact.
 
-Run via ``make schema``. CI regenerates and diffs the result, so the schema
-and the parser cannot drift.
+Run via ``make schema``. A unit test regenerates and compares the result, so
+the schema and the parser cannot drift.
 """
 
 from __future__ import annotations
@@ -33,14 +33,13 @@ from pathlib import Path
 from typing import Any
 
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
-    DATASET_SPEC,
     DOCUMENT_SPEC,
     ITEM_COMMON_NAMES,
     ITEM_SPECS,
     ITEM_TYPES,
     SCHEMA_VERSION,
-    SESSION_SPEC,
     TREE_NODE_SPEC,
+    VERSION_PATTERN,
     FieldSpec,
 )
 
@@ -65,7 +64,7 @@ def _field_schema(spec: FieldSpec) -> dict[str, Any]:
     if spec.min_len is not None:
         schema["minLength" if spec.json_type == "string" else "minItems"] = spec.min_len
     if spec.name == "schema_version":
-        schema["pattern"] = r"^[0-9]+\.[0-9]+$"
+        schema["pattern"] = f"^{VERSION_PATTERN}$"
         schema["default"] = SCHEMA_VERSION
     if spec.description:
         schema["description"] = spec.description
@@ -117,13 +116,6 @@ def build_schema() -> dict[str, Any]:
             "minProperties": 1,
             "additionalProperties": {"type": ["string", "number", "boolean"]},
         },
-        "propertyObject": {
-            "type": "object",
-            "minProperties": 1,
-            "additionalProperties": {
-                "type": ["string", "number", "boolean", "null", "array", "object"]
-            },
-        },
         "tableColumn": {
             "oneOf": [
                 {"type": "string"},
@@ -140,8 +132,6 @@ def build_schema() -> dict[str, Any]:
                 },
             ]
         },
-        "session": _object_schema(SESSION_SPEC),
-        "dataset": _object_schema(DATASET_SPEC),
         "treeNode": _object_schema(TREE_NODE_SPEC),
         "itemBase": _object_schema(
             tuple(spec for spec in ITEM_SPECS["text"] if spec.name in ITEM_COMMON_NAMES),

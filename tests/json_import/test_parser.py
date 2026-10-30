@@ -90,10 +90,8 @@ def test_app_id_must_be_non_empty():
 
 @pytest.mark.unit
 def test_schema_version_defaults_when_absent():
-    logger = MagicMock()
-    doc = build_document({"app_id": "demo-app"}, logger=logger)
+    doc = build_document({"app_id": "demo-app"})
     assert doc.schema_version == "1.0"
-    logger.warning.assert_called()
 
 
 @pytest.mark.unit
@@ -116,11 +114,19 @@ def test_empty_document_warns():
 
 
 @pytest.mark.unit
-def test_unknown_keys_are_retained_and_warned():
+def test_unknown_keys_are_warned_about_and_ignored():
     logger = MagicMock()
-    doc = build_document(_document(future_field={"a": 1}), logger=logger)
-    assert doc.extra == {"future_field": {"a": 1}}
+    build_document(_document(future_field={"a": 1}), logger=logger)
     assert any("unknown key" in str(call) for call in logger.warning.call_args_list)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("key", ["metadata", "sessions", "datasets"])
+def test_unapplied_envelope_sections_are_unknown_keys(key):
+    # Not part of v1.0; a producer that still sends them gets a warning, not an error.
+    logger = MagicMock()
+    build_document(_document(**{key: []}), logger=logger)
+    assert any(repr(key) in str(call) for call in logger.warning.call_args_list)
 
 
 @pytest.mark.unit
@@ -164,62 +170,6 @@ def test_tree_at_the_depth_limit_is_accepted():
         node = {"name": "n", "children": [node]}
     doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
     assert doc.items[0]["nodes"]
-
-
-@pytest.mark.unit
-def test_property_shadowing_a_first_class_field_is_warned():
-    logger = MagicMock()
-    build_document(
-        _document(
-            items=[
-                {
-                    "item_type": "table",
-                    "name": "t",
-                    "columns": ["a"],
-                    "rows": [[1]],
-                    "plot": "line",
-                    "properties": [{"plot": "bar"}],
-                }
-            ]
-        ),
-        logger=logger,
-    )
-    assert any("overrides the first-class" in str(c) for c in logger.warning.call_args_list)
-
-
-def _table_with_properties(properties):
-    return _document(
-        items=[
-            {
-                "item_type": "table",
-                "name": "t",
-                "columns": ["a"],
-                "rows": [[1]],
-                "properties": properties,
-            }
-        ]
-    )
-
-
-@pytest.mark.unit
-def test_property_overriding_the_derived_labels_row_is_warned():
-    logger = MagicMock()
-    build_document(_table_with_properties([{"labels_row": ["b"]}]), logger=logger)
-    assert any("derived from 'columns'" in str(c) for c in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
-def test_property_set_more_than_once_is_warned():
-    logger = MagicMock()
-    build_document(_table_with_properties([{"plot": "bar"}, {"plot": "line"}]), logger=logger)
-    assert any("set more than once" in str(c) for c in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
-def test_distinct_properties_raise_no_conflict_warning():
-    logger = MagicMock()
-    build_document(_table_with_properties([{"line_width": 2}, {"nan_display": "-"}]), logger=logger)
-    logger.warning.assert_not_called()
 
 
 @pytest.mark.unit
@@ -299,93 +249,23 @@ def test_supported_media_extensions_are_accepted(item_type, path):
     assert doc.items[0]["path"] == path
 
 
-# --------------------------------------------------------------------------
-# Path containment (allow_external_paths)
-# --------------------------------------------------------------------------
-
-
-def _image_document(path):
-    return _document(items=[{"item_type": "image", "name": "n", "path": path}])
-
-
 @pytest.mark.unit
-def test_external_paths_are_allowed_by_default(tmp_path: Path):
-    outside = str(tmp_path.parent / "elsewhere.png")
-    doc = build_document(_image_document(outside), base_dir=tmp_path)
-    assert doc.items[0]["path"] == outside
-    doc = build_document(_image_document("../up.png"), base_dir=tmp_path)
-    assert doc.items[0]["path"] == "../up.png"
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("path", ["../up.png", "media/../../up.png"])
-def test_relative_escape_is_rejected_when_external_paths_are_disallowed(path, tmp_path: Path):
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_image_document(path), base_dir=tmp_path, allow_external_paths=False)
-    assert "items[0].path" in _locations(excinfo)
-    assert any("resolves outside" in message for _, message in excinfo.value.problems)
-
-
-@pytest.mark.unit
-def test_absolute_path_outside_is_rejected_when_external_paths_are_disallowed(tmp_path: Path):
-    outside = str(tmp_path.parent / "elsewhere.png")
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_image_document(outside), base_dir=tmp_path, allow_external_paths=False)
-    assert "items[0].path" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_paths_inside_base_dir_are_accepted_when_external_paths_are_disallowed(tmp_path: Path):
-    inside_absolute = str(tmp_path / "media" / "a.png")
-    for path in ("media/a.png", "media/../b.png", inside_absolute):
-        doc = build_document(_image_document(path), base_dir=tmp_path, allow_external_paths=False)
-        assert doc.items[0]["path"] == path
-
-
-@pytest.mark.unit
-def test_inline_items_ignore_the_containment_check(tmp_path: Path):
-    doc = build_document(
-        _document(items=[{"item_type": "text", "name": "n", "value": "../not/a/path"}]),
-        base_dir=tmp_path,
-        allow_external_paths=False,
-    )
-    assert doc.items[0]["value"] == "../not/a/path"
-
-
-@pytest.mark.unit
-def test_load_document_forwards_allow_external_paths(tmp_path: Path):
-    path = tmp_path / "report.json"
-    path.write_text(json.dumps(_image_document("../up.png")), encoding="utf-8")
-    assert load_document(path).items[0]["path"] == "../up.png"
-    with pytest.raises(ImportItemValidationError):
-        load_document(path, allow_external_paths=False)
-
-
-@pytest.mark.unit
-def test_unknown_keys_are_errors_in_strict_mode():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(future_field=1), strict_keys=True)
-    assert any("unknown key" in message for _, message in excinfo.value.problems)
-
-
-@pytest.mark.unit
-def test_unknown_item_keys_are_retained():
+def test_unknown_item_keys_are_dropped():
     doc = build_document(
         _document(items=[{"item_type": "text", "name": "n", "value": "v", "typo_key": []}])
     )
-    assert doc.items[0]["extra"] == {"typo_key": []}
+    assert "typo_key" not in doc.items[0]
 
 
 @pytest.mark.unit
 def test_report_structure_is_not_part_of_the_contract():
     # Templates are imported by load_templates*; a 'templates' key here is just
-    # an unknown key, retained and warned about rather than interpreted.
+    # an unknown key, warned about and ignored rather than interpreted.
     logger = MagicMock()
     doc = build_document(
         _document(templates=[{"template_type": "basic", "name": "root"}]), logger=logger
     )
     assert not hasattr(doc, "templates")
-    assert "templates" in doc.extra
     assert any("unknown key" in str(call) for call in logger.warning.call_args_list)
 
 
@@ -458,7 +338,6 @@ def test_item_common_defaults():
     assert item["tags"] == ()
     assert item["source"] == ""
     assert item["sequence"] == 0
-    assert item["properties"] == ()
 
 
 @pytest.mark.unit
@@ -518,64 +397,6 @@ def test_item_tags_reject_what_the_schema_rejects(tag):
             _document(items=[{"item_type": "text", "name": "n", "value": "v", "tags": [tag]}])
         )
     assert "items[0].tags" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_item_properties_must_be_objects():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(
-            _document(
-                items=[{"item_type": "text", "name": "n", "value": "v", "properties": ["nope"]}]
-            )
-        )
-    assert "items[0].properties[0]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "raw",
-    [
-        {"item_type": "text", "name": "n", "value": "v"},
-        {"item_type": "image", "name": "n", "path": "a.png"},
-        {"item_type": "tree", "name": "n", "nodes": [{"name": "root"}]},
-    ],
-    ids=lambda raw: raw["item_type"],
-)
-def test_properties_on_a_non_table_item_are_warned_and_dropped(raw):
-    # Only tables persist properties, so keeping them would let both backends
-    # discard them without a trace.
-    logger = MagicMock()
-    doc = build_document(
-        _document(items=[{**raw, "properties": [{"line_width": 2}, {"plot_title": "t"}]}]),
-        logger=logger,
-    )
-    assert doc.items[0]["properties"] == ()
-    messages = [str(c) for c in logger.warning.call_args_list]
-    assert sum("only table items accept properties" in m for m in messages) == 2
-    assert any("line_width" in m for m in messages)
-
-
-@pytest.mark.unit
-def test_properties_on_a_table_item_are_kept():
-    logger = MagicMock()
-    doc = build_document(
-        _document(
-            items=[
-                {
-                    "item_type": "table",
-                    "name": "t",
-                    "columns": ["a"],
-                    "rows": [[1]],
-                    "properties": [{"line_width": 2}],
-                }
-            ]
-        ),
-        logger=logger,
-    )
-    assert doc.items[0]["properties"] == ({"line_width": 2},)
-    assert not any(
-        "only table items accept properties" in str(c) for c in logger.warning.call_args_list
-    )
 
 
 # --------------------------------------------------------------------------
@@ -880,40 +701,6 @@ def test_nested_tree_problems_report_their_full_location():
 
 
 # --------------------------------------------------------------------------
-# Sessions and datasets
-# --------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-def test_sessions_and_datasets_are_parsed_and_noted():
-    logger = MagicMock()
-    doc = build_document(
-        _document(
-            sessions=[{"name": "run", "application": "mechanical"}],
-            datasets=[{"name": "ds", "format": "csv"}],
-        ),
-        logger=logger,
-    )
-    assert doc.sessions[0].application == "mechanical"
-    assert doc.datasets[0].format == "csv"
-    assert any("not applied" in str(call) for call in logger.info.call_args_list)
-
-
-@pytest.mark.unit
-def test_session_entries_must_be_objects():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(sessions=["nope"]))
-    assert "sessions[0]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_dataset_entries_must_be_objects():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(datasets=[1]))
-    assert "datasets[0]" in _locations(excinfo)
-
-
-# --------------------------------------------------------------------------
 # load_document
 # --------------------------------------------------------------------------
 
@@ -929,6 +716,20 @@ def test_load_document_reads_a_file_and_defaults_base_dir(tmp_path: Path):
     assert doc.app_id == "demo-app"
     assert doc.base_dir == str(tmp_path)
     assert doc.items[0]["base_dir"] == str(tmp_path)
+
+
+@pytest.mark.unit
+def test_load_document_accepts_a_decoded_dict():
+    document = _document(items=[{"item_type": "image", "name": "n", "path": "a.png"}])
+    doc = load_document(document)
+    assert doc.app_id == "demo-app"
+    # Without a file there is no document directory; paths stay relative to the CWD.
+    assert doc.base_dir is None
+
+
+@pytest.mark.unit
+def test_load_document_honors_a_base_dir_for_a_dict(tmp_path: Path):
+    assert load_document(_document(), base_dir=tmp_path).base_dir == str(tmp_path)
 
 
 @pytest.mark.unit
@@ -996,7 +797,7 @@ def test_load_document_accepts_a_utf8_bom(tmp_path: Path):
 @pytest.mark.unit
 def test_read_document_decodes_without_validating(tmp_path: Path):
     # Validation belongs to build_document, so a contract violation still
-    # decodes; the dict entry points validate it afterwards.
+    # decodes; load_document validates it afterwards.
     path = tmp_path / "report.json"
     path.write_text(json.dumps({"surprise": 1}), encoding="utf-8")
     assert read_document(path) == {"surprise": 1}

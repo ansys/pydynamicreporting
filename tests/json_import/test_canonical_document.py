@@ -55,7 +55,6 @@ CANONICAL_DOCUMENT: dict[str, Any] = {
     "schema_version": "1.0",
     "app_id": "adr-mechanical",
     "tags": [{"report": "thermal_run_42"}],
-    "metadata": {"producer": "adr-mechanical", "producer_version": "2026R1"},
     "items": [
         {
             "item_type": "text",
@@ -84,7 +83,6 @@ CANONICAL_DOCUMENT: dict[str, Any] = {
             "plot": "line",
             "xaxis": "time",
             "yaxis": ["T_max", "T_min"],
-            "properties": [{"line_width": 2}, {"table_title": "Probe temperatures"}],
         },
         {
             "item_type": "tree",
@@ -129,24 +127,15 @@ def test_canonical_document_is_valid(canonical):
 
 
 @pytest.mark.unit
-def test_canonical_document_keeps_its_tags_and_metadata(canonical):
+def test_canonical_document_keeps_its_tags(canonical):
     assert canonical.tags == ({"report": "thermal_run_42"},)
-    assert canonical.metadata == {
-        "producer": "adr-mechanical",
-        "producer_version": "2026R1",
-    }
 
 
 @pytest.mark.unit
-def test_canonical_document_has_no_unknown_keys(canonical):
-    assert canonical.extra == {}
-    assert all(item["extra"] == {} for item in canonical.items)
-
-
-@pytest.mark.unit
-def test_canonical_document_is_accepted_in_strict_mode():
-    # Nothing in the specification sample is an unknown key.
-    build_document(copy.deepcopy(CANONICAL_DOCUMENT), strict_keys=True)
+def test_canonical_document_has_no_unknown_keys():
+    logger = MagicMock()
+    build_document(copy.deepcopy(CANONICAL_DOCUMENT), logger=logger)
+    logger.warning.assert_not_called()
 
 
 @pytest.mark.unit
@@ -208,7 +197,6 @@ def test_canonical_table_is_parsed(canonical):
     assert table["plot"] == "line"
     assert table["xaxis"] == "time"
     assert table["yaxis"] == ("T_max", "T_min")
-    assert table["properties"] == ({"line_width": 2}, {"table_title": "Probe temperatures"})
 
 
 # --------------------------------------------------------------------------
@@ -263,14 +251,6 @@ def test_canonical_table_labels_and_axes(imported):
     assert table.xaxis == "time"
     assert table.yaxis == ["T_max", "T_min"]
     assert table.plot == "line"
-
-
-@pytest.mark.unit
-def test_canonical_table_properties_are_applied(imported):
-    _, created = imported
-    table = created["Probe Table"]
-    assert table.line_width == 2
-    assert table.table_title == "Probe temperatures"
 
 
 @pytest.mark.unit
@@ -408,16 +388,14 @@ def test_canonical_document_accepts_a_newer_minor():
 
 
 @pytest.mark.unit
-def test_an_unknown_key_is_retained_by_default_and_rejected_when_strict():
+def test_an_unknown_key_is_warned_about_and_ignored():
     def mutate(document):
         document["items"][TEXT]["unexpected"] = 1
 
-    document = _mutated(mutate)
-    assert build_document(copy.deepcopy(document)).items[TEXT]["extra"] == {"unexpected": 1}
-
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(document, strict_keys=True)
-    assert f"items[{TEXT}]" in _locations(excinfo)
+    logger = MagicMock()
+    item = build_document(_mutated(mutate), logger=logger).items[TEXT]
+    assert "unexpected" not in item
+    assert "unexpected" in str(logger.warning.call_args)
 
 
 @pytest.mark.unit

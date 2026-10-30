@@ -1318,12 +1318,10 @@ class ADR:
 
     def import_items_from_json(
         self,
-        json_file_path: str | Path,
+        document: str | Path | dict,
         *,
         on_error: "OnError" = "collect",
         base_dir: str | Path | None = None,
-        strict_keys: bool = False,
-        allow_external_paths: bool = True,
     ) -> "ImportResult":
         """Import ADR report items from a JSON document into database.
 
@@ -1338,20 +1336,16 @@ class ADR:
 
         Parameters
         ----------
-        json_file_path : str or pathlib.Path
-            Path to the JSON document.
+        document : str, pathlib.Path, or dict
+            Path to the JSON document, or the already-decoded document, for
+            example the result of ``json.load``.
         on_error : {'collect', 'raise'}, default: 'collect'
             ``'collect'`` records per-item failures and continues;
             ``'raise'`` stops at the first failure.
         base_dir : str or pathlib.Path, optional
             Directory that relative media paths resolve against. Defaults to
-            the directory containing ``json_file_path``.
-        strict_keys : bool, default: False
-            Treat unknown keys in the document as validation errors.
-        allow_external_paths : bool, default: True
-            Accept media paths that resolve outside ``base_dir``. Pass
-            ``False`` for documents from an untrusted producer, so that
-            absolute paths and ``..`` cannot reach other files.
+            the directory containing the JSON file, or to the current working
+            directory for a dict.
 
         Returns
         -------
@@ -1367,79 +1361,11 @@ class ADR:
         """
         # Imported lazily so that importing the package does not pull the
         # import machinery for users who never call this.
-        from ..utils.json_item_import import read_document
-
-        return self.import_items(
-            read_document(json_file_path),
-            on_error=on_error,
-            base_dir=base_dir if base_dir is not None else Path(json_file_path).parent,
-            strict_keys=strict_keys,
-            allow_external_paths=allow_external_paths,
-        )
-
-    def import_items(
-        self,
-        document: dict,
-        *,
-        on_error: "OnError" = "collect",
-        base_dir: str | Path | None = None,
-        strict_keys: bool = False,
-        allow_external_paths: bool = True,
-    ) -> "ImportResult":
-        """Import ADR report items from an already-decoded JSON document.
-
-        .. note::
-
-           **Beta.** The document schema and this API may change in a future
-           release. A breaking change to the format raises the document
-           ``schema_version`` major.
-
-        The dictionary counterpart of :meth:`import_items_from_json`, as
-        :meth:`load_templates` is of :meth:`load_templates_from_file`.
-
-        Parameters
-        ----------
-        document : dict
-            Decoded import document, for example the result of ``json.load``.
-        on_error : {'collect', 'raise'}, default: 'collect'
-            ``'collect'`` records per-item failures and continues;
-            ``'raise'`` stops at the first failure.
-        base_dir : str or pathlib.Path, optional
-            Directory that relative media paths resolve against. When omitted,
-            they resolve against the current working directory.
-        strict_keys : bool, default: False
-            Treat unknown keys in the document as validation errors.
-        allow_external_paths : bool, default: True
-            Accept media paths that resolve outside ``base_dir``. Pass
-            ``False`` for documents from an untrusted producer, so that
-            absolute paths and ``..`` cannot reach other files.
-
-        Returns
-        -------
-        ImportResult
-            Counts and any per-item failures.
-
-        Raises
-        ------
-        ImportItemValidationError
-            If the document violates the item import contract.
-        ImportItemVersionError
-            If the document schema version is unsupported.
-        """
-        from ..utils.json_item_import import build_document
-        from ..utils.json_item_import import import_items as import_document_items
+        from ..utils.json_item_import import import_items, load_document
 
         self.ensure_setup()
-        validated = build_document(
-            document,
-            base_dir=base_dir,
-            strict_keys=strict_keys,
-            allow_external_paths=allow_external_paths,
-            logger=self._logger,
-        )
-        return import_document_items(
-            validated, self._populate_item, on_error=on_error, logger=self._logger
-        )
+        validated = load_document(document, base_dir=base_dir, logger=self._logger)
+        return import_items(validated, self._populate_item, on_error=on_error, logger=self._logger)
 
     @staticmethod
     def _import_item_class(item_type: str) -> type[Item]:
@@ -1462,7 +1388,7 @@ class ADR:
         validators run on every imported item.
         """
         from ..utils.json_item_import import combine_tags
-        from ..utils.json_item_import.mapping import apply_properties, item_content, table_fields
+        from ..utils.json_item_import.mapping import item_content, table_fields
 
         item = self.create_item(
             self._import_item_class(item_data["item_type"]),
@@ -1473,13 +1399,11 @@ class ADR:
             tags=combine_tags(doc_tags, item_data["tags"]),
         )
 
-        # Only tables persist display fields and properties; the parser drops
-        # properties on every other item type.
+        # Only tables have display fields.
         if item_data["item_type"] == "table":
             try:
                 for key, value in table_fields(item_data).items():
                     setattr(item, key, value)
-                apply_properties(item, item_data["properties"], self._logger)
                 item.save()
             except Exception:
                 # create_item() already persisted the table, so remove it

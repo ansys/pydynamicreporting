@@ -38,12 +38,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from html.parser import HTMLParser
 import math
 from pathlib import PurePath
 import re
 from typing import Any
 
+from ...common_utils import HTMLTagParser
+from ...constants import ANIMATION_EXTENSIONS, IMAGE_EXTENSIONS, SCENE_EXTENSIONS
 from ...exceptions import ImportItemVersionError
 
 # --------------------------------------------------------------------------
@@ -72,17 +73,15 @@ ITEM_TYPES: tuple[str, ...] = tuple(ITEM_TYPE_TO_ADR_TYPE)
 """Closed set of ``item_type`` discriminator values."""
 
 MEDIA_EXTENSIONS: dict[str, tuple[str, ...] | None] = {
-    "image": ("png", "jpg", "tif", "tiff"),
-    "animation": ("mp4",),
-    "scene": ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"),
+    "image": IMAGE_EXTENSIONS,
+    "animation": ANIMATION_EXTENSIONS,
+    "scene": SCENE_EXTENSIONS,
     "file": None,
 }
 """Accepted lowercase file extensions per media ``item_type``; ``None`` accepts any.
 
-Copied from the serverless content validators, which are the strictest
-backend, because importing them would load Django. The drift guard asserts
-these stay equal to the serverless ``ALLOWED_EXT`` tuples and to the lists the
-REST payload setters accept.
+The tuples are the ones both backends validate against, so a path accepted
+here is accepted at save time.
 """
 
 # --------------------------------------------------------------------------
@@ -93,55 +92,23 @@ SCHEMA_VERSION = "1.0"
 """Schema version emitted and fully understood by this importer."""
 
 SUPPORTED_MAJOR = 1
-"""Highest document major version this importer accepts."""
+"""The only document major version this importer accepts."""
 
-# The format is deliberately 'MAJOR.MINOR' and not semver: a third component
-# would have no defined meaning for this contract, so it is rejected instead of
-# being silently ignored.
-_VERSION_RE = re.compile(r"([0-9]+)\.([0-9]+)")
+VERSION_PATTERN = rf"{SUPPORTED_MAJOR}\.[0-9]+"
+"""Accepted ``schema_version`` values, shared with the JSON Schema artifact.
 
-
-def parse_version(version: str) -> tuple[int, int]:
-    """Parse a ``"MAJOR.MINOR"`` schema version string.
-
-    Parameters
-    ----------
-    version : str
-        Version string, for example ``"1.3"``.
-
-    Returns
-    -------
-    tuple of (int, int)
-        The major and minor components.
-
-    Raises
-    ------
-    ImportItemVersionError
-        If ``version`` is not exactly two dot-separated integers.
-    """
-    if not isinstance(version, str):
-        raise ImportItemVersionError(
-            f"expected a 'MAJOR.MINOR' version string, got {type(version).__name__}"
-        )
-    match = _VERSION_RE.fullmatch(version)
-    if match is None:
-        raise ImportItemVersionError(
-            f"{version!r} is not a valid schema version; expected 'MAJOR.MINOR', for example '1.0'"
-        )
-    return int(match.group(1)), int(match.group(2))
+The format is deliberately 'MAJOR.MINOR' and not semver: a third component
+would have no defined meaning for this contract.
+"""
 
 
-def check_version(version: str | None, logger: object | None = None) -> str:
+def check_version(version: Any) -> str:
     """Validate a document schema version against this importer.
 
     Parameters
     ----------
-    version : str or None
-        Version declared by the document. ``None`` is treated as
-        :data:`SCHEMA_VERSION` with a logged warning.
-    logger : object, optional
-        Logger used for the missing-version warning and the
-        forward-compatibility note.
+    version : Any
+        Version declared by the document. ``None`` means :data:`SCHEMA_VERSION`.
 
     Returns
     -------
@@ -151,32 +118,16 @@ def check_version(version: str | None, logger: object | None = None) -> str:
     Raises
     ------
     ImportItemVersionError
-        If the version is malformed or its major exceeds
-        :data:`SUPPORTED_MAJOR`.
+        If the version is not ``"<SUPPORTED_MAJOR>.<minor>"``.
     """
     if version is None:
-        if logger is not None:
-            logger.warning(
-                "No 'schema_version' in the import document; assuming %s.", SCHEMA_VERSION
-            )
         return SCHEMA_VERSION
-
-    major, minor = parse_version(version)
-    if major > SUPPORTED_MAJOR:
-        raise ImportItemVersionError(
-            f"document major version {major} is newer than the supported major "
-            f"{SUPPORTED_MAJOR}; upgrade ansys-dynamicreporting-core to import it"
-        )
-
-    supported_major, supported_minor = parse_version(SCHEMA_VERSION)
-    if major == supported_major and minor > supported_minor and logger is not None:
-        logger.info(
-            "Import document declares schema version %s, newer than the supported %s; "
-            "unrecognized fields are retained but not interpreted.",
-            version,
-            SCHEMA_VERSION,
-        )
-    return version
+    if isinstance(version, str) and re.fullmatch(VERSION_PATTERN, version):
+        return version
+    raise ImportItemVersionError(
+        f"{version!r} is not a supported schema version; expected "
+        f"'{SUPPORTED_MAJOR}.<minor>', for example '{SCHEMA_VERSION}'"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -260,26 +211,9 @@ def is_non_finite(value: Any) -> bool:
     return isinstance(value, float) and not math.isfinite(value)
 
 
-class _TagDetector(HTMLParser):
-    """Records whether at least one start tag was seen."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.found = False
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self.found = True
-
-
 def validate_html(value: str) -> str | None:
-    """Require at least one HTML tag.
-
-    Mirrors the serverless ``HTMLContent`` validator, so an ``html`` item that
-    the serverless backend would reject fails validation for both backends.
-    """
-    detector = _TagDetector()
-    detector.feed(value)
-    return None if detector.found else "must contain at least one HTML tag"
+    """Require at least one HTML tag, using the serverless ``HTMLContent`` check."""
+    return None if HTMLTagParser().validate(value) else "must contain at least one HTML tag"
 
 
 def _extension_validator(allowed: tuple[str, ...]) -> Callable[[str], str | None]:
@@ -345,11 +279,6 @@ def coerce_rows(value: Any) -> tuple[tuple[Any, ...], ...]:
     return tuple(tuple(row) for row in value)
 
 
-def coerce_dict_tuple(value: Any) -> tuple[dict[str, Any], ...]:
-    """Freeze a list of objects."""
-    return tuple(dict(entry) for entry in value)
-
-
 def _array(
     name: str,
     item_kind: Any,
@@ -372,9 +301,6 @@ def _array(
         json_items={"$ref": f"#/$defs/{items}"} if isinstance(items, str) else items,
         description=description,
     )
-
-
-_NOT_APPLIED = "Accepted and retained in v1.0, but not applied to created items."
 
 
 # --------------------------------------------------------------------------
@@ -407,15 +333,6 @@ ITEM_COMMON: tuple[FieldSpec, ...] = (
         default=0,
         json_type="integer",
         description="Ordering hint within a report.",
-    ),
-    _array(
-        "properties",
-        dict,
-        "propertyObject",
-        "Escape hatch for table fields not promoted to first class. "
-        "Ignored with a warning on other item types.",
-        default_factory=tuple,
-        coerce=coerce_dict_tuple,
     ),
 )
 ITEM_COMMON_NAMES = frozenset(spec.name for spec in ITEM_COMMON)
@@ -500,20 +417,6 @@ TREE_NODE_SPEC: tuple[FieldSpec, ...] = (
     _array("children", dict, "treeNode", "Child nodes.", default_factory=tuple),
 )
 
-SESSION_SPEC: tuple[FieldSpec, ...] = (
-    FieldSpec("name", str, description="Session name."),
-    _TAGS,
-    FieldSpec("application", str, description="Producing application."),
-    FieldSpec("hostname", str, description="Host that produced the session."),
-)
-
-DATASET_SPEC: tuple[FieldSpec, ...] = (
-    FieldSpec("name", str, description="Dataset name."),
-    _TAGS,
-    FieldSpec("filename", str, description="Source file name."),
-    FieldSpec("format", str, description="Source file format."),
-)
-
 DOCUMENT_SPEC: tuple[FieldSpec, ...] = (
     FieldSpec(
         "schema_version",
@@ -529,14 +432,5 @@ DOCUMENT_SPEC: tuple[FieldSpec, ...] = (
         description="Names the producing application and groups imported content.",
     ),
     _TAGS,
-    FieldSpec(
-        "metadata",
-        dict,
-        default_factory=dict,
-        json_type="object",
-        description="Free-form producer metadata. Retained but not interpreted.",
-    ),
-    _array("sessions", dict, "session", _NOT_APPLIED, default_factory=tuple),
-    _array("datasets", dict, "dataset", _NOT_APPLIED, default_factory=tuple),
     _array("items", dict, "item", "Report items to create.", default_factory=tuple),
 )

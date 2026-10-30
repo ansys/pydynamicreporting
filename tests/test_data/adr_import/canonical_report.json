@@ -2,10 +2,6 @@
   "schema_version": "1.0",
   "app_id": "adr-mechanical",
   "tags": [{ "report": "thermal_run_42" }],
-  "metadata": {
-    "producer": "adr-mechanical",
-    "producer_version": "2026R1"
-  },
   "items": [
     {
       "item_type": "text",
@@ -62,8 +58,7 @@
       "plot": "line",
       "format": "floatdot1",
       "xaxis": "time",
-      "yaxis": ["T_max", "T_min"],
-      "properties": [{ "line_width": 2 }, { "table_title": "Probe temperatures" }]
+      "yaxis": ["T_max", "T_min"]
     },
     {
       "item_type": "tree",

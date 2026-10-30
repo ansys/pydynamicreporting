@@ -26,13 +26,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import numpy
 import pytest
 
 from ansys.dynamicreporting.core.utils.json_item_import.mapping import (
-    apply_properties,
     column_labels,
     derive_axes,
     flatten_tree,
@@ -233,124 +231,6 @@ def test_flatten_tree_preserves_an_explicit_key():
 @pytest.mark.unit
 def test_flatten_tree_of_nothing_is_empty():
     assert flatten_tree(()) == []
-
-
-# --------------------------------------------------------------------------
-# apply_properties
-# --------------------------------------------------------------------------
-
-
-class _Target:
-    """Stand-in item exposing a method, a property, and free attributes."""
-
-    def __init__(self):
-        self.name = "target"
-        self.line_width = None
-        self.table_title = None
-        self._private = None
-
-    def save(self):  # pragma: no cover - only used as a shadowing target
-        raise AssertionError("save must never be overwritten by a property")
-
-    @property
-    def plot(self):
-        return self._plot
-
-    @plot.setter
-    def plot(self, value):
-        self._plot = value
-
-
-@pytest.mark.unit
-def test_apply_properties_sets_public_fields():
-    target = _Target()
-    applied = apply_properties(target, [{"line_width": 2}, {"table_title": "Probe"}])
-    assert target.line_width == 2
-    assert target.table_title == "Probe"
-    assert applied == ["line_width", "table_title"]
-
-
-@pytest.mark.unit
-def test_apply_properties_reports_an_unknown_field():
-    # Both backends drop unrecognized names at save time, so the escape hatch
-    # must report them rather than appear to accept them.
-    target = _Target()
-    logger = MagicMock()
-    applied = apply_properties(target, [{"not_an_adr_field": 1}], logger)
-    assert applied == []
-    assert not hasattr(target, "not_an_adr_field")
-    assert any("not a known ADR field" in str(call) for call in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
-def test_apply_properties_uses_a_supplied_setter():
-    target = _Target()
-    seen: list[tuple] = []
-    apply_properties(target, [{"line_width": 2}], setter=lambda o, k, v: seen.append((k, v)))
-    assert seen == [("line_width", 2)]
-
-
-@pytest.mark.unit
-def test_apply_properties_allows_properties():
-    target = _Target()
-    apply_properties(target, [{"plot": "line"}])
-    assert target.plot == "line"
-
-
-@pytest.mark.unit
-def test_apply_properties_refuses_to_shadow_a_method():
-    target = _Target()
-    logger = MagicMock()
-    apply_properties(target, [{"save": "oops"}], logger)
-    assert callable(target.save)
-    assert any("shadow a method" in str(call) for call in logger.warning.call_args_list)
-
-
-@pytest.mark.unit
-def test_apply_properties_skips_private_keys():
-    target = _Target()
-    logger = MagicMock()
-    apply_properties(target, [{"_private": "oops"}], logger)
-    assert target._private is None
-    logger.warning.assert_called_once()
-
-
-@pytest.mark.unit
-def test_apply_properties_skips_non_string_keys():
-    target = _Target()
-    logger = MagicMock()
-    apply_properties(target, [{7: "oops"}], logger)
-    logger.warning.assert_called_once()
-
-
-@pytest.mark.unit
-def test_apply_properties_logs_by_name_not_index():
-    target = _Target()
-    logger = MagicMock()
-    apply_properties(target, [{"save": 1}], logger)
-    assert "target" in str(logger.warning.call_args)
-
-
-@pytest.mark.unit
-def test_apply_properties_of_nothing_is_a_noop():
-    target = _Target()
-    apply_properties(target, ())
-    apply_properties(target, None)
-    assert target.line_width is None
-
-
-@pytest.mark.unit
-def test_apply_properties_without_a_logger_is_silent():
-    target = _Target()
-    apply_properties(target, [{"save": 1}, {"_x": 2}])
-    assert callable(target.save)
-
-
-@pytest.mark.unit
-def test_apply_properties_later_entries_win():
-    target = _Target()
-    apply_properties(target, [{"line_width": 1}, {"line_width": 9}])
-    assert target.line_width == 9
 
 
 # --------------------------------------------------------------------------

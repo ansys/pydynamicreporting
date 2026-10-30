@@ -32,7 +32,7 @@ import importlib.util
 import inspect
 import json
 from pathlib import Path
-import re
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -48,24 +48,14 @@ from ansys.dynamicreporting.core.serverless import (
     Table,
     Tree,
 )
-from ansys.dynamicreporting.core.serverless.item import (
-    AnimContent,
-    FileContent,
-    HTMLParser,
-    ImageContent,
-    ItemType,
-    SceneContent,
-)
+from ansys.dynamicreporting.core.serverless.item import ItemType
 from ansys.dynamicreporting.core.utils.json_item_import.parser import load_document
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     ITEM_TYPE_TO_ADR_TYPE,
     ITEM_TYPES,
-    MEDIA_EXTENSIONS,
     SCHEMA_VERSION,
     TABLE_FIELDS,
-    validate_html,
 )
-from ansys.dynamicreporting.core.utils.report_objects import ItemREST
 from ansys.dynamicreporting.core.utils.report_remote_server import Server
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -84,7 +74,7 @@ ITEM_CLASS = {item_type: ADR._import_item_class(item_type) for item_type in ITEM
 POPULATE_HOOKS = (Server._populate_item, ADR._populate_item)
 
 # The mapping helpers both hooks must call instead of inlining their own copy.
-SHARED_HELPERS = ("item_content", "table_fields", "apply_properties", "combine_tags")
+SHARED_HELPERS = ("item_content", "table_fields", "combine_tags")
 
 
 def _load_generator():
@@ -150,51 +140,6 @@ def test_each_item_class_declares_the_mapped_type(item_type):
 @pytest.mark.unit
 def test_both_backends_declare_every_item_type():
     assert set(ITEM_CLASS) == set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
-
-
-# --------------------------------------------------------------------------
-# Validation mirrors the serverless content validators
-# --------------------------------------------------------------------------
-
-SERVERLESS_MEDIA_VALIDATORS = {
-    "image": ImageContent,
-    "animation": AnimContent,
-    "scene": SceneContent,
-    "file": FileContent,
-}
-
-
-@pytest.mark.unit
-def test_media_extensions_cover_exactly_the_media_item_types():
-    assert set(MEDIA_EXTENSIONS) == set(SERVERLESS_MEDIA_VALIDATORS)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("item_type", sorted(SERVERLESS_MEDIA_VALIDATORS))
-def test_media_extensions_match_the_serverless_validators(item_type):
-    assert MEDIA_EXTENSIONS[item_type] == SERVERLESS_MEDIA_VALIDATORS[item_type].ALLOWED_EXT
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("setter", "item_type"),
-    [("set_payload_animation", "animation"), ("set_payload_scene", "scene")],
-)
-def test_media_extensions_match_the_rest_payload_setters(setter, item_type, tmp_path: Path):
-    bad = tmp_path / "payload.unsupported"
-    bad.write_bytes(b"payload")
-    allowed = list(MEDIA_EXTENSIONS[item_type])
-    with pytest.raises(ValueError, match=re.escape(f"Allowed types: {allowed}")):
-        getattr(ItemREST(), setter)(str(bad))
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "value",
-    ["<p>x</p>", "<br/>", "text <b>bold</b>", "plain text", "a < b", "<p", "", "</p>"],
-)
-def test_html_validation_agrees_with_the_serverless_parser(value):
-    assert (validate_html(value) is None) is HTMLParser().validate(value)
 
 
 # --------------------------------------------------------------------------
@@ -288,6 +233,6 @@ def test_sample_document_demonstrates_every_item_type():
 def test_sample_document_has_no_unknown_keys():
     # An unknown key here would still validate, but it would be teaching a
     # misspelling to anyone who copies the sample.
-    document = load_document(SAMPLE)
-    assert document.extra == {}
-    assert all(item["extra"] == {} for item in document.items)
+    logger = MagicMock()
+    load_document(SAMPLE, logger=logger)
+    logger.warning.assert_not_called()

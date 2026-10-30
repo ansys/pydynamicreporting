@@ -22,10 +22,9 @@
 
 """Shared mapping helpers for the ADR item import backends.
 
-``item_content``, ``table_fields``, ``apply_properties``, and ``combine_tags``
-are the only helpers the backends call; they keep the REST and serverless
-models fed with identical values. The lower-level helpers are their building
-blocks.
+``item_content``, ``table_fields``, and ``combine_tags`` are the only helpers
+the backends call; they keep the REST and serverless models fed with identical
+values. The lower-level helpers are their building blocks.
 
 Both backends are required to render tags through :func:`normalize_tags` and
 :func:`combine_tags`. A backend that builds its own ``key=value`` string will
@@ -41,11 +40,9 @@ from typing import Any
 
 import numpy
 
-from ...adr_utils import table_attr
 from ..report_objects import ItemREST
 
 __all__ = [
-    "apply_properties",
     "column_labels",
     "combine_tags",
     "derive_axes",
@@ -62,9 +59,6 @@ _SLUG_RE = re.compile(r"[^0-9a-z]+")
 # Reuses the REST model's quoting rather than the serverless
 # BaseModel._add_quotes, which would pull in Django.
 _quote = ItemREST.add_quotes
-
-KNOWN_PROPERTY_NAMES: frozenset[str] = frozenset(table_attr)
-"""Property names ADR recognizes; anything else is reported rather than dropped."""
 
 
 def rows_to_array(rows: Any, column_count: int | None = None) -> numpy.ndarray:
@@ -160,68 +154,6 @@ def flatten_tree(nodes: Any) -> list[dict[str, Any]]:
     return [
         _convert(node, f"node_{index}_{_slug(node['name'])}") for index, node in enumerate(nodes)
     ]
-
-
-def _item_label(item: Any) -> str:
-    """Return a human-readable name for log messages."""
-    return getattr(item, "name", None) or getattr(item, "obj_name", None) or "<unnamed>"
-
-
-def apply_properties(
-    item: Any, properties: Any, logger: Any = None, setter: Any = None
-) -> list[str]:
-    """Apply escape-hatch properties onto a created item.
-
-    Keys that are private, that would shadow a method, or that ADR does not
-    recognize are skipped and logged, so a document cannot overwrite ``save``
-    and cannot have a misspelled property silently discarded.
-
-    Parameters
-    ----------
-    item : Any
-        Backend item object.
-    properties : sequence of dict
-        One-key objects from the item ``properties`` array.
-    logger : object, optional
-        Logger used to report skipped keys.
-    setter : callable, optional
-        Called as ``setter(item, key, value)``. Defaults to :func:`setattr`.
-        The REST adapter passes a deferred setter so that applying several
-        properties does not re-upload the payload once per key.
-
-    Returns
-    -------
-    list of str
-        Names actually applied, in document order.
-    """
-    if not properties:
-        return []
-
-    assign = setter or setattr
-
-    flat: dict[str, Any] = {}
-    for entry in properties:
-        flat.update(entry)
-
-    applied: list[str] = []
-    for key, value in flat.items():
-        if not isinstance(key, str) or key.startswith("_"):
-            reason = "is not a public field name"
-        elif callable(attribute := getattr(type(item), key, None)) and not isinstance(
-            attribute, property
-        ):
-            reason = "would shadow a method"
-        elif key not in KNOWN_PROPERTY_NAMES:
-            # Both backends drop unrecognized names at save time, so report
-            # them here rather than letting them disappear.
-            reason = "is not a known ADR field"
-        else:
-            assign(item, key, value)
-            applied.append(key)
-            continue
-        if logger is not None:
-            logger.warning("Item %r: property %r %s; ignored.", _item_label(item), key, reason)
-    return applied
 
 
 def resolve_path(path: str, base_dir: str | None = None) -> str:

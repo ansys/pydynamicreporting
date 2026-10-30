@@ -65,7 +65,6 @@ document = {
     "schema_version": "1.0",
     "app_id": "thermal-run-42",
     "tags": [{"report": "thermal_run_42"}],
-    "metadata": {"producer": "adr-mechanical", "producer_version": "2026R1"},
     "items": [
         {
             "item_type": "text",
@@ -86,7 +85,6 @@ document = {
             "columns": ["time", "T_max", "T_min"],
             "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
             "plot": "line",
-            "properties": [{"table_title": "Probe temperatures"}],
         },
         {
             "item_type": "tree",

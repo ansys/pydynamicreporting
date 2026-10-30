@@ -155,7 +155,7 @@ def test_matches_accepts_bool_when_bool_is_declared():
 def test_explicit_null_is_replaced_by_the_default():
     errors = ErrorCollector()
     spec = (FieldSpec("opt", str, default="fallback"),)
-    values, _ = apply_spec({"opt": None}, spec, "obj", errors)
+    values = apply_spec({"opt": None}, spec, "obj", errors)
     assert values["opt"] == "fallback"
     assert errors.problems == []
 

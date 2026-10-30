@@ -23,31 +23,6 @@
         }
       ]
     },
-    "dataset": {
-      "additionalProperties": true,
-      "properties": {
-        "filename": {
-          "description": "Source file name.",
-          "type": "string"
-        },
-        "format": {
-          "description": "Source file format.",
-          "type": "string"
-        },
-        "name": {
-          "description": "Dataset name.",
-          "type": "string"
-        },
-        "tags": {
-          "description": "Tags applied to this object.",
-          "items": {
-            "$ref": "#/$defs/tagObject"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
     "fileItem": {
       "allOf": [
         {
@@ -155,13 +130,6 @@
           "minLength": 1,
           "type": "string"
         },
-        "properties": {
-          "description": "Escape hatch for table fields not promoted to first class. Ignored with a warning on other item types.",
-          "items": {
-            "$ref": "#/$defs/propertyObject"
-          },
-          "type": "array"
-        },
         "sequence": {
           "description": "Ordering hint within a report.",
           "type": "integer"
@@ -182,20 +150,6 @@
         "item_type",
         "name"
       ],
-      "type": "object"
-    },
-    "propertyObject": {
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
-      },
-      "minProperties": 1,
       "type": "object"
     },
     "sceneItem": {
@@ -220,31 +174,6 @@
           ]
         }
       ]
-    },
-    "session": {
-      "additionalProperties": true,
-      "properties": {
-        "application": {
-          "description": "Producing application.",
-          "type": "string"
-        },
-        "hostname": {
-          "description": "Host that produced the session.",
-          "type": "string"
-        },
-        "name": {
-          "description": "Session name.",
-          "type": "string"
-        },
-        "tags": {
-          "description": "Tags applied to this object.",
-          "items": {
-            "$ref": "#/$defs/tagObject"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
     },
     "tableColumn": {
       "oneOf": [
@@ -440,13 +369,6 @@
       "minLength": 1,
       "type": "string"
     },
-    "datasets": {
-      "description": "Accepted and retained in v1.0, but not applied to created items.",
-      "items": {
-        "$ref": "#/$defs/dataset"
-      },
-      "type": "array"
-    },
     "items": {
       "description": "Report items to create.",
       "items": {
@@ -454,22 +376,11 @@
       },
       "type": "array"
     },
-    "metadata": {
-      "description": "Free-form producer metadata. Retained but not interpreted.",
-      "type": "object"
-    },
     "schema_version": {
       "default": "1.0",
       "description": "Import schema version, 'MAJOR.MINOR'.",
-      "pattern": "^[0-9]+\\.[0-9]+$",
+      "pattern": "^1\\.[0-9]+$",
       "type": "string"
-    },
-    "sessions": {
-      "description": "Accepted and retained in v1.0, but not applied to created items.",
-      "items": {
-        "$ref": "#/$defs/session"
-      },
-      "type": "array"
     },
     "tags": {
       "description": "Tags applied to this object.",

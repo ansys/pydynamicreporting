@@ -765,12 +765,10 @@ class Service:
 
     def import_items_from_json(
         self,
-        json_file_path: str | Path,
+        document: str | Path | dict,
         *,
         on_error: "OnError" = "collect",
         base_dir: str | Path | None = None,
-        strict_keys: bool = False,
-        allow_external_paths: bool = True,
     ) -> "ImportResult":
         """Import ADR report items from a JSON document into the connected service.
 
@@ -785,20 +783,16 @@ class Service:
 
         Parameters
         ----------
-        json_file_path : str or pathlib.Path
-            Path to the JSON document.
+        document : str, pathlib.Path, or dict
+            Path to the JSON document, or the already-decoded document, for
+            example the result of ``json.load``.
         on_error : {'collect', 'raise'}, default: 'collect'
             ``'collect'`` records per-item failures and continues;
             ``'raise'`` stops at the first failure.
         base_dir : str or pathlib.Path, optional
             Directory that relative media paths resolve against. Defaults to
-            the directory containing ``json_file_path``.
-        strict_keys : bool, default: False
-            Treat unknown keys in the document as validation errors.
-        allow_external_paths : bool, default: True
-            Accept media paths that resolve outside ``base_dir``. Pass
-            ``False`` for documents from an untrusted producer, so that
-            absolute paths and ``..`` cannot reach other files.
+            the directory containing the JSON file, or to the current working
+            directory for a dict.
 
         Returns
         -------
@@ -818,12 +812,7 @@ class Service:
             self.logger.error("Error: no connection to any service")
             raise ConnectionToServiceError
         return self.serverobj.import_items_from_json(
-            json_file_path,
-            on_error=on_error,
-            base_dir=base_dir,
-            strict_keys=strict_keys,
-            allow_external_paths=allow_external_paths,
-            logger=self.logger,
+            document, on_error=on_error, base_dir=base_dir, logger=self.logger
         )
 
     def query(

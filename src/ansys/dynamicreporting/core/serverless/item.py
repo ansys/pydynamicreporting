@@ -38,7 +38,6 @@ the serverless ADR API:
 from dataclasses import field
 from datetime import datetime
 from contextlib import suppress
-from html.parser import HTMLParser as BaseHTMLParser
 import io
 from pathlib import Path
 import pickle  # nosec B403
@@ -52,6 +51,13 @@ from django.utils import timezone
 import numpy
 
 from ..adr_utils import table_attr
+from ..common_utils import HTMLTagParser
+from ..constants import (
+    ANIMATION_EXTENSIONS,
+    ENHANCED_IMAGE_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    SCENE_EXTENSIONS,
+)
 from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
@@ -115,35 +121,8 @@ class Dataset(BaseModel):
     _orm_model: str = "data.models.Dataset"
 
 
-class HTMLParser(BaseHTMLParser):
-    """Minimal HTML parser used to validate HTML content.
-
-    The parser records all encountered start tags and exposes a
-    :meth:`validate` utility that returns ``True`` if at least one tag
-    has been seen.
-    """
-
-    def __init__(self):
-        """Initialize an empty parser state."""
-        super().__init__()
-        self._start_tags = []
-
-    def handle_starttag(self, tag, attrs):
-        """Record each start tag encountered during parsing."""
-        self._start_tags.append(tag)
-
-    def validate(self, string):
-        """Return ``True`` if the input string contains at least one tag."""
-        self.feed(string)
-        for tag in self._start_tags:
-            if tag:
-                return True
-        return False
-
-    def reset(self):
-        """Reset the parser state and clear any recorded tags."""
-        super().reset()
-        self._start_tags = []
+# Kept under its historical name so existing imports from this module still work.
+HTMLParser = HTMLTagParser
 
 
 class ItemContent(Validator):
@@ -306,8 +285,8 @@ class FileValidator(StringContent):
 class ImageContent(FileValidator):
     """Validator for image payloads, including enhanced images."""
 
-    ENHANCED_EXT = ("tif", "tiff")
-    ALLOWED_EXT = ("png", "jpg") + ENHANCED_EXT
+    ENHANCED_EXT = ENHANCED_IMAGE_EXTENSIONS
+    ALLOWED_EXT = IMAGE_EXTENSIONS
 
     def process(self, value, obj):
         """Validate an image file and record its metadata."""
@@ -329,13 +308,13 @@ class ImageContent(FileValidator):
 class AnimContent(FileValidator):
     """Validator for animation/video payloads."""
 
-    ALLOWED_EXT = ("mp4",)
+    ALLOWED_EXT = ANIMATION_EXTENSIONS
 
 
 class SceneContent(FileValidator):
     """Validator for 3D scene and geometry payloads."""
 
-    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj")
+    ALLOWED_EXT = SCENE_EXTENSIONS
 
 
 class FileContent(FileValidator):

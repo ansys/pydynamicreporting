@@ -36,21 +36,18 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 import json
+import os
 from pathlib import Path
 from typing import Any, TypeVar
 
 from ...exceptions import ImportItemValidationError
-from .models import DatasetPayload, ImportDocument, SessionPayload
+from .models import ImportDocument
 from .spec import (
     ANY,
-    DATASET_SPEC,
     DOCUMENT_SPEC,
-    ITEM_COMMON_NAMES,
     ITEM_SPECS,
     ITEM_TYPES,
-    MEDIA_EXTENSIONS,
     NON_FINITE_MESSAGE,
-    SESSION_SPEC,
     TREE_NODE_SPEC,
     FieldSpec,
     check_version,
@@ -181,42 +178,37 @@ def _check_value(value: Any, spec: FieldSpec, location: str, errors: ErrorCollec
 
 def apply_spec(
     raw: dict[str, Any],
-    specs: Iterable[FieldSpec],
+    specs: tuple[FieldSpec, ...],
     location: str,
     errors: ErrorCollector,
     *,
-    strict_keys: bool = False,
     logger: Any = None,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> dict[str, Any]:
     """Validate ``raw`` against ``specs``.
 
     Parameters
     ----------
     raw : dict
         Raw JSON object.
-    specs : iterable of FieldSpec
+    specs : tuple of FieldSpec
         Field table to validate against.
     location : str
         Dotted/indexed path used in problem reports.
     errors : ErrorCollector
         Collector that receives every problem found.
-    strict_keys : bool, default: False
-        Promote unknown-key warnings to validation errors.
     logger : object, optional
-        Logger used for unknown-key warnings.
+        Logger used to warn about unknown keys, which are ignored.
 
     Returns
     -------
-    tuple of (dict, dict)
-        Normalized field values, and the retained unknown keys.
+    dict
+        Normalized field values, keyed by field name.
     """
     values: dict[str, Any] = {}
-    consumed: set[str] = set()
 
     for spec in specs:
         field_location = f"{location}.{spec.name}" if location else spec.name
         if spec.name in raw:
-            consumed.add(spec.name)
             checked = _check_value(raw[spec.name], spec, field_location, errors)
         else:
             if spec.required:
@@ -224,15 +216,12 @@ def apply_spec(
             checked = _INVALID
         values[spec.name] = spec.default_value() if checked is _INVALID else checked
 
-    extra = {key: value for key, value in raw.items() if key not in consumed}
-    for key in extra:
-        message = f"unknown key {key!r}"
-        if strict_keys:
-            errors.add(location, message)
-        elif logger is not None:
-            logger.warning("%s: %s is retained but not interpreted.", location, message)
+    if logger is not None:
+        for key in raw:
+            if key not in values:
+                logger.warning("%s: unknown key %r is ignored.", location or "<document>", key)
 
-    return values, extra
+    return values
 
 
 def _build_each(raws: Iterable[Any], build: Callable[[Any, int], _T | None]) -> tuple[_T, ...]:
@@ -263,7 +252,6 @@ def build_tree_node(
     location: str,
     errors: ErrorCollector,
     *,
-    strict_keys: bool = False,
     logger: Any = None,
     depth: int = 1,
 ) -> dict[str, Any] | None:
@@ -276,9 +264,7 @@ def build_tree_node(
         errors.add(location, f"tree nesting is deeper than {MAX_TREE_DEPTH} levels")
         return None
 
-    values, _ = apply_spec(
-        raw, TREE_NODE_SPEC, location, errors, strict_keys=strict_keys, logger=logger
-    )
+    values = apply_spec(raw, TREE_NODE_SPEC, location, errors, logger=logger)
 
     value = values["value"]
     if value is None:
@@ -293,7 +279,6 @@ def build_tree_node(
             child,
             f"{location}.children[{index}]",
             errors,
-            strict_keys=strict_keys,
             logger=logger,
             depth=depth + 1,
         ),
@@ -340,8 +325,6 @@ def build_item(
     errors: ErrorCollector,
     *,
     base_dir: str | None = None,
-    strict_keys: bool = False,
-    allow_external_paths: bool = True,
     logger: Any = None,
 ) -> dict[str, Any] | None:
     """Build one item payload from the document ``items`` array."""
@@ -356,9 +339,7 @@ def build_item(
         errors.add(f"{location}.item_type", f"expected one of [{allowed}], got {item_type!r}")
         return None
 
-    values, extra = apply_spec(
-        raw, ITEM_SPECS[item_type], location, errors, strict_keys=strict_keys, logger=logger
-    )
+    values = apply_spec(raw, ITEM_SPECS[item_type], location, errors, logger=logger)
 
     if item_type == "table":
         _validate_table(values, location, errors)
@@ -366,110 +347,17 @@ def build_item(
         values["nodes"] = _build_each(
             values["nodes"] or (),
             lambda node, node_index: build_tree_node(
-                node,
-                f"{location}.nodes[{node_index}]",
-                errors,
-                strict_keys=strict_keys,
-                logger=logger,
+                node, f"{location}.nodes[{node_index}]", errors, logger=logger
             ),
         )
 
-    if item_type != "table" and values["properties"]:
-        # Only tables persist properties, so neither backend would store
-        # them here; report and drop them rather than discard them silently.
-        if logger is not None:
-            for key in sorted({key for entry in values["properties"] for key in entry}, key=str):
-                logger.warning(
-                    "%s: property %r is ignored; only table items accept properties.",
-                    location,
-                    key,
-                )
-        values["properties"] = ()
-
-    if logger is not None and values["properties"]:
-        _warn_about_property_conflicts(values, location, logger)
-
-    if not allow_external_paths and item_type in MEDIA_EXTENSIONS and values["path"] is not None:
-        _check_path_containment(values["path"], base_dir, f"{location}.path", errors)
-
-    return {**values, "extra": extra, "base_dir": base_dir}
-
-
-def _warn_about_property_conflicts(values: dict[str, Any], location: str, logger: Any) -> None:
-    """Report table properties that silently replace another value.
-
-    Properties are applied after the first-class fields and the
-    column-derived ``labels_row``, so a property of the same name wins. When
-    the same key appears in several entries, the last one wins.
-    """
-    seen: set[str] = set()
-    duplicated: set[str] = set()
-    for entry in values["properties"]:
-        for key in entry:
-            if key in seen:
-                duplicated.add(key)
-            seen.add(key)
-
-    for key in sorted(duplicated, key=str):
-        logger.warning("%s: property %r is set more than once; the last value wins.", location, key)
-    for key in sorted(seen & (values.keys() - ITEM_COMMON_NAMES), key=str):
-        logger.warning("%s: property %r overrides the first-class %r field.", location, key, key)
-    if "labels_row" in seen:
-        logger.warning(
-            "%s: property 'labels_row' overrides the labels derived from 'columns'.", location
-        )
-
-
-def _check_path_containment(
-    path: str, base_dir: str | None, location: str, errors: ErrorCollector
-) -> None:
-    """Reject a media path that resolves outside ``base_dir``.
-
-    Resolution follows symbolic links, so a link inside ``base_dir`` that
-    points elsewhere is rejected too. Without a ``base_dir``, relative paths
-    resolve against the working directory, so that is the boundary.
-    """
-    base = Path(base_dir or ".").resolve()
-    # Joining an absolute path discards ``base``, so absolute paths are
-    # checked against the boundary like relative ones.
-    target = (base / path).resolve()
-    if not target.is_relative_to(base):
-        errors.add(
-            location,
-            f"{path!r} resolves outside {str(base)!r}; pass allow_external_paths=True to allow it",
-        )
-
-
-def _build_payloads(
-    document: dict[str, Any],
-    key: str,
-    specs: tuple[FieldSpec, ...],
-    factory: Callable[..., _T],
-    errors: ErrorCollector,
-    strict_keys: bool,
-    logger: Any,
-) -> tuple[_T, ...]:
-    """Build the session or dataset payloads listed under ``document[key]``."""
-
-    def build(raw: Any, index: int) -> _T | None:
-        location = f"{key}[{index}]"
-        if not isinstance(raw, dict):
-            errors.add(location, f"expected an object, got {type(raw).__name__}")
-            return None
-        values, extra = apply_spec(
-            raw, specs, location, errors, strict_keys=strict_keys, logger=logger
-        )
-        return factory(**values, extra=extra)
-
-    return _build_each(document[key], build)
+    return {**values, "base_dir": base_dir}
 
 
 def build_document(
     raw: Any,
     *,
     base_dir: str | Path | None = None,
-    strict_keys: bool = False,
-    allow_external_paths: bool = True,
     logger: Any = None,
 ) -> ImportDocument:
     """Validate a raw mapping and build an :class:`ImportDocument`.
@@ -480,13 +368,8 @@ def build_document(
         Decoded JSON document.
     base_dir : str or pathlib.Path, optional
         Directory that relative media paths resolve against.
-    strict_keys : bool, default: False
-        Treat unknown keys as validation errors.
-    allow_external_paths : bool, default: True
-        Accept media paths that resolve outside ``base_dir``. When ``False``,
-        such paths, including absolute ones, are validation errors.
     logger : object, optional
-        Logger used for warnings and notes.
+        Logger used for warnings.
 
     Returns
     -------
@@ -499,7 +382,7 @@ def build_document(
         If the document violates the contract. The error carries every
         problem found during the pass.
     ImportItemVersionError
-        If the declared schema version is malformed or too new.
+        If the declared schema version is not supported.
     """
     errors = ErrorCollector()
     if not isinstance(raw, dict):
@@ -509,53 +392,25 @@ def build_document(
     base = None if base_dir is None else str(base_dir)
 
     # Version is an envelope-level precondition: fail before anything else is
-    # interpreted, because a newer major may redefine every field below.
-    schema_version = check_version(raw.get("schema_version"), logger)
+    # interpreted, because another major may redefine every field below.
+    schema_version = check_version(raw.get("schema_version"))
 
-    values, extra = apply_spec(
-        raw, DOCUMENT_SPEC, "", errors, strict_keys=strict_keys, logger=logger
-    )
-
-    sessions = _build_payloads(
-        values, "sessions", SESSION_SPEC, SessionPayload, errors, strict_keys, logger
-    )
-    datasets = _build_payloads(
-        values, "datasets", DATASET_SPEC, DatasetPayload, errors, strict_keys, logger
-    )
+    values = apply_spec(raw, DOCUMENT_SPEC, "", errors, logger=logger)
     items = _build_each(
         values["items"],
-        lambda item_raw, index: build_item(
-            item_raw,
-            index,
-            errors,
-            base_dir=base,
-            strict_keys=strict_keys,
-            allow_external_paths=allow_external_paths,
-            logger=logger,
-        ),
+        lambda item_raw, index: build_item(item_raw, index, errors, base_dir=base, logger=logger),
     )
 
     errors.raise_if_any()
 
-    if logger is not None:
-        if sessions or datasets:
-            logger.info(
-                "'sessions' and 'datasets' are accepted but not applied in schema version %s; "
-                "items use the backend defaults.",
-                schema_version,
-            )
-        if not items:
-            logger.warning("The import document declares no items.")
+    if logger is not None and not items:
+        logger.warning("The import document declares no items.")
 
     return ImportDocument(
         schema_version=schema_version,
         app_id=values["app_id"],
         tags=values["tags"],
-        metadata=values["metadata"],
-        sessions=sessions,
-        datasets=datasets,
         items=items,
-        extra=extra,
         base_dir=base,
     )
 
@@ -597,29 +452,23 @@ def read_document(path: str | Path) -> Any:
 
 
 def load_document(
-    path: str | Path,
+    document: str | Path | dict[str, Any],
     *,
     base_dir: str | Path | None = None,
-    strict_keys: bool = False,
-    allow_external_paths: bool = True,
     logger: Any = None,
 ) -> ImportDocument:
-    """Read and validate an import document from a JSON file.
+    """Validate an import document given as a JSON file path or a decoded dict.
 
     Parameters
     ----------
-    path : str or pathlib.Path
-        Path to the JSON document.
+    document : str, pathlib.Path, or dict
+        Path to the JSON document, or the already-decoded document.
     base_dir : str or pathlib.Path, optional
         Directory that relative media paths resolve against. Defaults to the
-        directory containing ``path``.
-    strict_keys : bool, default: False
-        Treat unknown keys as validation errors.
-    allow_external_paths : bool, default: True
-        Accept media paths that resolve outside ``base_dir``. When ``False``,
-        such paths, including absolute ones, are validation errors.
+        directory containing the file, or to the current working directory
+        for a dict.
     logger : object, optional
-        Logger used for warnings and notes.
+        Logger used for warnings.
 
     Returns
     -------
@@ -629,15 +478,15 @@ def load_document(
     Raises
     ------
     ImportItemValidationError
-        If the file cannot be read, is not UTF-8, is not valid JSON, or
+        If the file cannot be read, is not valid JSON, or the document
         violates the contract.
     ImportItemVersionError
-        If the declared schema version is malformed or too new.
+        If the declared schema version is not supported.
     """
-    return build_document(
-        read_document(path),
-        base_dir=base_dir if base_dir is not None else Path(path).parent,
-        strict_keys=strict_keys,
-        allow_external_paths=allow_external_paths,
-        logger=logger,
-    )
+    if isinstance(document, (str, os.PathLike)):
+        raw = read_document(document)
+        if base_dir is None:
+            base_dir = Path(document).parent
+    else:
+        raw = document
+    return build_document(raw, base_dir=base_dir, logger=logger)

@@ -33,45 +33,13 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class SessionPayload:
-    """A validated entry of the document ``sessions`` array.
-
-    Accepted and retained in v1.0, but not applied to created items.
-    """
-
-    name: str | None = None
-    tags: tuple[dict[str, Any], ...] = ()
-    application: str | None = None
-    hostname: str | None = None
-    extra: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class DatasetPayload:
-    """A validated entry of the document ``datasets`` array.
-
-    Accepted and retained in v1.0, but not applied to created items.
-    """
-
-    name: str | None = None
-    tags: tuple[dict[str, Any], ...] = ()
-    filename: str | None = None
-    format: str | None = None
-    extra: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
 class ImportDocument:
     """A validated ADR import document."""
 
     schema_version: str
     app_id: str
     tags: tuple[dict[str, Any], ...] = ()
-    metadata: dict[str, Any] = field(default_factory=dict)
-    sessions: tuple[SessionPayload, ...] = ()
-    datasets: tuple[DatasetPayload, ...] = ()
     items: tuple[dict[str, Any], ...] = ()
-    extra: dict[str, Any] = field(default_factory=dict)
     base_dir: str | None = None
 
 

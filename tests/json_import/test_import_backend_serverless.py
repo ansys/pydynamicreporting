@@ -217,21 +217,6 @@ def test_simple_item_is_not_saved_a_second_time(adr):
 
 
 @pytest.mark.unit
-def test_table_properties_are_applied_before_the_single_save(adr):
-    item = adr._populate_item(_table_model(properties=[{"line_width": 2}]), "")
-    assert item.line_width == 2
-    item.save.assert_called_once()
-
-
-@pytest.mark.unit
-def test_properties_on_a_non_table_item_never_trigger_a_save(adr):
-    # The parser drops them, so there is nothing to write back.
-    model = _item({"item_type": "text", "name": "n", "value": "v", "properties": [{"title": "t"}]})
-    item = adr._populate_item(model, "")
-    item.save.assert_not_called()
-
-
-@pytest.mark.unit
 def test_a_failed_table_save_removes_the_created_table(adr):
     # create_item() has already persisted the row; leaving it would keep a
     # table without labels or axes while the import reports a failure.
@@ -302,13 +287,6 @@ def test_import_forwards_on_error(adr, tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_import_forwards_strict_keys(adr, tmp_path: Path):
-    with patch.object(ADR, "ensure_setup"):
-        with pytest.raises(ImportItemValidationError):
-            adr.import_items_from_json(_write(tmp_path, surprise=1), strict_keys=True)
-
-
-@pytest.mark.unit
 def test_import_logs_through_the_adr_logger(adr, tmp_path: Path):
     adr.create_item.side_effect = RuntimeError("db down")
     path = _write(tmp_path, items=[{"item_type": "text", "name": "t", "value": "v"}])
@@ -318,7 +296,7 @@ def test_import_logs_through_the_adr_logger(adr, tmp_path: Path):
 
 
 # --------------------------------------------------------------------------
-# ADR.import_items (dict entry point)
+# Dict documents
 # --------------------------------------------------------------------------
 
 
@@ -327,48 +305,25 @@ def _document(**overrides) -> dict:
 
 
 @pytest.mark.unit
-def test_import_from_json_delegates_to_import_items(adr, tmp_path: Path):
-    # Mirrors load_templates_from_file -> load_templates.
-    path = _write(tmp_path)
-    with patch.object(ADR, "import_items") as import_items:
-        adr.import_items_from_json(path, on_error="raise", allow_external_paths=False)
-    import_items.assert_called_once_with(
-        _document(),
-        on_error="raise",
-        base_dir=tmp_path,
-        strict_keys=False,
-        allow_external_paths=False,
-    )
-
-
-@pytest.mark.unit
-def test_import_items_accepts_a_decoded_document(adr, tmp_path: Path):
+def test_import_accepts_a_decoded_document(adr, tmp_path: Path):
     document = _document(items=[{"item_type": "image", "name": "i", "path": "a.png"}])
     with patch.object(ADR, "ensure_setup"):
-        result = adr.import_items(document, base_dir=tmp_path)
+        result = adr.import_items_from_json(document, base_dir=tmp_path)
     assert result.items_saved == 1
     assert adr.create_item.call_args.kwargs["content"] == str(tmp_path / "a.png")
 
 
 @pytest.mark.unit
-def test_import_items_leaves_relative_media_to_the_working_directory(adr):
+def test_a_dict_leaves_relative_media_to_the_working_directory(adr):
     document = _document(items=[{"item_type": "image", "name": "i", "path": "a.png"}])
     with patch.object(ADR, "ensure_setup"):
-        adr.import_items(document)
+        adr.import_items_from_json(document)
     assert adr.create_item.call_args.kwargs["content"] == "a.png"
 
 
 @pytest.mark.unit
-def test_import_items_requires_a_set_up_adr(adr):
-    with patch.object(ADR, "ensure_setup", side_effect=RuntimeError("not set up")):
-        with pytest.raises(RuntimeError):
-            adr.import_items(_document())
-    adr.create_item.assert_not_called()
-
-
-@pytest.mark.unit
-def test_import_items_validates_before_creating(adr):
+def test_import_validates_before_creating(adr):
     with patch.object(ADR, "ensure_setup"):
         with pytest.raises(ImportItemValidationError):
-            adr.import_items({"schema_version": "1.0"})
+            adr.import_items_from_json({"schema_version": "1.0"})
     adr.create_item.assert_not_called()

@@ -20,11 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Tests for schema version parsing and compatibility checks."""
+"""Tests for the schema version check."""
 
 from __future__ import annotations
-
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -33,83 +31,47 @@ from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     SCHEMA_VERSION,
     SUPPORTED_MAJOR,
     check_version,
-    parse_version,
 )
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [("1.0", (1, 0)), ("1.7", (1, 7)), ("2.13", (2, 13)), ("0.1", (0, 1))],
-)
-def test_parse_version_accepts_major_minor(text, expected):
-    assert parse_version(text) == expected
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "text",
-    # Surrounding whitespace and a trailing newline are rejected, matching the
-    # JSON Schema pattern, so the schema and the parser agree.
-    ["1", "1.0.0", "x.y", "", "1.", ".1", "1,0", "v1.0", "1.0b", " 1.0 ", "1.0\n", "\u0661.\u0660"],
-)
-def test_parse_version_rejects_malformed(text):
-    with pytest.raises(ImportItemVersionError):
-        parse_version(text)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("value", [None, 1.0, 10, ["1", "0"]])
-def test_parse_version_rejects_non_strings(value):
-    with pytest.raises(ImportItemVersionError):
-        parse_version(value)
-
-
-@pytest.mark.unit
-def test_check_version_defaults_when_absent_and_warns():
-    logger = MagicMock()
-    assert check_version(None, logger) == SCHEMA_VERSION
-    logger.warning.assert_called_once()
-
-
-@pytest.mark.unit
-def test_check_version_defaults_without_a_logger():
+def test_check_version_defaults_when_absent():
     assert check_version(None) == SCHEMA_VERSION
 
 
 @pytest.mark.unit
-def test_check_version_accepts_current():
-    logger = MagicMock()
-    assert check_version(SCHEMA_VERSION, logger) == SCHEMA_VERSION
-    logger.info.assert_not_called()
-    logger.warning.assert_not_called()
+@pytest.mark.parametrize("text", [SCHEMA_VERSION, "1.7", "1.13"])
+def test_check_version_accepts_the_supported_major(text):
+    assert check_version(text) == text
 
 
 @pytest.mark.unit
-def test_check_version_accepts_newer_minor_with_an_info_note():
-    logger = MagicMock()
-    assert check_version("1.7", logger) == "1.7"
-    logger.info.assert_called_once()
+@pytest.mark.parametrize("text", [f"{SUPPORTED_MAJOR + 1}.0", "0.9"])
+def test_check_version_rejects_another_major(text):
+    with pytest.raises(ImportItemVersionError, match="not a supported schema version"):
+        check_version(text)
 
 
 @pytest.mark.unit
-def test_check_version_accepts_newer_minor_without_a_logger():
-    assert check_version("1.7") == "1.7"
-
-
-@pytest.mark.unit
-def test_check_version_accepts_older_major():
-    assert check_version("0.9") == "0.9"
-
-
-@pytest.mark.unit
-def test_check_version_rejects_newer_major():
-    with pytest.raises(ImportItemVersionError) as excinfo:
-        check_version(f"{SUPPORTED_MAJOR + 1}.0")
-    assert "newer than the supported major" in str(excinfo.value)
-
-
-@pytest.mark.unit
-def test_check_version_rejects_malformed():
+@pytest.mark.parametrize(
+    "value",
+    # Surrounding whitespace and a trailing newline are rejected, matching the
+    # JSON Schema pattern, so the schema and the parser agree.
+    [
+        "1",
+        "1.0.0",
+        "x.y",
+        "",
+        "1.",
+        ".1",
+        "v1.0",
+        " 1.0 ",
+        "1.0\n",
+        "\u0661.\u0660",
+        1.0,
+        ["1", "0"],
+    ],
+)
+def test_check_version_rejects_malformed(value):
     with pytest.raises(ImportItemVersionError):
-        check_version("1.0.0")
+        check_version(value)

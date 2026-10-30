@@ -87,24 +87,12 @@ def test_import_from_json_forwards_every_option(tmp_path: Path):
 
     with (
         patch.object(ADR, "ensure_setup"),
-        patch(f"{IMPORT_PACKAGE}.build_document") as build_document,
+        patch(f"{IMPORT_PACKAGE}.load_document") as load_document,
         patch(f"{IMPORT_PACKAGE}.import_items") as import_items,
     ):
-        adr.import_items_from_json(
-            path,
-            on_error="raise",
-            base_dir="/media",
-            strict_keys=True,
-            allow_external_paths=False,
-        )
+        adr.import_items_from_json(path, on_error="raise", base_dir="/media")
 
-    build_document.assert_called_once_with(
-        {"schema_version": "1.0", "app_id": "demo-app"},
-        base_dir="/media",
-        strict_keys=True,
-        allow_external_paths=False,
-        logger=adr._logger,
-    )
+    load_document.assert_called_once_with(path, base_dir="/media", logger=adr._logger)
     assert import_items.call_args.kwargs["on_error"] == "raise"
 
 
@@ -151,7 +139,6 @@ def test_import_from_json_end_to_end(adr_serverless: ADR, tmp_path: Path):
                 "columns": ["time", "T_max", "T_min"],
                 "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
                 "plot": "line",
-                "properties": [{"table_title": "Probe temperatures"}],
             },
             {
                 "item_type": "tree",

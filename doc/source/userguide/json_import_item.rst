@@ -82,16 +82,14 @@ The serverless call is identical:
 
    result = adr_obj.import_items_from_json(r"D:\runs\42\report.json")
 
-If the document is already in memory, for example built by your own code,
-pass the dictionary to
-:func:`ADR.import_items<ansys.dynamicreporting.core.serverless.ADR.import_items>`
-instead, the same way ``load_templates`` complements ``load_templates_from_file``
-for templates. There is no file to resolve relative media paths against, so
-pass ``base_dir``; otherwise they resolve against the current working directory:
+If the document is already in memory, for example built by your own code, pass
+the dictionary to the same method. There is no file to resolve relative media
+paths against, so pass ``base_dir``; otherwise they resolve against the current
+working directory:
 
 .. code:: python
 
-   result = adr_obj.import_items(document, base_dir=r"D:\runs\42")
+   result = adr_obj.import_items_from_json(document, base_dir=r"D:\runs\42")
 
 The document envelope
 ---------------------
@@ -99,13 +97,9 @@ The document envelope
 ======================  ========  ===========================================
 Field                   Required  Description
 ======================  ========  ===========================================
-``schema_version``      no        ``"MAJOR.MINOR"``. Defaults to ``"1.0"``.
+``schema_version``      no        ``"1.MINOR"``. Defaults to ``"1.0"``.
 ``app_id``              **yes**   Names the producing application.
 ``tags``                no        Merged into every item.
-``metadata``            no        Free-form producer metadata. Retained but
-                                  not interpreted.
-``sessions``            no        Accepted but **not applied** in v1.0.
-``datasets``            no        Accepted but **not applied** in v1.0.
 ``items``               no        Report items to create.
 ======================  ========  ===========================================
 
@@ -113,7 +107,7 @@ Item types
 ----------
 
 Every item carries ``item_type``, ``name``, and optionally ``tags``,
-``source``, ``sequence``, and ``properties``.
+``source``, and ``sequence``.
 
 =================  ===============================  ========================
 ``item_type``      Payload fields                   Created as
@@ -129,10 +123,7 @@ Every item carries ``item_type``, ``name``, and optionally ``tags``,
 =================  ===============================  ========================
 
 Media paths may be absolute, or relative to the directory containing the JSON
-document. Pass ``base_dir`` to resolve them against a different directory. For
-documents from a producer you do not control, pass
-``allow_external_paths=False`` so that every media path must stay inside
-``base_dir``.
+document. Pass ``base_dir`` to resolve them against a different directory.
 
 Media files must use an extension that both backends accept: ``image`` takes
 ``.png``, ``.jpg``, ``.tif``, or ``.tiff``; ``animation`` takes ``.mp4``;
@@ -152,8 +143,7 @@ entry of ``rows`` is one record.
      "name": "Probe Table",
      "columns": ["time", "T_max", "T_min"],
      "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
-     "plot": "line",
-     "properties": [{ "line_width": 2 }]
+     "plot": "line"
    }
 
 ADR stores tables series-per-row, so the importer transposes the data on the
@@ -168,9 +158,8 @@ A table whose cells are all numbers, booleans, or ``null`` is stored as floats.
 A table with any JSON string is stored as text, and numeric-looking strings such
 as ``"001"`` stay unchanged.
 
-Anything ADR models for a table but the schema does not promote to a
-first-class field is reachable through ``properties``. Other item types ignore
-``properties`` with a warning.
+Besides ``columns`` and ``rows``, a table accepts ``plot``, ``format``,
+``xaxis``, and ``yaxis``.
 
 Trees
 -----
@@ -218,15 +207,15 @@ Per-item failures during creation are governed by ``on_error``:
 ``"collect"`` (the default) records failures and continues; ``"raise"`` stops at
 the first one.
 
-Unknown keys are retained and logged as warnings, so a newer producer can talk
-to an older client. Pass ``strict_keys=True`` to turn them into errors.
+Unknown keys are logged as warnings and ignored, so a newer producer can talk
+to an older client.
 
 Versioning
 ----------
 
-``schema_version`` is ``MAJOR.MINOR``. A document whose major exceeds the
-supported major is rejected with ``ImportItemVersionError``. A newer minor is
-accepted and its unrecognized fields are retained.
+``schema_version`` is ``MAJOR.MINOR``. This release reads major ``1``: any
+``1.<minor>`` is accepted, and any other major or a malformed version is
+rejected with ``ImportItemVersionError``.
 
 While the feature is in beta, the shipped version stays at ``1.0``. Treat a
 major bump as the signal that the format changed incompatibly.
@@ -234,8 +223,7 @@ major bump as the signal that the format changed incompatibly.
 Schema reference
 ----------------
 
-:doc:`json_import_item_schema` documents every field, its type, and its validation
-rules.
+:doc:`json_import_item_schema` summarizes the validation rules.
 
 The machine-readable contract is generated from the same field tables the
 parser validates against, and is committed at the repository root as
