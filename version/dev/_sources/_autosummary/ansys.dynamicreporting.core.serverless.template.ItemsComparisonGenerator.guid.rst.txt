@@ -1,0 +1,6 @@
+guid
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: ItemsComparisonGenerator.guid

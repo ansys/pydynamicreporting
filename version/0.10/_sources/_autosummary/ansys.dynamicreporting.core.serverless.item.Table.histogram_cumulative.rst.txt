@@ -1,0 +1,6 @@
+histogram\_cumulative
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.histogram_cumulative

@@ -1,0 +1,6 @@
+get\_iframe
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: ReportLinkLayout.get_iframe

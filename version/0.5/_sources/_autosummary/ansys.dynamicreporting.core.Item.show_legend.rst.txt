@@ -1,0 +1,6 @@
+show\_legend
+============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.show_legend

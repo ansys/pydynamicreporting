@@ -1,0 +1,6 @@
+yaxis\_format
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.yaxis_format

@@ -1,0 +1,6 @@
+dirname
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Dataset.dirname

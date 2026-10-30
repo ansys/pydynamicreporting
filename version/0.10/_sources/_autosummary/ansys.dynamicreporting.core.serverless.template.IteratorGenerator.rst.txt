@@ -1,0 +1,165 @@
+﻿IteratorGenerator
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: IteratorGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      IteratorGenerator.add_filter
+      
+      
+      IteratorGenerator.add_params
+      
+      
+      IteratorGenerator.add_properties
+      
+      
+      IteratorGenerator.add_property
+      
+      
+      IteratorGenerator.add_sort_fields
+      
+      
+      IteratorGenerator.add_tag
+      
+      
+      IteratorGenerator.as_dict
+      
+      
+      IteratorGenerator.create
+      
+      
+      IteratorGenerator.delete
+      
+      
+      IteratorGenerator.filter
+      
+      
+      IteratorGenerator.find
+      
+      
+      IteratorGenerator.get
+      
+      
+      IteratorGenerator.get_append_tags
+      
+      
+      IteratorGenerator.get_filter
+      
+      
+      IteratorGenerator.get_filter_mode
+      
+      
+      IteratorGenerator.get_generated_items
+      
+      
+      IteratorGenerator.get_params
+      
+      
+      IteratorGenerator.get_property
+      
+      
+      IteratorGenerator.get_sort_fields
+      
+      
+      IteratorGenerator.get_sort_selection
+      
+      
+      IteratorGenerator.get_tags
+      
+      
+      IteratorGenerator.reinit
+      
+      
+      IteratorGenerator.rem_tag
+      
+      
+      IteratorGenerator.remove_tag
+      
+      
+      IteratorGenerator.render
+      
+      
+      IteratorGenerator.render_pdf
+      
+      
+      IteratorGenerator.reorder_child
+      
+      
+      IteratorGenerator.reorder_children
+      
+      
+      IteratorGenerator.save
+      
+      
+      IteratorGenerator.set_append_tags
+      
+      
+      IteratorGenerator.set_filter
+      
+      
+      IteratorGenerator.set_filter_mode
+      
+      
+      IteratorGenerator.set_generated_items
+      
+      
+      IteratorGenerator.set_params
+      
+      
+      IteratorGenerator.set_property
+      
+      
+      IteratorGenerator.set_sort_fields
+      
+      
+      IteratorGenerator.set_sort_selection
+      
+      
+      IteratorGenerator.set_tags
+      
+      
+      IteratorGenerator.to_dict
+      
+      
+      IteratorGenerator.to_json
+      
+      
+      IteratorGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      IteratorGenerator.children_order
+      IteratorGenerator.db
+      IteratorGenerator.item_filter
+      IteratorGenerator.master
+      IteratorGenerator.name
+      IteratorGenerator.params
+      IteratorGenerator.parent
+      IteratorGenerator.report_type
+      IteratorGenerator.saved
+      IteratorGenerator.tags
+      IteratorGenerator.type
+      IteratorGenerator.date
+      IteratorGenerator.children
+      IteratorGenerator.guid
+   
+   
