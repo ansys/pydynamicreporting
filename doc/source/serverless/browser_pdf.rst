@@ -178,6 +178,11 @@ During rendering, PyDynamicReporting temporarily points
 original value afterward. Because this environment variable is process-wide,
 do not run browser-PDF exports concurrently in the same process.
 
+If the ADR installation ships a different Chromium build than the installed
+Playwright version expects, PyDynamicReporting launches the product browser
+directly and logs a warning. Playwright only guarantees the build it was
+released with.
+
 Temporary offline bundles are removed after the operation. Cleanup failures
 are retained for debug logging and do not mask a successful PDF or the primary
 rendering error.

@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Raise the minimum runtime dependency versions to the versions bundled with
   ADR 26.1: requests 2.32.4, Pillow 11.1.0, python-dateutil 2.9.0.post0,
   pytz 2024.2, psutil 7.2.1, psycopg 3.2.12, and bleach 6.3.0.
+- Browser PDF export launches the Chromium build shipped with ADR directly, and
+  logs a warning, when it differs from the build the installed Playwright
+  expects. A newer client release then keeps working with an older ADR install.
 
 ### Removed
 
@@ -34,9 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
   with earlier Pillow releases.
 - Update Playwright to 1.64.1. Its bundled Node.js 24.22.1 distrusts the
-  compromised eMudhra intermediates, and it uses Chromium 156. Browser PDF export
-  needs the matching Chromium build (`chromium_headless_shell-1248`) in the ADR
-  installation.
+  compromised eMudhra intermediates, and it uses Chromium 156
+  (`chromium_headless_shell-1248`).
 
 ## [1.0.0rc3] - 2026-09-21
 
