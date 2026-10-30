@@ -29,6 +29,10 @@ check: ## Run all code quality checks
 	@echo "🚀 Running pre-commit hooks"
 	uv run pre-commit run --all-files
 
+.PHONY: schema
+schema: ## Generate the ADR item import JSON schema artifact
+	uv run python scripts/gen_import_schema.py
+
 .PHONY: version
 version: ## Print the current project version
 	uv run hatch version

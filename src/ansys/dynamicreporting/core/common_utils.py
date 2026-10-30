@@ -35,6 +35,7 @@ Install resolution uses four distinct path and version concepts:
 
 from dataclasses import dataclass
 from enum import Enum
+from html.parser import HTMLParser as BaseHTMLParser
 import logging
 import os
 from pathlib import Path
@@ -542,3 +543,35 @@ def check_list_for_html(value_list, key):
             check_list_for_html(item, key)
         else:
             continue
+
+
+class HTMLTagParser(BaseHTMLParser):
+    """Minimal HTML parser used to validate HTML content.
+
+    The parser records all encountered start tags and exposes a
+    :meth:`validate` utility that returns ``True`` if at least one tag
+    has been seen. It lives here rather than with the serverless models so
+    that the JSON item import can share it without loading Django.
+    """
+
+    def __init__(self):
+        """Initialize an empty parser state."""
+        super().__init__()
+        self._start_tags = []
+
+    def handle_starttag(self, tag, attrs):
+        """Record each start tag encountered during parsing."""
+        self._start_tags.append(tag)
+
+    def validate(self, string):
+        """Return ``True`` if the input string contains at least one tag."""
+        self.feed(string)
+        for tag in self._start_tags:
+            if tag:
+                return True
+        return False
+
+    def reset(self):
+        """Reset the parser state and clear any recorded tags."""
+        super().reset()
+        self._start_tags = []

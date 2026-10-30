@@ -1,0 +1,398 @@
+{
+  "$defs": {
+    "animationItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "animation"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .mp4.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "fileItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "file"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "htmlItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "html"
+            },
+            "value": {
+              "description": "Inline HTML body; must contain at least one HTML tag.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "value"
+          ]
+        }
+      ]
+    },
+    "imageItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "image"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .png, .jpg, .tif, .tiff.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "item": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/textItem"
+        },
+        {
+          "$ref": "#/$defs/htmlItem"
+        },
+        {
+          "$ref": "#/$defs/tableItem"
+        },
+        {
+          "$ref": "#/$defs/treeItem"
+        },
+        {
+          "$ref": "#/$defs/imageItem"
+        },
+        {
+          "$ref": "#/$defs/animationItem"
+        },
+        {
+          "$ref": "#/$defs/sceneItem"
+        },
+        {
+          "$ref": "#/$defs/fileItem"
+        }
+      ]
+    },
+    "itemBase": {
+      "additionalProperties": true,
+      "properties": {
+        "item_type": {
+          "type": "string"
+        },
+        "name": {
+          "description": "Item name.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "sequence": {
+          "description": "Ordering hint within a report.",
+          "type": "integer"
+        },
+        "source": {
+          "description": "Producing application or component.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags applied to this object.",
+          "items": {
+            "$ref": "#/$defs/tagObject"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "item_type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "sceneItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "scene"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .stl, .ply, .csf, .avz, .scdoc, .scdocx, .dsco, .glb, .obj.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "tableColumn": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "description": "Informational; not interpreted by the importer.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "tableItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "columns": {
+              "description": "Column definitions, in wire (record) order.",
+              "items": {
+                "$ref": "#/$defs/tableColumn"
+              },
+              "type": "array"
+            },
+            "format": {
+              "description": "Cell value format.",
+              "type": "string"
+            },
+            "item_type": {
+              "const": "table"
+            },
+            "plot": {
+              "description": "Plot style, for example 'line'.",
+              "type": "string"
+            },
+            "rows": {
+              "description": "Record-oriented rows; one inner list per record.",
+              "items": {
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "xaxis": {
+              "description": "Explicit x-axis label; must name a column.",
+              "type": "string"
+            },
+            "yaxis": {
+              "description": "Explicit y-axis labels; each must name a column.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "item_type",
+            "columns",
+            "rows"
+          ]
+        }
+      ]
+    },
+    "tagObject": {
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      },
+      "minProperties": 1,
+      "type": "object"
+    },
+    "textItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "text"
+            },
+            "value": {
+              "description": "Inline payload body.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "value"
+          ]
+        }
+      ]
+    },
+    "treeItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "tree"
+            },
+            "nodes": {
+              "description": "Root nodes of the tree.",
+              "items": {
+                "$ref": "#/$defs/treeNode"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "item_type",
+            "nodes"
+          ]
+        }
+      ]
+    },
+    "treeNode": {
+      "additionalProperties": true,
+      "properties": {
+        "children": {
+          "description": "Child nodes.",
+          "items": {
+            "$ref": "#/$defs/treeNode"
+          },
+          "type": "array"
+        },
+        "key": {
+          "description": "Stable node key; generated when absent.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Node label.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "value": {
+          "description": "Node value. Defaults to the node name.",
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null",
+            "array"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.ansys.com/adr/item-import/1.0/adr-item-import.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "app_id": {
+      "description": "Names the producing application and groups imported content.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "items": {
+      "description": "Report items to create.",
+      "items": {
+        "$ref": "#/$defs/item"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "description": "Import schema version, 'MAJOR.MINOR'.",
+      "pattern": "^1\\.[0-9]+$",
+      "type": "string"
+    },
+    "tags": {
+      "description": "Tags applied to this object.",
+      "items": {
+        "$ref": "#/$defs/tagObject"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "app_id"
+  ],
+  "title": "ADR Item Import Document",
+  "type": "object"
+}

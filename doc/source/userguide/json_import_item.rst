@@ -1,0 +1,239 @@
+.. _ref_json_import_guide:
+
+JSON item import
+################
+
+.. warning::
+
+   **Beta.** JSON item import is a beta feature. The schema and the Python
+   API may change in a future release, and a breaking change to the document
+   format will raise the ``schema_version`` major. Pin the version you
+   validate against, and report anything that surprises you.
+
+PyDynamicReporting can create report items from a single JSON document. The
+same document imports identically through
+:func:`Service.import_items_from_json<ansys.dynamicreporting.core.Service.import_items_from_json>`
+(server mode) and
+:func:`ADR.import_items_from_json<ansys.dynamicreporting.core.serverless.ADR.import_items_from_json>`
+(serverless mode).
+
+This is useful when a producing application already knows what it wants to
+report and simply needs to hand that description to ADR.
+
+This page is a task-oriented introduction. For the complete field-by-field
+contract, see :doc:`json_import_item_schema`.
+
+.. note::
+
+   Report structure is out of scope for this contract. Import report
+   templates with
+   :func:`Service.load_templates<ansys.dynamicreporting.core.Service.load_templates>`
+   or
+   :func:`ADR.load_templates_from_file<ansys.dynamicreporting.core.serverless.ADR.load_templates_from_file>`.
+
+Quick start
+-----------
+
+Write a document:
+
+.. code:: json
+
+   {
+     "schema_version": "1.0",
+     "app_id": "adr-mechanical",
+     "tags": [{ "report": "thermal_run_42" }],
+     "items": [
+       {
+         "item_type": "text",
+         "name": "Summary",
+         "tags": [{ "section": "intro" }],
+         "value": "Simulation completed successfully."
+       },
+       {
+         "item_type": "image",
+         "name": "Contour",
+         "path": "contour.png"
+       }
+     ]
+   }
+
+Then import it:
+
+.. code:: python
+
+   import ansys.dynamicreporting.core as adr
+
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
+   adr_service.connect(url="http://localhost:8010")
+
+   result = adr_service.import_items_from_json(r"D:\runs\42\report.json")
+   print(result.items_saved, result.ok)
+
+The serverless call is identical:
+
+.. code:: python
+
+   from ansys.dynamicreporting.core.serverless import ADR
+
+   adr_obj = ADR(
+       ansys_installation=r"C:\Program Files\ANSYS Inc\v261", db_directory=r"D:\db"
+   )
+   adr_obj.setup()
+
+   result = adr_obj.import_items_from_json(r"D:\runs\42\report.json")
+
+If the document is already in memory, for example built by your own code, pass
+the dictionary to the same method. There is no file to resolve relative media
+paths against, so pass ``base_dir``; otherwise they resolve against the current
+working directory:
+
+.. code:: python
+
+   result = adr_obj.import_items_from_json(document, base_dir=r"D:\runs\42")
+
+The document envelope
+---------------------
+
+======================  ========  ===========================================
+Field                   Required  Description
+======================  ========  ===========================================
+``schema_version``      no        ``"1.MINOR"``. Defaults to ``"1.0"``.
+``app_id``              **yes**   Names the producing application.
+``tags``                no        Merged into every item.
+``items``               no        Report items to create.
+======================  ========  ===========================================
+
+Item types
+----------
+
+Every item carries ``item_type``, ``name``, and optionally ``tags``,
+``source``, and ``sequence``.
+
+=================  ===============================  ========================
+``item_type``      Payload fields                   Created as
+=================  ===============================  ========================
+``text``           ``value``                        ``String``
+``html``           ``value``                        ``HTML``
+``table``          ``columns``, ``rows``            ``Table``
+``tree``           ``nodes``                        ``Tree``
+``image``          ``path``                         ``Image``
+``animation``      ``path``                         ``Animation``
+``scene``          ``path``                         ``Scene``
+``file``           ``path``                         ``File``
+=================  ===============================  ========================
+
+Media paths may be absolute, or relative to the directory containing the JSON
+document. Pass ``base_dir`` to resolve them against a different directory.
+
+Media files must use an extension that both backends accept: ``image`` takes
+``.png``, ``.jpg``, ``.tif``, or ``.tiff``; ``animation`` takes ``.mp4``;
+``scene`` takes the 3D formats listed in :doc:`json_import_item_schema`; ``file``
+takes any extension. An ``html`` value must contain at least one HTML tag.
+
+Tables
+------
+
+Tables are written **record-oriented**: ``columns`` names the fields and each
+entry of ``rows`` is one record.
+
+.. code:: json
+
+   {
+     "item_type": "table",
+     "name": "Probe Table",
+     "columns": ["time", "T_max", "T_min"],
+     "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+     "plot": "line"
+   }
+
+ADR stores tables series-per-row, so the importer transposes the data on the
+way in. The example above becomes a ``(3, 2)`` array whose row labels are
+``["time", "T_max", "T_min"]``.
+
+If ``xaxis`` and ``yaxis`` are omitted, the first column becomes the x axis and
+the remaining columns become the y axes. When supplied, they must name
+columns.
+
+A table whose cells are all numbers, booleans, or ``null`` is stored as floats.
+A table with any JSON string is stored as text, and numeric-looking strings such
+as ``"001"`` stay unchanged.
+
+Besides ``columns`` and ``rows``, a table accepts ``plot``, ``format``,
+``xaxis``, and ``yaxis``.
+
+Trees
+-----
+
+.. code:: json
+
+   {
+     "item_type": "tree",
+     "name": "Mesh",
+     "nodes": [
+       { "name": "Assembly", "children": [{ "name": "Part A" }, { "name": "Part B" }] }
+     ]
+   }
+
+A node value defaults to the node name. Node keys are generated from the
+position in the tree, so repeated names never collide.
+
+Error handling
+--------------
+
+Contract violations raise ``ImportItemValidationError``, which reports **every**
+problem found in one pass, each with its location. It and
+``ImportItemVersionError`` derive from ``ADRItemImportError`` and are importable
+from ``ansys.dynamicreporting.core.exceptions`` with the other ADR exceptions:
+
+.. code:: python
+
+   from ansys.dynamicreporting.core.exceptions import ImportItemValidationError
+
+.. code:: text
+
+   The ADR import document is not valid : 3 problems found
+     app_id: is required
+     items[0].value: is required
+     items[2].item_type: expected one of ['text', 'html', ...], got 'spreadsheet'
+
+Per-item failures during creation are governed by ``on_error``:
+
+.. code:: python
+
+   result = adr_service.import_items_from_json("report.json", on_error="collect")
+   for failure in result.failures:
+       print(failure.name, failure.item_type, failure.error)
+
+``"collect"`` (the default) records failures and continues; ``"raise"`` stops at
+the first one.
+
+Unknown keys are logged as warnings and ignored, so a newer producer can talk
+to an older client.
+
+Versioning
+----------
+
+``schema_version`` is ``MAJOR.MINOR``. This release reads major ``1``: any
+``1.<minor>`` is accepted, and any other major or a malformed version is
+rejected with ``ImportItemVersionError``.
+
+While the feature is in beta, the shipped version stays at ``1.0``. Treat a
+major bump as the signal that the format changed incompatibly.
+
+Schema reference
+----------------
+
+:doc:`json_import_item_schema` summarizes the validation rules.
+
+The machine-readable contract is generated from the same field tables the
+parser validates against, and is committed at the repository root as
+``adr_item_import.schema.json``. To validate your own document before importing it:
+
+.. code:: text
+
+   check-jsonschema --schemafile adr_item_import.schema.json my_report.json
+
+A complete working document that exercises every item type lives at
+``tests/test_data/adr_import/canonical_report.json``. It is the easiest
+starting point to copy, and it is validated against the committed schema on
+every commit, so it cannot fall out of step with the contract.
