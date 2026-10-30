@@ -2708,7 +2708,10 @@ def test_product_browser_launch_options_keep_playwright_lookup_for_unknown_build
     )
 
     assert launch_options == {}
-    logger.warning.assert_not_called()
+    logger.warning.assert_called_once()
+    warning_args = logger.warning.call_args.args
+    assert "cannot determine" in warning_args[0]
+    assert tmp_path / "chromium_headless_shell-1223" in warning_args
 
 
 @pytest.mark.unit

@@ -328,6 +328,13 @@ def _product_browser_launch_options(
     logger = logger or get_logger()
     if expected_dir is None:
         if not executable_found:
+            # The launch error stays generic, so record why the standard lookup is used.
+            logger.warning(
+                "This PyDynamicReporting release cannot determine which browser build it "
+                "expects, and no browser executable was found in %s. Using the default browser "
+                "lookup in the Ansys installation.",
+                binary_info.path / binary_info.packaged_binary_dir,
+            )
             return {}
         logger.warning(
             "This PyDynamicReporting release cannot determine which browser build it expects. "
