@@ -40,8 +40,7 @@ from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightP
 from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
 _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
-_PACKAGED_BROWSER_BUILD = 1248
-_PACKAGED_BROWSER_DIR_NAME = f"chromium_headless_shell-{_PACKAGED_BROWSER_BUILD}"
+_PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
 _STUBBED_BROWSER_DIR = Path("mock-product-browser")
 
 
@@ -147,10 +146,6 @@ def _mock_playwright_pdf_flow(
     browser = Mock()
     browser.new_context.return_value = context
     playwright = Mock()
-    # Expect the build the fake product ships, so renders take the normal launch path.
-    playwright.chromium.executable_path = _playwright_chromium_path(
-        Path("mock-playwright-cache"), _PACKAGED_BROWSER_BUILD
-    )
     if launch_side_effect is None:
         playwright.chromium.launch.return_value = browser
     else:
@@ -2752,9 +2747,7 @@ def test_playwright_pdf_launches_packaged_shell_when_product_ships_other_build(
 ):
     renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     executable = _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
-    flow.playwright.chromium.executable_path = _playwright_chromium_path(
-        tmp_path, _PACKAGED_BROWSER_BUILD + 1
-    )
+    flow.playwright.chromium.executable_path = _playwright_chromium_path(tmp_path, 1248)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
