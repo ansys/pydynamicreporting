@@ -77,6 +77,8 @@ jobs:
     secrets:
       LICENSE_SERVER: ${{ secrets.LICENSE_SERVER }}
       PYANSYS_CI_BOT_TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+      ADR_GHCR_USERNAME: ${{ secrets.ADR_GHCR_USERNAME }}
+      ADR_GHCR_TOKEN: ${{ secrets.ADR_GHCR_TOKEN }}
 
   docs:
     name: Build docs
