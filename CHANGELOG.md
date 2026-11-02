@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   annual product-line compatibility policy.
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
+- Browser PDF export keeps working when the ADR installation ships a different
+  browser build than this release expects. It uses the browser from the ADR
+  installation and logs a warning.
 
 ### Security
 
