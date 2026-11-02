@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Raise the minimum runtime dependency versions to the versions bundled with
+  ADR 26.1: requests 2.32.4, Pillow 11.1.0, python-dateutil 2.9.0.post0,
+  pytz 2024.2, psutil 7.2.1, psycopg 3.2.12, and bleach 6.3.0.
+- Browser PDF export keeps working when the ADR installation ships a different
+  browser build than this release expects. It uses the browser from the ADR
+  installation and logs a warning.
+
+### Removed
+
+- Python 3.10 support. The package now requires Python 3.11 through 3.14. Python
+  3.10 is end-of-life, has no upstream fix for the eMudhra certificate incident,
+  and is not supported by Pillow 13.
+
+### Fixed
+
+- Require statsmodels 0.14.5 or later. Earlier statsmodels releases cannot be
+  imported with SciPy 1.16 or later, which made Serverless ADR setup fail.
+
+### Security
+
+- Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
+- Lock Pillow 13.0.0 and Django 5.2.18 for development installs, and support
+  Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
+  with earlier Pillow releases.
+- Update Playwright to 1.64.1. Its bundled Node.js 24.22.1 distrusts the
+  compromised eMudhra intermediates, and it uses Chromium 156
+  (`chromium_headless_shell-1248`).
+
 ## [1.0.0rc3] - 2026-09-21
 
 ### Added
