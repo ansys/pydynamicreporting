@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Raise the minimum runtime dependency versions to the versions bundled with
   ADR 26.1: requests 2.32.4, Pillow 11.1.0, python-dateutil 2.9.0.post0,
   pytz 2024.2, psutil 7.2.1, psycopg 3.2.12, and bleach 6.3.0.
+- The default ADR Docker image is now `ghcr.io/snps-ansys-internal/adr_dev:latest`,
+  where the image has moved.
 - Browser PDF export keeps working when the ADR installation ships a different
   browser build than this release expects. It uses the browser from the ADR
   installation and logs a warning.
