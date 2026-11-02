@@ -56,40 +56,6 @@ jobs:
           username: ${{ secrets.ADR_GHCR_USERNAME }}
           password: ${{ secrets.ADR_GHCR_TOKEN }}
 
-      - name: Diagnose GHCR authorization (temporary)
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.ADR_GHCR_TOKEN }}
-          ADR_GHCR_USERNAME: ${{ secrets.ADR_GHCR_USERNAME }}
-        run: |
-          set +x
-          status=0
-          echo "Docker credential comparisons (values are not printed)"
-          jq '
-            .auths["ghcr.io"].auth as $auth
-            | if $auth then
-                ($auth | @base64d | split(":")) as $credentials
-                | {
-                    username_matches: ($credentials[0] == env.ADR_GHCR_USERNAME),
-                    token_matches: ($credentials[1] == env.GH_TOKEN)
-                  }
-              else
-                {inline_credentials_present: false}
-              end
-          ' "${DOCKER_CONFIG:-$HOME/.docker}/config.json" || status=1
-          echo "GitHub token identity"
-          gh api --hostname github.com user \
-            --jq '{login: .login, expected_emu_account: (.login == "vrajendr_snps")}' || status=1
-          echo "GitHub API status and token scopes"
-          gh api --hostname github.com --include user --jq empty |
-            grep -Ei '^(HTTP/|X-OAuth-Scopes:)' || status=1
-          echo "GitHub package metadata authorization"
-          gh api --hostname github.com orgs/snps-ansys-internal/packages/container/adr_dev \
-            --jq '{name: .name, visibility: .visibility, message: .message}' || status=1
-          echo "Docker manifest authorization"
-          docker manifest inspect ghcr.io/snps-ansys-internal/adr_dev:latest >/dev/null || status=1
-          exit "$status"
-
       - name: Pull Docker container
         run: make pull-docker
 
