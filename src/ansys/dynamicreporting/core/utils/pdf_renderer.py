@@ -294,19 +294,24 @@ def _launch_product_browser(
     product that ships the browser build this Playwright version expects launches exactly as
     before. Only if that launch fails, for example because the product ships a different
     build, retry once with the packaged headless shell's executable and log a warning.
-    Timeouts are not retried because they already spent the shared browser budget, and the
-    original error is re-raised when the packaged executable is missing.
+    Timeouts are not retried because they already spent the shared browser budget. When the
+    packaged executable is missing, log where it was expected and re-raise the original error,
+    which callers report as a generic rendering failure.
     """
     try:
         return launch()
     except PlaywrightTimeoutError:
         raise
     except PlaywrightError:
+        build_dir = binary_info.path / binary_info.packaged_binary_dir
         executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-        if executable_relpath is None:
-            raise
-        executable = binary_info.path / binary_info.packaged_binary_dir / executable_relpath
-        if not executable.is_file():
+        executable = None if executable_relpath is None else build_dir / executable_relpath
+        if executable is None or not executable.is_file():
+            logger.warning(
+                "Could not launch the browser, and no browser executable was found in %s in "
+                "the Ansys installation.",
+                build_dir,
+            )
             raise
         logger.debug("Default browser launch failed.", exc_info=True)
         logger.warning(

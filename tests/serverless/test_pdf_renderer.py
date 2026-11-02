@@ -2675,11 +2675,14 @@ def test_launch_product_browser_falls_back_to_packaged_shell_when_launch_fails(
 def test_launch_product_browser_reraises_when_packaged_shell_is_missing(tmp_path):
     binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
     launch = Mock(side_effect=PlaywrightError("Executable doesn't exist"))
+    logger = Mock()
 
     with pytest.raises(PlaywrightError, match="Executable doesn't exist"):
-        pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
+        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
     launch.assert_called_once_with()
+    logger.warning.assert_called_once()
+    assert tmp_path / "chromium_headless_shell-1223" in logger.warning.call_args.args
 
 
 @pytest.mark.unit
