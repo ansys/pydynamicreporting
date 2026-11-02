@@ -66,6 +66,7 @@ size is definitive and content cannot expand it.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
 import json
@@ -78,6 +79,8 @@ from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
+from playwright.sync_api import Browser
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -92,7 +95,7 @@ from ..exceptions import ADRException
 # Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 # Headless-shell executable inside a packaged ``chromium_headless_shell-<build>`` directory,
-# keyed by the ADR ``machines/<arch>`` name. Only used when Playwright expects another build.
+# keyed by the ADR ``machines/<arch>`` name. Only used when the normal browser launch fails.
 _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
     "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
     "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
@@ -280,81 +283,40 @@ def resolve_playwright_browser_binary_info(
     return _validate_playwright_browsers_path(browser_dir, machine_arch)
 
 
-def _playwright_expected_headless_shell_dir(chromium_executable_path: str) -> str | None:
-    """Return the ``chromium_headless_shell-<build>`` directory Playwright would launch.
-
-    Playwright documents ``BrowserType.executable_path`` as the path where it expects its
-    bundled browser. Its browser cache names the full Chromium ``chromium-<build>`` and the
-    headless shell ``chromium_headless_shell-<build>`` with the same build number, so the
-    expected headless-shell directory follows from that path. Return ``None`` when the path
-    has no recognizable build directory.
-    """
-    for part in Path(chromium_executable_path).parts:
-        match = re.fullmatch(r"chromium-(\d+)", part)
-        if match is not None:
-            return f"chromium_headless_shell-{match.group(1)}"
-    return None
-
-
-def _product_browser_launch_options(
-    chromium: Any,
+def _launch_product_browser(
+    launch: Callable[..., Browser],
     binary_info: _PlaywrightBrowserBinaryInfo,
-    logger: Any = None,
-) -> dict[str, str]:
-    """Return extra ``chromium.launch()`` options for the product-shipped browser.
+    logger: Any,
+) -> Browser:
+    """Launch the product-shipped browser, falling back to its executable by path.
 
-    When the product ships the browser build this Playwright version expects, Playwright
-    finds it through ``PLAYWRIGHT_BROWSERS_PATH`` and no extra options are needed. When the
-    builds differ, for example a newer client against an older product release, launch the
-    packaged headless shell through ``executable_path`` so browser-PDF keeps working without
-    a product update. Playwright only guarantees the build it was released with, so log a
-    warning that names both builds. If the expected build cannot be determined, for example
-    because a later Playwright names its cache directories differently, launch the packaged
-    headless shell when it is present; otherwise keep the standard lookup, which only searches
-    the product folder and never falls back to another browser.
+    ``launch`` runs Playwright's normal lookup in the product browser folder first, so a
+    product that ships the browser build this Playwright version expects launches exactly as
+    before. Only if that launch fails, for example because the product ships a different
+    build, retry once with the packaged headless shell's executable and log a warning.
+    Timeouts are not retried because they already spent the shared browser budget, and the
+    original error is re-raised when the packaged executable is missing.
     """
-    expected_dir = _playwright_expected_headless_shell_dir(str(chromium.executable_path))
-    if expected_dir == binary_info.packaged_binary_dir:
-        return {}
-
-    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-    executable = (
-        None
-        if executable_relpath is None
-        else binary_info.path / binary_info.packaged_binary_dir / executable_relpath
-    )
-    executable_found = executable is not None and executable.is_file()
-
-    logger = logger or get_logger()
-    if expected_dir is None:
-        if not executable_found:
-            # The launch error stays generic, so record why the standard lookup is used.
-            logger.warning(
-                "This PyDynamicReporting release cannot determine which browser build it "
-                "expects, and no browser executable was found in %s. Using the default browser "
-                "lookup in the Ansys installation.",
-                binary_info.path / binary_info.packaged_binary_dir,
-            )
-            return {}
+    try:
+        return launch()
+    except PlaywrightTimeoutError:
+        raise
+    except PlaywrightError:
+        executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
+        if executable_relpath is None:
+            raise
+        executable = binary_info.path / binary_info.packaged_binary_dir / executable_relpath
+        if not executable.is_file():
+            raise
+        logger.debug("Default browser launch failed.", exc_info=True)
         logger.warning(
-            "This PyDynamicReporting release cannot determine which browser build it expects. "
+            "Could not launch the browser build this PyDynamicReporting release expects. "
             "Using the browser build %s from the Ansys installation.",
             binary_info.packaged_binary_dir,
         )
-        return {"executable_path": str(executable)}
-
-    if not executable_found:
-        raise ADRException(
-            f"Browser PDF export expects browser build {expected_dir}, and the browser build "
-            f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
-        )
-    logger.warning(
-        "This PyDynamicReporting release expects browser build %s, but the Ansys installation "
-        "ships %s. Using the browser from the Ansys installation.",
-        expected_dir,
-        binary_info.packaged_binary_dir,
-    )
-    return {"executable_path": str(executable)}
+        browser = launch(executable_path=str(executable))
+        logger.info("Using Ansys installation browser %s.", browser.version)
+        return browser
 
 
 class _BasePlaywrightPDFRenderer(ABC):
@@ -612,19 +574,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                 self._playwright_browser_binary_env() as browser_binary,
                 sync_playwright() as playwright,
             ):
-                launch_options = _product_browser_launch_options(
-                    playwright.chromium, browser_binary, self._logger
-                )
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = playwright.chromium.launch(
-                    headless=True,
-                    timeout=self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "browser launch"
+                browser = _launch_product_browser(
+                    lambda **launch_options: playwright.chromium.launch(
+                        headless=True,
+                        timeout=self._remaining_browser_phase_timeout_ms(
+                            browser_phase_deadline, "browser launch"
+                        ),
+                        **launch_options,
                     ),
-                    **launch_options,
+                    browser_binary,
+                    self._logger,
                 )
-                if launch_options:
-                    self._logger.info("Using Ansys installation browser %s.", browser.version)
                 context = None
 
                 try:

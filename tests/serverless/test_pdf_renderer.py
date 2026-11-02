@@ -24,6 +24,7 @@ import os
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import call
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 
@@ -245,10 +246,9 @@ def _use_product_playwright_browser(product_playwright_context: _ProductPlaywrig
 
 def _launch_product_chromium(playwright, product_playwright_context: _ProductPlaywrightContext):
     """Launch the product-shipped Chromium the same way ``render_pdf()`` does."""
-    launch_options = pdf_renderer_module._product_browser_launch_options(
-        playwright.chromium, product_playwright_context.binary_info
+    return pdf_renderer_module._launch_product_browser(
+        playwright.chromium.launch, product_playwright_context.binary_info, Mock()
     )
-    return playwright.chromium.launch(**launch_options)
 
 
 def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDFFlow:
@@ -2639,122 +2639,69 @@ def _create_packaged_headless_shell(
     return executable
 
 
-def _playwright_chromium_path(cache_dir: Path, build: int) -> str:
-    """Return a full-Chromium path shaped like Playwright's ``executable_path`` property."""
-    return str(cache_dir / f"chromium-{build}" / "chrome-win64" / "chrome.exe")
-
-
 @pytest.mark.unit
-def test_expected_headless_shell_dir_follows_playwright_chromium_build(tmp_path):
-    expected_dir = pdf_renderer_module._playwright_expected_headless_shell_dir(
-        _playwright_chromium_path(tmp_path, 1248)
-    )
-
-    assert expected_dir == "chromium_headless_shell-1248"
-
-
-@pytest.mark.unit
-def test_expected_headless_shell_dir_is_unknown_without_a_build_directory(tmp_path):
-    expected_dir = pdf_renderer_module._playwright_expected_headless_shell_dir(
-        str(tmp_path / "custom-browser" / "chrome.exe")
-    )
-
-    assert expected_dir is None
-
-
-@pytest.mark.unit
-def test_product_browser_launch_options_keep_playwright_lookup_for_matching_build(tmp_path):
-    chromium = Mock(executable_path=_playwright_chromium_path(tmp_path, 1248))
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1248")
+def test_launch_product_browser_keeps_the_normal_launch_when_it_succeeds(tmp_path):
+    _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
+    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    launch = Mock()
     logger = Mock()
 
-    launch_options = pdf_renderer_module._product_browser_launch_options(
-        chromium, binary_info, logger
-    )
+    browser = pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
-    assert launch_options == {}
+    assert browser is launch.return_value
+    launch.assert_called_once_with()
     logger.warning.assert_not_called()
 
 
 @pytest.mark.unit
-def test_product_browser_launch_options_launch_packaged_shell_for_unknown_build(tmp_path):
-    chromium = Mock(executable_path=str(tmp_path / "custom-browser" / "chrome.exe"))
-    packaged_dir = "chromium_headless_shell-1223"
-    executable = _create_packaged_headless_shell(tmp_path, packaged_dir)
-    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
-    logger = Mock()
-
-    launch_options = pdf_renderer_module._product_browser_launch_options(
-        chromium, binary_info, logger
-    )
-
-    assert launch_options == {"executable_path": str(executable)}
-    logger.warning.assert_called_once()
-    warning_args = logger.warning.call_args.args
-    assert "cannot determine" in warning_args[0]
-    assert packaged_dir in warning_args
-
-
-@pytest.mark.unit
-def test_product_browser_launch_options_keep_playwright_lookup_for_unknown_build_without_shell(
-    tmp_path,
-):
-    chromium = Mock(executable_path=str(tmp_path / "custom-browser" / "chrome.exe"))
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
-    logger = Mock()
-
-    launch_options = pdf_renderer_module._product_browser_launch_options(
-        chromium, binary_info, logger
-    )
-
-    assert launch_options == {}
-    logger.warning.assert_called_once()
-    warning_args = logger.warning.call_args.args
-    assert "cannot determine" in warning_args[0]
-    assert tmp_path / "chromium_headless_shell-1223" in warning_args
-
-
-@pytest.mark.unit
 @pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
-def test_product_browser_launch_options_launch_packaged_shell_for_other_build(
+def test_launch_product_browser_falls_back_to_packaged_shell_when_launch_fails(
     tmp_path, machine_arch
 ):
-    chromium = Mock(executable_path=_playwright_chromium_path(tmp_path, 1248))
     packaged_dir = "chromium_headless_shell-1223"
     executable = _create_packaged_headless_shell(tmp_path, packaged_dir, machine_arch)
     binary_info = _headless_shell_binary_info(tmp_path, packaged_dir, machine_arch)
+    browser = Mock()
+    launch = Mock(side_effect=[PlaywrightError("Executable doesn't exist"), browser])
     logger = Mock()
 
-    launch_options = pdf_renderer_module._product_browser_launch_options(
-        chromium, binary_info, logger
-    )
-
-    assert launch_options == {"executable_path": str(executable)}
+    assert pdf_renderer_module._launch_product_browser(launch, binary_info, logger) is browser
+    assert launch.call_args_list == [call(), call(executable_path=str(executable))]
     logger.warning.assert_called_once()
-    warning_args = logger.warning.call_args.args
-    assert "chromium_headless_shell-1248" in warning_args
-    assert packaged_dir in warning_args
+    assert packaged_dir in logger.warning.call_args.args
 
 
 @pytest.mark.unit
-def test_product_browser_launch_options_reject_other_build_without_packaged_shell(tmp_path):
-    chromium = Mock(executable_path=_playwright_chromium_path(tmp_path, 1248))
+def test_launch_product_browser_reraises_when_packaged_shell_is_missing(tmp_path):
     binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    launch = Mock(side_effect=PlaywrightError("Executable doesn't exist"))
 
-    with pytest.raises(
-        ADRException,
-        match="expects browser build chromium_headless_shell-1248.*is incomplete",
-    ):
-        pdf_renderer_module._product_browser_launch_options(chromium, binary_info, Mock())
+    with pytest.raises(PlaywrightError, match="Executable doesn't exist"):
+        pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
+
+    launch.assert_called_once_with()
 
 
 @pytest.mark.unit
-def test_playwright_pdf_launches_packaged_shell_when_product_ships_other_build(
-    tmp_path, monkeypatch
-):
+def test_launch_product_browser_does_not_retry_a_timeout(tmp_path):
+    _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
+    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    launch = Mock(side_effect=PlaywrightTimeoutError("Timeout 30000ms exceeded"))
+
+    with pytest.raises(PlaywrightTimeoutError):
+        pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
+
+    launch.assert_called_once_with()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_launches_packaged_shell_when_normal_launch_fails(tmp_path, monkeypatch):
     renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     executable = _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
-    flow.playwright.chromium.executable_path = _playwright_chromium_path(tmp_path, 1248)
+    flow.playwright.chromium.launch.side_effect = [
+        PlaywrightError("Executable doesn't exist"),
+        flow.browser,
+    ]
 
     assert renderer.render_pdf() == b"%PDF-mock"
     assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
