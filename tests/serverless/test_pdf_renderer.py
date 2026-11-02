@@ -2601,10 +2601,17 @@ def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwr
     _capture_render_start_env(flow, env_seen)
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
 
-    with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
+    with pytest.raises(
+        ADRException,
+        match=(
+            rf"Browser PDF rendering failed: the browser build {_PACKAGED_BROWSER_DIR_NAME} "
+            r"in the Ansys installation is incomplete\.$"
+        ),
+    ) as exc_info:
         renderer.render_pdf()
     # The caller must never have to catch Playwright errors directly: the surfaced message stays
-    # ADR-owned, while the original Playwright failure remains available as the chained cause.
+    # ADR-owned and names the incomplete build, while the original Playwright failure remains
+    # available as the chained cause.
     assert isinstance(exc_info.value.__cause__, PlaywrightError)
     assert "Executable doesn't exist" in str(exc_info.value.__cause__)
     assert "playwright" not in str(exc_info.value).lower()
@@ -2675,14 +2682,14 @@ def test_launch_product_browser_falls_back_to_packaged_shell_when_launch_fails(
 def test_launch_product_browser_reraises_when_packaged_shell_is_missing(tmp_path):
     binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
     launch = Mock(side_effect=PlaywrightError("Executable doesn't exist"))
-    logger = Mock()
 
-    with pytest.raises(PlaywrightError, match="Executable doesn't exist"):
-        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
+    with pytest.raises(
+        ADRException, match="browser build chromium_headless_shell-1223 .* is incomplete"
+    ) as exc_info:
+        pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
 
     launch.assert_called_once_with()
-    logger.warning.assert_called_once()
-    assert tmp_path / "chromium_headless_shell-1223" in logger.warning.call_args.args
+    assert isinstance(exc_info.value.__cause__, PlaywrightError)
 
 
 @pytest.mark.unit

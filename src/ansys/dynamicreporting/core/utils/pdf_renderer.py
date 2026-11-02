@@ -295,24 +295,26 @@ def _launch_product_browser(
     before. Only if that launch fails, for example because the product ships a different
     build, retry once with the packaged headless shell's executable and log a warning.
     Timeouts are not retried because they already spent the shared browser budget. When the
-    packaged executable is missing, log where it was expected and re-raise the original error,
-    which callers report as a generic rendering failure.
+    packaged executable is missing, raise an ``ADRException`` naming the incomplete build,
+    with the original launch error as its cause.
     """
     try:
         return launch()
     except PlaywrightTimeoutError:
         raise
-    except PlaywrightError:
-        build_dir = binary_info.path / binary_info.packaged_binary_dir
+    except PlaywrightError as exc:
         executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-        executable = None if executable_relpath is None else build_dir / executable_relpath
+        executable = (
+            None
+            if executable_relpath is None
+            else binary_info.path / binary_info.packaged_binary_dir / executable_relpath
+        )
         if executable is None or not executable.is_file():
-            logger.warning(
-                "Could not launch the browser, and no browser executable was found in %s in "
-                "the Ansys installation.",
-                build_dir,
-            )
-            raise
+            # Name only the build: the folder path would expose Playwright internals to users.
+            raise ADRException(
+                "Browser PDF rendering failed: the browser build "
+                f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
+            ) from exc
         logger.debug("Default browser launch failed.", exc_info=True)
         logger.warning(
             "Could not launch the browser build this PyDynamicReporting release expects. "
