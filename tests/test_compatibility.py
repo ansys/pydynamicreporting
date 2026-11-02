@@ -324,7 +324,7 @@ def test_service_warns_for_unsupported_docker_product_release(monkeypatch, tmp_p
         warnings.simplefilter("always")
         service = Service(
             ansys_installation="docker",
-            docker_image="ghcr.io/snps-ansys-internal/adr_dev:latest",
+            docker_image="ghcr.io/ansys/adr_dev:latest",
             db_directory=str(tmp_path / "db"),
         )
 
@@ -340,7 +340,7 @@ def test_service_does_not_warn_for_supported_docker_product_release(monkeypatch,
         warnings.simplefilter("always")
         service = Service(
             ansys_installation="docker",
-            docker_image="ghcr.io/snps-ansys-internal/adr_dev:latest",
+            docker_image="ghcr.io/ansys/adr_dev:latest",
             db_directory=str(tmp_path / "db"),
         )
 
