@@ -13,8 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   annual product-line compatibility policy.
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
-- The default ADR Docker image is now `ghcr.io/snps-ansys-internal/adr_dev:latest`,
-  where the image has moved.
 - Browser PDF export keeps working when the ADR installation ships a different
   browser build than this release expects. It uses the browser from the ADR
   installation and logs a warning.
