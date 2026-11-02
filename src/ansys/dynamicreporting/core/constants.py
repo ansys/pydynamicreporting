@@ -20,8 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-DOCKER_REPO_URL = "ghcr.io/ansys/adr_dev:latest"
-DOCKER_DEV_REPO_URL = "ghcr.io/ansys/adr_dev:latest"
+# The 27.1 tag follows the ADR 27.1 release branch. The latest tag follows main,
+# which is a later ADR release line.
+DOCKER_REPO_URL = "ghcr.io/ansys/adr_dev:27.1"
+DOCKER_DEV_REPO_URL = "ghcr.io/ansys/adr_dev:27.1"
 DOCKER_DEFAULT_PORT = 8000
 
 # The product registers the ADR tag as the canonical 3D viewer and retains the
