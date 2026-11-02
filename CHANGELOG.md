@@ -16,9 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the ADR installation ships a different browser build than this release expects,
   PyDynamicReporting retries once with the browser executable packaged in the ADR
   installation and logs a warning. It never uses a browser from outside the ADR
-  installation. This keeps browser-PDF export working with ADR 27.1 installations
-  that ship `chromium_headless_shell-1223`. If the packaged executable is missing,
-  the export raises an `ADRException` that names the incomplete browser build.
+  installation. If the packaged executable is missing, the export raises an
+  `ADRException` that names the incomplete browser build.
 
 ### Removed
 
@@ -38,10 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
   with earlier Pillow releases.
 - Update Playwright to 1.64.1. Its bundled Node.js 24.22.1 distrusts the
-  compromised eMudhra intermediates. Browser-PDF export uses Chromium 156
-  (`chromium_headless_shell-1248`) when the ADR installation ships that build.
-  Installations that still ship `chromium_headless_shell-1223` render with
-  Chromium 148 through the browser fallback described under Changed.
+  compromised eMudhra intermediates, and it uses Chromium 156
+  (`chromium_headless_shell-1248`).
 
 ## [1.0.0rc3] - 2026-09-21
 
