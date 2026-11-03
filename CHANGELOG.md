@@ -13,12 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   annual product-line compatibility policy.
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
+
+## [1.0.0rc4] - 2026-11-02
+
+### Changed
+
 - Raise the minimum runtime dependency versions to the versions bundled with
   ADR 26.1: requests 2.32.4, Pillow 11.1.0, python-dateutil 2.9.0.post0,
   pytz 2024.2, psutil 7.2.1, psycopg 3.2.12, and bleach 6.3.0.
-- Browser PDF export keeps working when the ADR installation ships a different
-  browser build than this release expects. It uses the browser from the ADR
-  installation and logs a warning.
+- When the normal browser launch fails for browser-PDF export, for example because
+  the ADR installation ships a different browser build than this release expects,
+  PyDynamicReporting retries once with the browser executable packaged in the ADR
+  installation and logs a warning. It never uses a browser from outside the ADR
+  installation. If the packaged executable is missing, the export raises an
+  `ADRException` that names the incomplete browser build.
 
 ### Removed
 
@@ -33,11 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- Update the development lockfile to Django 5.2.18 for its security fixes.
 - Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
-- Lock Pillow 13.0.0 for development installs, and support Pillow 13. 32-bit
-  integer images are still stored as 16-bit PNGs, as they were with earlier
-  Pillow releases.
+- Lock Pillow 13.0.0 and Django 5.2.18 for development installs, and support
+  Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
+  with earlier Pillow releases.
 - Update Playwright to 1.64.1. Its bundled Node.js 24.22.1 distrusts the
   compromised eMudhra intermediates, and it uses Chromium 156
   (`chromium_headless_shell-1248`).
