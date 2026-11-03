@@ -20,7 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 import os
+import re
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -245,10 +247,27 @@ def _use_product_playwright_browser(product_playwright_context: _ProductPlaywrig
 
 
 def _launch_product_chromium(playwright, product_playwright_context: _ProductPlaywrightContext):
-    """Launch the product-shipped Chromium the same way ``render_pdf()`` does."""
-    return pdf_renderer_module._launch_product_browser(
-        playwright.chromium.launch, product_playwright_context.binary_info, Mock()
+    """Launch the product-shipped Chromium the same way ``render_pdf()`` does.
+
+    Also check that the launch took the path the installed Playwright calls for. The installed
+    Playwright's own full-Chromium revision is the oracle: when it differs from the packaged
+    build, the product build is launched by path without a failed default launch first.
+    """
+    binary_info = product_playwright_context.binary_info
+    logger = Mock()
+    browser = pdf_renderer_module._launch_product_browser(
+        playwright.chromium.launch,
+        binary_info,
+        logger,
+        expected_build=pdf_renderer_module._expected_headless_shell_build(),
     )
+    expected = re.search(r"[\\/]chromium-(\d+)[\\/]", playwright.chromium.executable_path)
+    packaged = re.fullmatch(r"chromium_headless_shell-(\d+)", binary_info.packaged_binary_dir)
+    if expected is not None and packaged is not None:
+        assert logger.warning.called == (expected.group(1) != packaged.group(1))
+    # No launch failed on the way: a failed launch leaves temporary folders behind.
+    assert not any(entry.kwargs.get("exc_info") for entry in logger.debug.call_args_list)
+    return browser
 
 
 def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDFFlow:
@@ -2862,6 +2881,165 @@ def test_playwright_pdf_fallback_warns_and_restores_the_browser_path_env(tmp_pat
     # Both launches run inside the product-browser scope, which is undone after the render.
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
+
+
+def _write_browsers_registry(path: Path, browsers: list[dict[str, object]]) -> Path:
+    """Write a Playwright ``browsers.json`` registry and return its path."""
+    registry = path / "browsers.json"
+    registry.write_text(json.dumps({"browsers": browsers}), encoding="utf-8")
+    return registry
+
+
+@pytest.mark.unit
+def test_expected_headless_shell_build_names_the_registry_revision(tmp_path):
+    registry = _write_browsers_registry(
+        tmp_path,
+        [
+            {"name": "chromium", "revision": "1248"},
+            {"name": "chromium-headless-shell", "revision": "1249", "installByDefault": True},
+        ],
+    )
+
+    build = pdf_renderer_module._expected_headless_shell_build(registry)
+
+    assert build == "chromium_headless_shell-1249"
+
+
+@pytest.mark.unit
+def test_expected_headless_shell_build_reads_the_installed_playwright_registry():
+    build = pdf_renderer_module._expected_headless_shell_build()
+
+    # The installed Playwright lists a plain revision for the headless shell.
+    assert build is not None
+    assert re.fullmatch(r"chromium_headless_shell-\d+", build)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "browsers",
+    [
+        [{"name": "chromium", "revision": "1248"}],
+        [{"name": "chromium-headless-shell", "revision": "not-a-number"}],
+        [{"name": "chromium-headless-shell"}],
+        [{"name": "chromium-headless-shell", "revision": "1248", "revisionOverrides": {"x": "1"}}],
+        ["not-a-browser-entry"],
+    ],
+    ids=["no-entry", "non-digit-revision", "no-revision", "revision-overrides", "malformed-entry"],
+)
+def test_expected_headless_shell_build_is_unknown_when_the_registry_is_not_certain(
+    tmp_path, browsers
+):
+    registry = _write_browsers_registry(tmp_path, browsers)
+
+    assert pdf_renderer_module._expected_headless_shell_build(registry) is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("content", [None, "{not json", '{"browsers": "text"}', "[]"])
+def test_expected_headless_shell_build_is_unknown_when_the_registry_is_unreadable(
+    tmp_path, content
+):
+    registry = tmp_path / "browsers.json"
+    if content is not None:
+        registry.write_text(content, encoding="utf-8")
+
+    assert pdf_renderer_module._expected_headless_shell_build(registry) is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
+def test_launch_product_browser_skips_the_failing_launch_when_the_builds_differ(
+    tmp_path, machine_arch
+):
+    packaged_dir = "chromium_headless_shell-1223"
+    executable = _create_packaged_headless_shell(tmp_path, packaged_dir, machine_arch)
+    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir, machine_arch)
+    launch = Mock()
+    logger = Mock()
+
+    browser = pdf_renderer_module._launch_product_browser(
+        launch, binary_info, logger, expected_build="chromium_headless_shell-1248"
+    )
+
+    # A single launch by path: the default launch cannot succeed, and leaves temp folders behind.
+    assert browser is launch.return_value
+    launch.assert_called_once_with(executable_path=str(executable))
+    logger.warning.assert_called_once()
+    assert packaged_dir in logger.warning.call_args.args
+
+
+@pytest.mark.unit
+def test_launch_product_browser_launches_normally_when_the_builds_match(tmp_path):
+    packaged_dir = "chromium_headless_shell-1248"
+    _create_packaged_headless_shell(tmp_path, packaged_dir)
+    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
+    launch = Mock()
+    logger = Mock()
+
+    browser = pdf_renderer_module._launch_product_browser(
+        launch, binary_info, logger, expected_build=packaged_dir
+    )
+
+    assert browser is launch.return_value
+    launch.assert_called_once_with()
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.unit
+def test_launch_product_browser_names_the_incomplete_build_without_launching(tmp_path):
+    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    launch = Mock()
+
+    with pytest.raises(
+        ADRException, match="browser build chromium_headless_shell-1223 .* is incomplete"
+    ) as exc_info:
+        pdf_renderer_module._launch_product_browser(
+            launch, binary_info, Mock(), expected_build="chromium_headless_shell-1248"
+        )
+
+    launch.assert_not_called()
+    assert exc_info.value.__cause__ is None
+
+
+@pytest.mark.unit
+def test_launch_product_browser_launches_normally_when_the_packaged_folder_is_not_a_revision(
+    tmp_path,
+):
+    """Without a revision in its name the packaged build cannot be compared, so the launch is tried."""
+    _create_packaged_headless_shell(tmp_path, _PACKAGED_BROWSER_DIR_NAME)
+    binary_info = _headless_shell_binary_info(tmp_path, _PACKAGED_BROWSER_DIR_NAME)
+    launch = Mock()
+
+    pdf_renderer_module._launch_product_browser(
+        launch, binary_info, Mock(), expected_build="chromium_headless_shell-1248"
+    )
+
+    launch.assert_called_once_with()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_skips_the_failing_launch_when_the_product_ships_another_build(
+    tmp_path, monkeypatch
+):
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    packaged_dir = "chromium_headless_shell-1223"
+    executable = _create_packaged_headless_shell(browser_binary_dir, packaged_dir)
+    binary_info = _headless_shell_binary_info(browser_binary_dir, packaged_dir)
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: binary_info,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "_expected_headless_shell_build",
+        lambda: "chromium_headless_shell-1248",
+    )
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+
+    flow.playwright.chromium.launch.assert_called_once()
+    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
 
 
 @pytest.mark.unit

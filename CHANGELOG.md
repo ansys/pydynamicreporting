@@ -19,7 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Browser-PDF export now falls back to the browser packaged in the ADR installation
   only when the browser build this release expects is missing. Any other browser launch
   failure, such as missing system libraries, is reported with its original error instead
-  of launching the same browser a second time.
+  of launching the same browser a second time. When the installation ships a different
+  build, that build is launched directly, which also avoids the empty temporary folders
+  that a failed browser launch leaves behind.
 
 ## [1.0.0rc4] - 2026-11-02
 

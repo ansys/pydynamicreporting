@@ -79,6 +79,7 @@ from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
+import playwright
 from playwright.sync_api import Browser
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
@@ -104,6 +105,8 @@ _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
 # failure means the product ships a different build; any other failure, such as missing system
 # libraries or a crash on start-up, would fail the same way for the packaged build.
 _MISSING_BROWSER_EXECUTABLE_ERROR = "Executable doesn't exist"
+# Folder name of a packaged headless-shell build, ``chromium_headless_shell-<revision>``.
+_HEADLESS_SHELL_BUILD_PATTERN = re.compile(r"chromium_headless_shell-\d+")
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
 _PAGINATION_FIT_GUARD_PX = 8.0
 # Direct-child headings that own the content container in an ADR basic layout.
@@ -287,10 +290,65 @@ def resolve_playwright_browser_binary_info(
     return _validate_playwright_browsers_path(browser_dir, machine_arch)
 
 
+def _expected_headless_shell_build(registry_path: Path | None = None) -> str | None:
+    """Return the packaged folder name of the headless-shell build Playwright expects.
+
+    Playwright lists the browser revisions it expects in the ``browsers.json`` file shipped with
+    its driver. Return ``None`` whenever that cannot be read with certainty, for example when the
+    file is missing or malformed, or when the revision is platform specific, so that callers keep
+    Playwright's own browser lookup instead of guessing.
+    """
+    if registry_path is None:
+        registry_path = Path(playwright.__file__).parent / "driver" / "package" / "browsers.json"
+    try:
+        browsers = json.loads(registry_path.read_text(encoding="utf-8"))["browsers"]
+        entry = next(item for item in browsers if item["name"] == "chromium-headless-shell")
+        revision = str(entry["revision"])
+    except (OSError, ValueError, KeyError, TypeError, StopIteration):
+        return None
+    if "revisionOverrides" in entry or not revision.isdigit():
+        return None
+    return f"chromium_headless_shell-{revision}"
+
+
+def _launch_packaged_browser(
+    launch: Callable[..., Browser],
+    binary_info: _PlaywrightBrowserBinaryInfo,
+    logger: Any,
+    launch_error: PlaywrightError | None = None,
+) -> Browser:
+    """Launch the headless shell packaged in the Ansys installation by its executable path.
+
+    Raise an ``ADRException`` naming the incomplete build when that executable is missing, with
+    ``launch_error`` as its cause when the default launch already failed.
+    """
+    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
+    executable = (
+        None
+        if executable_relpath is None
+        else binary_info.path / binary_info.packaged_binary_dir / executable_relpath
+    )
+    if executable is None or not executable.is_file():
+        # Name only the build: the folder path would expose Playwright internals to users.
+        raise ADRException(
+            "Browser PDF rendering failed: the browser build "
+            f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
+        ) from launch_error
+    logger.warning(
+        "The Ansys installation does not ship the browser build this PyDynamicReporting "
+        "release expects. Using the browser build %s from the Ansys installation.",
+        binary_info.packaged_binary_dir,
+    )
+    browser = launch(executable_path=str(executable))
+    logger.info("Using Ansys installation browser %s.", browser.version)
+    return browser
+
+
 def _launch_product_browser(
     launch: Callable[..., Browser],
     binary_info: _PlaywrightBrowserBinaryInfo,
     logger: Any,
+    expected_build: str | None = None,
 ) -> Browser:
     """Launch the product-shipped browser, falling back to its executable by path.
 
@@ -303,7 +361,24 @@ def _launch_product_browser(
     and hide the original error. Timeouts are not retried because they already spent the shared
     browser budget. When the packaged executable is missing, raise an ``ADRException`` naming
     the incomplete build, with the original launch error as its cause.
+
+    When ``expected_build`` is known and differs from the packaged build, the normal launch
+    cannot succeed, so the packaged executable is launched directly. That also avoids the
+    temporary folders Playwright leaves behind after a launch that fails.
     """
+    packaged_build = binary_info.packaged_binary_dir
+    if (
+        expected_build is not None
+        and _HEADLESS_SHELL_BUILD_PATTERN.fullmatch(packaged_build)
+        and packaged_build != expected_build
+    ):
+        logger.debug(
+            "Skipping the default browser launch: the Ansys installation ships %s but %s is "
+            "expected.",
+            packaged_build,
+            expected_build,
+        )
+        return _launch_packaged_browser(launch, binary_info, logger)
     try:
         return launch()
     except PlaywrightTimeoutError:
@@ -312,26 +387,7 @@ def _launch_product_browser(
         if _MISSING_BROWSER_EXECUTABLE_ERROR not in str(exc):
             raise
         logger.debug("Default browser launch failed.", exc_info=True)
-        executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-        executable = (
-            None
-            if executable_relpath is None
-            else binary_info.path / binary_info.packaged_binary_dir / executable_relpath
-        )
-        if executable is None or not executable.is_file():
-            # Name only the build: the folder path would expose Playwright internals to users.
-            raise ADRException(
-                "Browser PDF rendering failed: the browser build "
-                f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
-            ) from exc
-        logger.warning(
-            "Could not launch the browser build this PyDynamicReporting release expects. "
-            "Using the browser build %s from the Ansys installation.",
-            binary_info.packaged_binary_dir,
-        )
-        browser = launch(executable_path=str(executable))
-        logger.info("Using Ansys installation browser %s.", browser.version)
-        return browser
+        return _launch_packaged_browser(launch, binary_info, logger, exc)
 
 
 class _BasePlaywrightPDFRenderer(ABC):
@@ -600,6 +656,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     ),
                     browser_binary,
                     self._logger,
+                    expected_build=_expected_headless_shell_build(),
                 )
                 context = None
 
