@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
 
+### Fixed
+
+- Browser-PDF export now falls back to the browser packaged in the ADR installation
+  only when the browser build this release expects is missing. Any other browser launch
+  failure, such as missing system libraries, is reported with its original error instead
+  of launching the same browser a second time.
+
 ## [1.0.0rc4] - 2026-11-02
 
 ### Changed

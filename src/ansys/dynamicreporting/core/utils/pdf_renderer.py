@@ -100,6 +100,10 @@ _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
     "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
     "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
 }
+# Playwright's own wording when the browser build it expects is not installed. Only this launch
+# failure means the product ships a different build; any other failure, such as missing system
+# libraries or a crash on start-up, would fail the same way for the packaged build.
+_MISSING_BROWSER_EXECUTABLE_ERROR = "Executable doesn't exist"
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
 _PAGINATION_FIT_GUARD_PX = 8.0
 # Direct-child headings that own the content container in an ADR basic layout.
@@ -292,17 +296,22 @@ def _launch_product_browser(
 
     ``launch`` runs Playwright's normal lookup in the product browser folder first, so a
     product that ships the browser build this Playwright version expects launches exactly as
-    before. Only if that launch fails, for example because the product ships a different
-    build, retry once with the packaged headless shell's executable and log a warning.
-    Timeouts are not retried because they already spent the shared browser budget. When the
-    packaged executable is missing, raise an ``ADRException`` naming the incomplete build,
-    with the original launch error as its cause.
+    before. Only if that launch fails because the expected build's executable is missing, which
+    means the product ships a different build, retry once with the packaged headless shell's
+    executable and log a warning. Any other launch failure, such as missing system libraries,
+    is re-raised unchanged because launching the same browser again would fail the same way
+    and hide the original error. Timeouts are not retried because they already spent the shared
+    browser budget. When the packaged executable is missing, raise an ``ADRException`` naming
+    the incomplete build, with the original launch error as its cause.
     """
     try:
         return launch()
     except PlaywrightTimeoutError:
         raise
     except PlaywrightError as exc:
+        if _MISSING_BROWSER_EXECUTABLE_ERROR not in str(exc):
+            raise
+        logger.debug("Default browser launch failed.", exc_info=True)
         executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
         executable = (
             None
@@ -315,7 +324,6 @@ def _launch_product_browser(
                 "Browser PDF rendering failed: the browser build "
                 f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
             ) from exc
-        logger.debug("Default browser launch failed.", exc_info=True)
         logger.warning(
             "Could not launch the browser build this PyDynamicReporting release expects. "
             "Using the browser build %s from the Ansys installation.",

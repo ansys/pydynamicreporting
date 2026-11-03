@@ -2718,6 +2718,153 @@ def test_playwright_pdf_launches_packaged_shell_when_normal_launch_fails(tmp_pat
 
 
 @pytest.mark.unit
+def test_launch_product_browser_reraises_a_launch_failure_unrelated_to_the_build(tmp_path):
+    """Only a missing browser build triggers the fallback; other failures keep their error."""
+    _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
+    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    error = PlaywrightError("Host system is missing dependencies to run browsers.")
+    launch = Mock(side_effect=error)
+    logger = Mock()
+
+    with pytest.raises(PlaywrightError) as exc_info:
+        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
+
+    assert exc_info.value is error
+    launch.assert_called_once_with()
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.unit
+def test_launch_product_browser_logs_the_launch_error_when_packaged_shell_is_missing(tmp_path):
+    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    launch = Mock(side_effect=PlaywrightError("Executable doesn't exist"))
+    logger = Mock()
+
+    with pytest.raises(ADRException, match="is incomplete"):
+        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
+
+    # The original launch error stays available in debug logs, as it was before the fallback.
+    logger.debug.assert_called_once()
+    assert logger.debug.call_args.kwargs["exc_info"] is True
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "fallback_error",
+    [PlaywrightError("Target crashed"), PlaywrightTimeoutError("Timeout 1000ms exceeded")],
+)
+def test_launch_product_browser_propagates_a_failure_of_the_fallback_launch(
+    tmp_path, fallback_error
+):
+    packaged_dir = "chromium_headless_shell-1223"
+    executable = _create_packaged_headless_shell(tmp_path, packaged_dir)
+    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
+    launch = Mock(side_effect=[PlaywrightError("Executable doesn't exist"), fallback_error])
+    logger = Mock()
+
+    with pytest.raises(type(fallback_error)) as exc_info:
+        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
+
+    assert exc_info.value is fallback_error
+    # One normal launch and exactly one fallback launch: there is no further retry.
+    assert launch.call_args_list == [call(), call(executable_path=str(executable))]
+    logger.warning.assert_called_once()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_reports_an_unrelated_launch_failure_with_its_original_cause(
+    tmp_path, monkeypatch
+):
+    error = PlaywrightError("Host system is missing dependencies to run browsers.")
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(
+        tmp_path, monkeypatch, launch_side_effect=error
+    )
+    _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
+
+    with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
+        renderer.render_pdf()
+
+    # The caller gets the same ADR-owned error as before the fallback existed, chained to the
+    # original Playwright error, and the same browser is not launched a second time.
+    assert exc_info.value.__cause__ is error
+    flow.playwright.chromium.launch.assert_called_once()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_fallback_launch_spends_the_remaining_browser_budget(tmp_path, monkeypatch):
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    executable = _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
+    clock = {"now": 100.0}
+    launches: list[dict[str, object]] = []
+
+    def launch(**kwargs):
+        """Fail the normal launch after 10 s, then accept the fallback launch."""
+        launches.append(kwargs)
+        if "executable_path" not in kwargs:
+            clock["now"] += 10.0
+            raise PlaywrightError("Executable doesn't exist")
+        return flow.browser
+
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: clock["now"])
+    flow.playwright.chromium.launch.side_effect = launch
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+
+    full_budget_ms = int(_OfflinePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT * 1000)
+    assert [kwargs["timeout"] for kwargs in launches] == [full_budget_ms, full_budget_ms - 10_000]
+    assert launches[1]["executable_path"] == str(executable)
+
+
+@pytest.mark.unit
+def test_playwright_pdf_does_not_launch_the_fallback_after_the_budget_is_spent(
+    tmp_path, monkeypatch
+):
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
+    clock = {"now": 100.0}
+
+    def launch(**kwargs):
+        """Spend the whole browser budget on the normal launch before it fails."""
+        clock["now"] += 1_000.0
+        raise PlaywrightError("Executable doesn't exist")
+
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: clock["now"])
+    flow.playwright.chromium.launch.side_effect = launch
+
+    with pytest.raises(ADRException, match="browser launch timed out"):
+        renderer.render_pdf()
+
+    flow.playwright.chromium.launch.assert_called_once()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_fallback_warns_and_restores_the_browser_path_env(tmp_path, monkeypatch):
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
+    flow.playwright.chromium.launch.side_effect = [
+        PlaywrightError("Executable doesn't exist"),
+        flow.browser,
+    ]
+    logger = Mock()
+    monkeypatch.setattr(renderer, "_logger", logger)
+    user_browser_path = str(tmp_path / "user-browser-path")
+    env_seen: dict[str, str | None] = {}
+
+    _capture_render_start_env(flow, env_seen)
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+
+    assert any(
+        _PACKAGED_BROWSER_DIR_NAME in warning.args for warning in logger.warning.call_args_list
+    )
+    # Both launches run inside the product-browser scope, which is undone after the render.
+    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
+    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
+
+
+@pytest.mark.unit
 def test_base_renderer_cannot_be_instantiated_directly():
     """The shared base renderer is abstract; concrete subclasses must supply the seams."""
     with pytest.raises(TypeError):
