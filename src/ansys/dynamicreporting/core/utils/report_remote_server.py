@@ -1504,7 +1504,13 @@ class Server:
             # dictionary adr_item.Item builds for set_payload_table.
             content = {"array": content, **table_fields(item_data)}
         elif item_type == "image":
-            content = self._read_import_image(content)
+            # set_payload_image expects image bytes. As in adr_item.Item, PNG
+            # files are passed through and any other format is converted first.
+            if content.lower().endswith(".png"):
+                with open(content, "rb") as handle:
+                    content = handle.read()
+            else:
+                content = report_utils.PIL_image_to_data(content)["file_data"]
         self._IMPORT_PAYLOAD_SETTERS[item_type](item, content)
 
         try:
@@ -1545,18 +1551,6 @@ class Server:
             logger.warning(
                 "Could not remove partially imported item %r (HTTP %s).", item.name, status
             )
-
-    @staticmethod
-    def _read_import_image(path: str) -> bytes:
-        """Read an image file into the bytes ``ItemREST.set_payload_image`` expects.
-
-        Mirrors ``adr_item.Item``: PNG files are passed through, and any other
-        format is converted to PNG first.
-        """
-        if path.lower().endswith(".png"):
-            with open(path, "rb") as handle:
-                return handle.read()
-        return report_utils.PIL_image_to_data(path)["file_data"]
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None
