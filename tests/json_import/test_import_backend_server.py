@@ -36,6 +36,7 @@ from ansys.dynamicreporting.core.exceptions import (
     ADRItemImportError,
     ImportItemValidationError,
 )
+from ansys.dynamicreporting.core.utils.exceptions import PermissionDenied
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     ITEM_TYPE_TO_ADR_TYPE,
     ITEM_TYPES,
@@ -77,7 +78,7 @@ _INLINE = {
 def test_payload_setter_map_covers_every_item_type():
     assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
     for setter in Server._IMPORT_PAYLOAD_SETTERS.values():
-        assert callable(getattr(ItemREST, setter))
+        assert getattr(ItemREST, setter.__name__) is setter
 
 
 @pytest.mark.unit
@@ -151,6 +152,46 @@ def test_a_rejected_push_removes_the_partial_item(rest_server):
 def test_a_successful_push_deletes_nothing(rest_server):
     rest_server._populate_item(_item({"item_type": "text", "name": "n", "value": "v"}), "")
     rest_server.del_objects.assert_not_called()
+
+
+@pytest.mark.unit
+def test_a_push_that_raises_removes_the_partial_item(rest_server):
+    # put_objects() raises PermissionDenied when the payload upload is refused,
+    # after the item record was already created.
+    rest_server.put_objects.side_effect = PermissionDenied("upload refused")
+    with pytest.raises(PermissionDenied, match="upload refused"):
+        rest_server._populate_item(_item({"item_type": "text", "name": "n", "value": "v"}), "")
+    pushed = rest_server.put_objects.call_args.args[0]
+    rest_server.del_objects.assert_called_once_with(pushed)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("item_type", ["animation", "scene", "file"])
+def test_the_payload_file_is_closed_after_a_successful_push(item_type, rest_server, tmp_path: Path):
+    model = _item(
+        {"item_type": item_type, "name": "n", **_media(tmp_path)[item_type]}, str(tmp_path)
+    )
+    item = rest_server._populate_item(model, "")
+    assert item.fileobj.closed
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        ({"return_value": 500}, ADRItemImportError),
+        ({"side_effect": PermissionDenied("upload refused")}, PermissionDenied),
+    ],
+)
+def test_the_payload_file_is_closed_after_a_failed_push(
+    failure, expected, rest_server, tmp_path: Path
+):
+    rest_server.put_objects.configure_mock(**failure)
+    model = _item({"item_type": "file", "name": "n", **_media(tmp_path)["file"]}, str(tmp_path))
+    with pytest.raises(expected):
+        rest_server._populate_item(model, "")
+    pushed = rest_server.put_objects.call_args.args[0]
+    assert pushed[0].fileobj.closed
 
 
 @pytest.mark.unit

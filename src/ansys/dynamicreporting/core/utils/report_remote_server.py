@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import collections
+from collections.abc import Callable
 import configparser
 import functools
 import hashlib
@@ -54,7 +55,12 @@ from ..adr_utils import build_query_url
 from ..common_utils import PDFPageSize, populate_template
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION, validate_supported_server_install_version
 from ..constants import JSON_ATTR_KEYS
-from ..exceptions import ADRException, InvalidAnsysPath, UnsupportedServerVersionError
+from ..exceptions import (
+    ADRException,
+    ADRItemImportError,
+    InvalidAnsysPath,
+    UnsupportedServerVersionError,
+)
 from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
@@ -1439,15 +1445,15 @@ class Server:
         for child_id_str in children_id_strs:
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
-    _IMPORT_PAYLOAD_SETTERS: dict[str, str] = {
-        "text": "set_payload_string",
-        "html": "set_payload_html",
-        "table": "set_payload_table",
-        "tree": "set_payload_tree",
-        "image": "set_payload_image",
-        "animation": "set_payload_animation",
-        "scene": "set_payload_scene",
-        "file": "set_payload_file",
+    _IMPORT_PAYLOAD_SETTERS: dict[str, Callable[[report_objects.ItemREST, object], None]] = {
+        "text": report_objects.ItemREST.set_payload_string,
+        "html": report_objects.ItemREST.set_payload_html,
+        "table": report_objects.ItemREST.set_payload_table,
+        "tree": report_objects.ItemREST.set_payload_tree,
+        "image": report_objects.ItemREST.set_payload_image,
+        "animation": report_objects.ItemREST.set_payload_animation,
+        "scene": report_objects.ItemREST.set_payload_scene,
+        "file": report_objects.ItemREST.set_payload_file,
     }
     """Wire ``item_type`` to the :class:`report_objects.ItemREST` payload setter."""
 
@@ -1483,7 +1489,6 @@ class Server:
         self, item_data: dict, doc_tags: str, logger: logging.Logger | None = None
     ) -> report_objects.ItemREST:
         """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
-        from ..exceptions import ADRItemImportError
         from .json_item_import import combine_tags
         from .json_item_import.mapping import item_content, table_fields
 
@@ -1500,18 +1505,28 @@ class Server:
             content = {"array": content, **table_fields(item_data)}
         elif item_type == "image":
             content = self._read_import_image(content)
-        getattr(item, self._IMPORT_PAYLOAD_SETTERS[item_type])(content)
+        self._IMPORT_PAYLOAD_SETTERS[item_type](item, content)
 
-        status = self.put_objects([item])
-        if status != requests.codes.ok:
-            error = self._last_error
+        try:
+            status = self.put_objects([item])
+            if status != requests.codes.ok:
+                # Read before cleanup, which can overwrite _last_error.
+                raise ADRItemImportError(
+                    f"the server rejected item {item_data['name']!r} "
+                    f"(HTTP {status}): {self._last_error}"
+                )
+        except Exception:
             # put_objects() creates the item record before uploading its
             # payload file, so a failed upload leaves an item without a
-            # payload behind. Remove it, as the serverless backend does.
+            # payload behind, whether it is reported by status or raised
+            # (for example PermissionDenied). Remove it, as the serverless
+            # backend does.
             self._delete_partial_import_item(item, logger)
-            raise ADRItemImportError(
-                f"the server rejected item {item_data['name']!r} (HTTP {status}): {error}"
-            )
+            raise
+        finally:
+            # The file payload setters open the payload and never close it.
+            if item.fileobj is not None:
+                item.fileobj.close()
         return item
 
     def _delete_partial_import_item(
