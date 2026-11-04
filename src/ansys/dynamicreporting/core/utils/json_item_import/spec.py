@@ -43,7 +43,6 @@ from pathlib import PurePath
 import re
 from typing import Any
 
-from ...common_utils import HTMLTagParser
 from ...constants import ANIMATION_EXTENSIONS, IMAGE_EXTENSIONS, SCENE_EXTENSIONS
 from ...exceptions import ImportItemVersionError
 
@@ -213,7 +212,11 @@ def is_non_finite(value: Any) -> bool:
 
 def validate_html(value: str) -> str | None:
     """Require at least one HTML tag, using the serverless ``HTMLContent`` check."""
-    return None if HTMLTagParser().validate(value) else "must contain at least one HTML tag"
+    # Imported lazily: it is the only backend import here, and loading the
+    # serverless models (and Django) is deferred until an HTML item needs it.
+    from ...serverless.item import HTMLParser
+
+    return None if HTMLParser().validate(value) else "must contain at least one HTML tag"
 
 
 def _extension_validator(allowed: tuple[str, ...]) -> Callable[[str], str | None]:

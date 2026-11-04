@@ -38,6 +38,7 @@ the serverless ADR API:
 from dataclasses import field
 from datetime import datetime
 from contextlib import suppress
+from html.parser import HTMLParser as BaseHTMLParser
 import io
 from pathlib import Path
 import pickle  # nosec B403
@@ -51,7 +52,6 @@ from django.utils import timezone
 import numpy
 
 from ..adr_utils import table_attr
-from ..common_utils import HTMLTagParser
 from ..constants import (
     ANIMATION_EXTENSIONS,
     ENHANCED_IMAGE_EXTENSIONS,
@@ -121,8 +121,35 @@ class Dataset(BaseModel):
     _orm_model: str = "data.models.Dataset"
 
 
-# Kept under its historical name so existing imports from this module still work.
-HTMLParser = HTMLTagParser
+class HTMLParser(BaseHTMLParser):
+    """Minimal HTML parser used to validate HTML content.
+
+    The parser records all encountered start tags and exposes a
+    :meth:`validate` utility that returns ``True`` if at least one tag
+    has been seen.
+    """
+
+    def __init__(self):
+        """Initialize an empty parser state."""
+        super().__init__()
+        self._start_tags = []
+
+    def handle_starttag(self, tag, attrs):
+        """Record each start tag encountered during parsing."""
+        self._start_tags.append(tag)
+
+    def validate(self, string):
+        """Return ``True`` if the input string contains at least one tag."""
+        self.feed(string)
+        for tag in self._start_tags:
+            if tag:
+                return True
+        return False
+
+    def reset(self):
+        """Reset the parser state and clear any recorded tags."""
+        super().reset()
+        self._start_tags = []
 
 
 class ItemContent(Validator):
