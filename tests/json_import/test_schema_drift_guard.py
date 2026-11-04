@@ -48,7 +48,7 @@ from ansys.dynamicreporting.core.serverless import (
     Table,
     Tree,
 )
-from ansys.dynamicreporting.core.serverless.item import ItemType
+from ansys.dynamicreporting.core.serverless.item import Item, ItemType
 from ansys.dynamicreporting.core.utils.json_item_import.parser import load_document
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     ITEM_TYPE_TO_ADR_TYPE,
@@ -67,7 +67,9 @@ SAMPLE = REPO_ROOT / "tests" / "test_data" / "adr_import" / "canonical_report.js
 # shape rather than an ADR field, so they are not in this set.
 FIRST_CLASS_TABLE_FIELDS = {"plot", "format", "xaxis", "yaxis"}
 
-ITEM_CLASS = {item_type: ADR._import_item_class(item_type) for item_type in ITEM_TYPES}
+ITEM_CLASS = {
+    item_type: Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_type]] for item_type in ITEM_TYPES
+}
 
 # The per-item hooks each backend hands to import_items, like the
 # create_template_func each backend hands to populate_template.

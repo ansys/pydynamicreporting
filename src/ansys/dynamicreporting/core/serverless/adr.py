@@ -1367,20 +1367,6 @@ class ADR:
         validated = load_document(document, base_dir=base_dir, logger=self._logger)
         return import_items(validated, self._populate_item, on_error=on_error, logger=self._logger)
 
-    @staticmethod
-    def _import_item_class(item_type: str) -> type[Item]:
-        """Resolve the serverless :class:`Item` subclass for a wire ``item_type``.
-
-        Goes through ``ITEM_TYPE_TO_ADR_TYPE`` and the :class:`Item` type
-        registry, so ``html`` binds to :class:`HTML` and ``animation`` to
-        :class:`Animation`. Collapsing them onto :class:`String`/:class:`Image`
-        would skip the markup validation and route video files through the
-        image save path.
-        """
-        from ..utils.json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
-
-        return Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_type]]
-
     def _populate_item(self, item_data: dict[str, Any], doc_tags: str) -> Item:
         """Create one :class:`Item` from a validated import item.
 
@@ -1389,9 +1375,14 @@ class ADR:
         """
         from ..utils.json_item_import import combine_tags
         from ..utils.json_item_import.mapping import item_content, table_fields
+        from ..utils.json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
 
+        # Resolve the subclass through the Item type registry, so "html" binds
+        # to HTML and "animation" to Animation. Collapsing them onto
+        # String/Image would skip the markup validation and route video files
+        # through the image save path.
         item = self.create_item(
-            self._import_item_class(item_data["item_type"]),
+            Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_data["item_type"]]],
             name=item_data["name"],
             content=item_content(item_data),
             source=item_data["source"],

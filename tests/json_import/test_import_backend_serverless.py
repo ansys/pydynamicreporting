@@ -37,15 +37,21 @@ from ansys.dynamicreporting.core.serverless.item import (
     Animation,
     File,
     Image,
+    Item,
     Scene,
     String,
     Table,
     Tree,
 )
-from ansys.dynamicreporting.core.utils.json_item_import.spec import ITEM_TYPES
+from ansys.dynamicreporting.core.utils.json_item_import.spec import (
+    ITEM_TYPE_TO_ADR_TYPE,
+    ITEM_TYPES,
+)
 from tests.json_import.helpers import build_item as _item
 
-ITEM_CLASS = {item_type: ADR._import_item_class(item_type) for item_type in ITEM_TYPES}
+ITEM_CLASS = {
+    item_type: Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_type]] for item_type in ITEM_TYPES
+}
 
 
 @pytest.fixture

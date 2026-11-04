@@ -40,9 +40,13 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core.serverless import ADR
+from ansys.dynamicreporting.core.serverless.item import Item
 from ansys.dynamicreporting.core.utils.json_item_import.importer import import_items
 from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
-from ansys.dynamicreporting.core.utils.json_item_import.spec import ITEM_TYPES
+from ansys.dynamicreporting.core.utils.json_item_import.spec import (
+    ITEM_TYPE_TO_ADR_TYPE,
+    ITEM_TYPES,
+)
 from ansys.dynamicreporting.core.utils.report_remote_server import Server
 
 DOCUMENT = {
@@ -151,8 +155,8 @@ def server_run(tmp_path: Path) -> Run:
 
 @pytest.mark.unit
 def test_both_backends_cover_every_item_type():
-    # _import_item_class raises KeyError for a type the serverless side lacks.
-    assert all(ADR._import_item_class(item_type) for item_type in ITEM_TYPES)
+    # The registry lookup raises KeyError for a type the serverless side lacks.
+    assert all(Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_type]] for item_type in ITEM_TYPES)
     assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
 
 
