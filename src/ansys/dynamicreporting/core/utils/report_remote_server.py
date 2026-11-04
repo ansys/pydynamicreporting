@@ -1446,16 +1446,20 @@ class Server:
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     _IMPORT_PAYLOAD_SETTERS: dict[str, Callable[[report_objects.ItemREST, object], None]] = {
-        "text": report_objects.ItemREST.set_payload_string,
-        "html": report_objects.ItemREST.set_payload_html,
-        "table": report_objects.ItemREST.set_payload_table,
-        "tree": report_objects.ItemREST.set_payload_tree,
-        "image": report_objects.ItemREST.set_payload_image,
-        "animation": report_objects.ItemREST.set_payload_animation,
-        "scene": report_objects.ItemREST.set_payload_scene,
-        "file": report_objects.ItemREST.set_payload_file,
+        report_objects.ItemREST.type_str: report_objects.ItemREST.set_payload_string,
+        report_objects.ItemREST.type_html: report_objects.ItemREST.set_payload_html,
+        report_objects.ItemREST.type_tbl: report_objects.ItemREST.set_payload_table,
+        report_objects.ItemREST.type_tree: report_objects.ItemREST.set_payload_tree,
+        report_objects.ItemREST.type_img: report_objects.ItemREST.set_payload_image,
+        report_objects.ItemREST.type_anim: report_objects.ItemREST.set_payload_animation,
+        report_objects.ItemREST.type_scn: report_objects.ItemREST.set_payload_scene,
+        report_objects.ItemREST.type_file: report_objects.ItemREST.set_payload_file,
     }
-    """Wire ``item_type`` to the :class:`report_objects.ItemREST` payload setter."""
+    """Stored ADR item type to the :class:`report_objects.ItemREST` payload setter.
+
+    Wire ``item_type`` values are translated through ``ITEM_TYPE_TO_ADR_TYPE``
+    first, as the serverless backend does to resolve its :class:`Item` subclass.
+    """
 
     def import_items_from_json(
         self,
@@ -1491,6 +1495,7 @@ class Server:
         """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
         from .json_item_import import combine_tags
         from .json_item_import.mapping import item_content, table_fields
+        from .json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
 
         item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
         # create_item() skips a falsy source; the document value is stored verbatim.
@@ -1511,7 +1516,7 @@ class Server:
                     content = handle.read()
             else:
                 content = report_utils.PIL_image_to_data(content)["file_data"]
-        self._IMPORT_PAYLOAD_SETTERS[item_type](item, content)
+        self._IMPORT_PAYLOAD_SETTERS[ITEM_TYPE_TO_ADR_TYPE[item_type]](item, content)
 
         try:
             status = self.put_objects([item])

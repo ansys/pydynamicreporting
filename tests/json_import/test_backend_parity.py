@@ -157,7 +157,7 @@ def server_run(tmp_path: Path) -> Run:
 def test_both_backends_cover_every_item_type():
     # The registry lookup raises KeyError for a type the serverless side lacks.
     assert all(Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_type]] for item_type in ITEM_TYPES)
-    assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
+    assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPE_TO_ADR_TYPE.values())
 
 
 @pytest.mark.unit

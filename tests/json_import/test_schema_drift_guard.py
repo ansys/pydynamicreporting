@@ -141,7 +141,8 @@ def test_each_item_class_declares_the_mapped_type(item_type):
 
 @pytest.mark.unit
 def test_both_backends_declare_every_item_type():
-    assert set(ITEM_CLASS) == set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
+    assert set(ITEM_CLASS) == set(ITEM_TYPES)
+    assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPE_TO_ADR_TYPE.values())
 
 
 # --------------------------------------------------------------------------

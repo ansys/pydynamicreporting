@@ -76,7 +76,7 @@ _INLINE = {
 
 @pytest.mark.unit
 def test_payload_setter_map_covers_every_item_type():
-    assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPES)
+    assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPE_TO_ADR_TYPE.values())
     for setter in Server._IMPORT_PAYLOAD_SETTERS.values():
         assert getattr(ItemREST, setter.__name__) is setter
 
