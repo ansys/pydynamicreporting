@@ -1846,7 +1846,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     f"Browser PDF rendering failed: {step_name} timed out after "
                     f"{self._render_timeout:.1f}s"
                 )
-        except Exception as exc:
+        except Exception:
             step_outcome = "failed"
             raise
         finally:
