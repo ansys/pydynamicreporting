@@ -71,6 +71,25 @@ For complete examples and handler behavior, see :ref:`serverless_logging`.
 - ``in_memory`` (bool, optional):
   Enables in-memory database and media storage for ephemeral or test usage.
 
+Output-Specific Asset Configuration
+-----------------------------------
+
+Choose the static and media configuration for the output being produced:
+
+- Default ``render_report()`` output is linked HTML. Configure
+  ``static_directory``, run ``ADR.setup(collect_static=True)``, and serve the
+  configured static and media URL prefixes.
+- ``render_report(embed_assets=True)`` returns served HTML containing the
+  report's ADR-owned dependencies. This path can omit ``static_directory`` and
+  call ``ADR.setup()`` without ``collect_static=True``; it does not need ADR
+  asset routes. The media directory is still used as the source for item files.
+- Offline HTML export and browser-PDF rendering remain separate pipelines with
+  their existing output and static-directory requirements.
+
+Asset embedding trades routing setup for a larger response and higher transient
+memory use. It is a served-response option, not a replacement for the offline
+export methods.
+
 Environment Variables
 =====================
 
@@ -193,7 +212,8 @@ Best Practices
 
 - **Within a process, all threads share the ADR configuration after setup; calling ``setup()`` multiple times per process is disallowed.**
 
-- **Configure ``media_url`` and ``static_url`` to match your web server routing to serve media and static content correctly.**
+- **For linked rendering, configure ``media_url`` and ``static_url`` to match
+  the web server routes that serve those assets.**
 
 - **Use absolute paths for all directory configurations to avoid ambiguity.**
 
