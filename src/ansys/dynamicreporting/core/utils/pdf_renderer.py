@@ -326,29 +326,22 @@ def _expected_headless_shell_build(registry_path: Path | None = None) -> str | N
     return f"chromium_headless_shell-{revision}"
 
 
+def _packaged_headless_shell_executable(binary_info: _PlaywrightBrowserBinaryInfo) -> Path | None:
+    """Return the headless-shell executable packaged in the Ansys installation, if present."""
+    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
+    if executable_relpath is None:
+        return None
+    executable = binary_info.path / binary_info.packaged_binary_dir / executable_relpath
+    return executable if executable.is_file() else None
+
+
 def _launch_packaged_browser(
     launch: Callable[..., Browser],
     binary_info: _PlaywrightBrowserBinaryInfo,
+    executable: Path,
     logger: Any,
-    launch_error: PlaywrightError | None = None,
 ) -> Browser:
-    """Launch the headless shell packaged in the Ansys installation by its executable path.
-
-    Raise an ``ADRException`` naming the incomplete build when that executable is missing, with
-    ``launch_error`` as its cause when the default launch already failed.
-    """
-    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-    executable = (
-        None
-        if executable_relpath is None
-        else binary_info.path / binary_info.packaged_binary_dir / executable_relpath
-    )
-    if executable is None or not executable.is_file():
-        # Name only the build: the folder path would expose Playwright internals to users.
-        raise ADRException(
-            "Browser PDF rendering failed: the browser build "
-            f"{binary_info.packaged_binary_dir} in the Ansys installation is incomplete."
-        ) from launch_error
+    """Launch the headless shell packaged in the Ansys installation by its executable path."""
     logger.warning(
         "The Ansys installation does not ship the browser build this PyDynamicReporting "
         "release expects. Using the browser build %s from the Ansys installation.",
@@ -374,14 +367,21 @@ def _launch_product_browser(
     executable and log a warning. Any other launch failure, such as missing system libraries,
     is re-raised unchanged because launching the same browser again would fail the same way
     and hide the original error. Timeouts are not retried because they already spent the shared
-    browser budget. When the packaged executable is missing, raise an ``ADRException`` naming
-    the incomplete build, with the original launch error as its cause.
+    browser budget.
 
-    When ``expected_build`` is known and differs from the packaged build, the normal launch
-    cannot succeed, so the packaged executable is launched directly. That also avoids the
-    temporary folders Playwright leaves behind after a launch that fails.
+    When the packaged executable is missing, raise an ``ADRException`` naming the incomplete
+    build before any launch. When ``expected_build`` is known and differs from the packaged
+    build, the normal launch cannot succeed, so the packaged executable is launched directly.
+    Both avoid the temporary folders Playwright leaves behind after a launch that fails.
     """
     packaged_build = binary_info.packaged_binary_dir
+    executable = _packaged_headless_shell_executable(binary_info)
+    if executable is None:
+        # Name only the build: the folder path would expose Playwright internals to users.
+        raise ADRException(
+            "Browser PDF rendering failed: the browser build "
+            f"{packaged_build} in the Ansys installation is incomplete."
+        )
     if (
         expected_build is not None
         and _HEADLESS_SHELL_BUILD_PATTERN.fullmatch(packaged_build)
@@ -393,7 +393,7 @@ def _launch_product_browser(
             packaged_build,
             expected_build,
         )
-        return _launch_packaged_browser(launch, binary_info, logger)
+        return _launch_packaged_browser(launch, binary_info, executable, logger)
     try:
         return launch()
     except PlaywrightTimeoutError:
@@ -402,7 +402,7 @@ def _launch_product_browser(
         if _MISSING_BROWSER_EXECUTABLE_ERROR not in str(exc):
             raise
         logger.debug("Default browser launch failed.", exc_info=True)
-        return _launch_packaged_browser(launch, binary_info, logger, exc)
+        return _launch_packaged_browser(launch, binary_info, executable, logger)
 
 
 class _BasePlaywrightPDFRenderer(ABC):

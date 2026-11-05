@@ -282,6 +282,12 @@ def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDF
             _STUBBED_BROWSER_DIR
         ),
     )
+    # The browser launch is mocked, so any path stands in for the packaged executable.
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "_packaged_headless_shell_executable",
+        lambda binary_info: _STUBBED_BROWSER_DIR / "headless-shell",
+    )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     return flow
 
@@ -291,11 +297,14 @@ def _arrange_product_browser_renderer(
     monkeypatch: pytest.MonkeyPatch,
     *,
     launch_side_effect: Exception | None = None,
+    create_executable: bool = True,
 ) -> tuple[_OfflinePlaywrightPDFRenderer, MockPlaywrightPDFFlow, Path]:
     """Create a renderer wired to a stubbed product browser and Playwright flow."""
     html_dir = _write_html(tmp_path, "<html><body><p>Shared binary</p></body></html>")
     browser_binary_dir = tmp_path / "playwright-browsers"
     browser_binary_dir.mkdir()
+    if create_executable:
+        _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
     ansys_version = int(DEFAULT_ANSYS_VERSION)
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
@@ -2608,11 +2617,9 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwright(
     tmp_path, monkeypatch
 ):
-    """A Playwright launch failure surfaces a clean ADR error and still restores env."""
+    """A missing packaged browser surfaces a clean ADR error and still restores env."""
     renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(
-        tmp_path,
-        monkeypatch,
-        launch_side_effect=PlaywrightError("Executable doesn't exist; run playwright install"),
+        tmp_path, monkeypatch, create_executable=False
     )
     user_browser_path = str(tmp_path / "user-browser-path")
     env_seen: dict[str, str | None] = {}
@@ -2628,12 +2635,11 @@ def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwr
         ),
     ) as exc_info:
         renderer.render_pdf()
-    # The caller must never have to catch Playwright errors directly: the surfaced message stays
-    # ADR-owned and names the incomplete build, while the original Playwright failure remains
-    # available as the chained cause.
-    assert isinstance(exc_info.value.__cause__, PlaywrightError)
-    assert "Executable doesn't exist" in str(exc_info.value.__cause__)
+    # The surfaced message stays ADR-owned and names the incomplete build. No browser launch is
+    # attempted, so Playwright leaves no temporary folders behind.
+    assert exc_info.value.__cause__ is None
     assert "playwright" not in str(exc_info.value).lower()
+    flow.playwright.chromium.launch.assert_not_called()
     # The product browser path is still selected for the render and the env restored afterward.
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
@@ -2660,7 +2666,7 @@ def _create_packaged_headless_shell(
         / packaged_binary_dir
         / pdf_renderer_module._PACKAGED_HEADLESS_SHELL_EXECUTABLES[machine_arch]
     )
-    executable.parent.mkdir(parents=True)
+    executable.parent.mkdir(parents=True, exist_ok=True)
     executable.write_bytes(b"")
     return executable
 
@@ -2698,17 +2704,17 @@ def test_launch_product_browser_falls_back_to_packaged_shell_when_launch_fails(
 
 
 @pytest.mark.unit
-def test_launch_product_browser_reraises_when_packaged_shell_is_missing(tmp_path):
+def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_missing(tmp_path):
     binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
-    launch = Mock(side_effect=PlaywrightError("Executable doesn't exist"))
+    launch = Mock()
 
     with pytest.raises(
         ADRException, match="browser build chromium_headless_shell-1223 .* is incomplete"
     ) as exc_info:
         pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
 
-    launch.assert_called_once_with()
-    assert isinstance(exc_info.value.__cause__, PlaywrightError)
+    launch.assert_not_called()
+    assert exc_info.value.__cause__ is None
 
 
 @pytest.mark.unit
@@ -2754,17 +2760,21 @@ def test_launch_product_browser_reraises_a_launch_failure_unrelated_to_the_build
 
 
 @pytest.mark.unit
-def test_launch_product_browser_logs_the_launch_error_when_packaged_shell_is_missing(tmp_path):
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
-    launch = Mock(side_effect=PlaywrightError("Executable doesn't exist"))
+def test_launch_product_browser_does_not_launch_the_expected_build_without_its_executable(
+    tmp_path,
+):
+    """A launch that cannot find its executable leaves Playwright temp folders behind."""
+    packaged_dir = "chromium_headless_shell-1248"
+    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
+    launch = Mock()
     logger = Mock()
 
-    with pytest.raises(ADRException, match="is incomplete"):
-        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
+    with pytest.raises(ADRException, match=f"browser build {packaged_dir} .* is incomplete"):
+        pdf_renderer_module._launch_product_browser(
+            launch, binary_info, logger, expected_build=packaged_dir
+        )
 
-    # The original launch error stays available in debug logs, as it was before the fallback.
-    logger.debug.assert_called_once()
-    assert logger.debug.call_args.kwargs["exc_info"] is True
+    launch.assert_not_called()
     logger.warning.assert_not_called()
 
 
