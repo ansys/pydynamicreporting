@@ -981,7 +981,9 @@ class Image(FilePayloadMixin, Item):
             # Convert to PNG format
             self._file_ext = target_ext
             try:
-                image.save(self.file_path, format=self._file_ext.upper())
+                report_utils.png_compatible_image(image).save(
+                    self.file_path, format=self._file_ext.upper()
+                )
             except OSError as e:
                 raise ADRException(f"Error converting image to {self._file_ext}: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
