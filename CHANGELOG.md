@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   of launching the same browser a second time. When the installation ships a different
   build, that build is launched directly, which also avoids the empty temporary folders
   that a failed browser launch leaves behind.
+- Browser-PDF export no longer fails when the ADR installation's browser folder
+  contains extra browser builds, for example after copying a newer ADR package
+  over an older installation. It uses the build named in the installation's browser
+  metadata and logs a warning that names the ignored builds.
 
 ## [1.0.0rc4] - 2026-11-02
 

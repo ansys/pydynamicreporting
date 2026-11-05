@@ -181,7 +181,9 @@ def _validate_playwright_browsers_path(
     when the stripped package layout is complete and self-consistent. This keeps
     the runtime honest to the product packaging contract instead of silently
     accepting stale or partially copied browser directories. The metadata file
-    lives inside ``playwright-browsers`` itself.
+    lives inside ``playwright-browsers`` itself and names the packaged browser
+    directory to use. Other browser directories, such as a build left behind when
+    a newer ADR package is copied over an older install, are ignored.
     """
     if not browser_dir.is_dir():
         return None
@@ -233,26 +235,39 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    packaged_dirs = sorted(path for path in browser_dir.iterdir() if path.is_dir())
-    if len(packaged_dirs) != 1:
+    packaged_name = metadata_info.packaged_binary_dir
+    # The metadata entry must name a direct child folder so it cannot point outside
+    # ``playwright-browsers``.
+    if Path(packaged_name).name != packaged_name or packaged_name in {".", ".."}:
         get_logger().warning(
-            "Ignoring product Playwright binary at %s because it contains %d packaged browser "
-            "directories instead of exactly one.",
+            "Ignoring product Playwright binary at %s because metadata entry %s is not a "
+            "packaged directory name.",
             browser_dir,
-            len(packaged_dirs),
+            packaged_name,
         )
         return None
 
-    packaged_dir = packaged_dirs[0]
-    if packaged_dir.name != metadata_info.packaged_binary_dir:
+    packaged_dir = browser_dir / packaged_name
+    if not packaged_dir.is_dir():
         get_logger().warning(
-            "Ignoring product Playwright binary at %s because packaged directory %s does not "
-            "match metadata entry %s.",
+            "Ignoring product Playwright binary at %s because packaged directory %s named in "
+            "the metadata is missing.",
             browser_dir,
-            packaged_dir.name,
-            metadata_info.packaged_binary_dir,
+            packaged_name,
         )
         return None
+
+    leftover_dirs = sorted(
+        path.name for path in browser_dir.iterdir() if path.is_dir() and path != packaged_dir
+    )
+    if leftover_dirs:
+        get_logger().warning(
+            "Ignoring browser directories %s at %s that the metadata does not name; using %s. "
+            "A clean Ansys installation removes them.",
+            ", ".join(leftover_dirs),
+            browser_dir,
+            packaged_name,
+        )
 
     marker_path = packaged_dir / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():

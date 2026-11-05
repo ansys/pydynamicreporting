@@ -152,6 +152,11 @@ If the ADR installation ships a different browser build than this
 PyDynamicReporting release expects, the export still uses the browser from the
 ADR installation and logs a warning.
 
+The export uses the browser build named in the ADR installation's browser
+metadata. Other browser builds in the same folder, for example from copying a
+newer ADR package over an older installation, are ignored and reported in a
+warning.
+
 Missing or incomplete product browser packages are reported through the ADR
 export error. Browser and context cleanup failures are logged for diagnostics
 and do not replace an otherwise successful export.
