@@ -180,6 +180,11 @@ If the ADR installation ships a different browser build than this
 PyDynamicReporting release expects, the export still uses the browser from the
 ADR installation and logs a warning.
 
+The export uses the browser build named in the ADR installation's browser
+metadata. Other browser builds in the same folder, for example from copying a
+newer ADR package over an older installation, are ignored and reported in a
+warning.
+
 Temporary offline bundles are removed after the operation. Cleanup failures
 are retained for debug logging and do not mask a successful PDF or the primary
 rendering error.

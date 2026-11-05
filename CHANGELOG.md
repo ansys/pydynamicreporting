@@ -16,13 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Browser-PDF export now uses the browser packaged in the ADR installation, launched
-  directly by its executable path, when that build differs from the one this release
-  expects. The two build names are compared, so no browser launch has to fail first,
-  which also avoids the empty temporary folders that a failed browser launch leaves
+- Browser-PDF export now decides whether to use the browser packaged in the ADR
+  installation by comparing its build name with the build this release expects,
+  instead of first trying a launch and retrying after it fails. When the builds
+  differ, the packaged browser is launched directly by its executable path, which
+  also avoids the empty temporary folders that a failed browser launch leaves
   behind. A browser build in the ADR installation that is missing its executable is
-  reported before any launch, for the same reason. Any browser launch failure, such as
-  missing system libraries, is reported with its original error and is never retried.
+  reported before any launch, for the same reason. Other browser launch failures,
+  such as missing system libraries, are never retried and keep the original
+  Playwright error as their cause.
 - Browser-PDF export no longer fails when the ADR installation's browser folder
   contains extra browser builds, for example after copying a newer ADR package
   over an older installation. It uses the build named in the installation's browser
