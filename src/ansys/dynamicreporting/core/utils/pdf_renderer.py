@@ -79,9 +79,8 @@ from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
-import playwright
+import playwright as playwright_package
 from playwright.sync_api import Browser
-from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -96,15 +95,12 @@ from ..exceptions import ADRException
 # Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 # Headless-shell executable inside a packaged ``chromium_headless_shell-<build>`` directory,
-# keyed by the ADR ``machines/<arch>`` name. Only used when the normal browser launch fails.
+# keyed by the ADR ``machines/<arch>`` name. Launched by path when the product ships a different
+# build than the one Playwright expects.
 _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
     "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
     "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
 }
-# Playwright's own wording when the browser build it expects is not installed. Only this launch
-# failure means the product ships a different build; any other failure, such as missing system
-# libraries or a crash on start-up, would fail the same way for the packaged build.
-_MISSING_BROWSER_EXECUTABLE_ERROR = "Executable doesn't exist"
 # Folder name of a packaged headless-shell build, ``chromium_headless_shell-<revision>``.
 _HEADLESS_SHELL_BUILD_PATTERN = re.compile(r"chromium_headless_shell-\d+")
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
@@ -314,7 +310,9 @@ def _expected_headless_shell_build(registry_path: Path | None = None) -> str | N
     Playwright's own browser lookup instead of guessing.
     """
     if registry_path is None:
-        registry_path = Path(playwright.__file__).parent / "driver" / "package" / "browsers.json"
+        registry_path = (
+            Path(playwright_package.__file__).parent / "driver" / "package" / "browsers.json"
+        )
     try:
         browsers = json.loads(registry_path.read_text(encoding="utf-8"))["browsers"]
         entry = next(item for item in browsers if item["name"] == "chromium-headless-shell")
@@ -358,21 +356,22 @@ def _launch_product_browser(
     logger: Any,
     expected_build: str | None = None,
 ) -> Browser:
-    """Launch the product-shipped browser, falling back to its executable by path.
-
-    ``launch`` runs Playwright's normal lookup in the product browser folder first, so a
-    product that ships the browser build this Playwright version expects launches exactly as
-    before. Only if that launch fails because the expected build's executable is missing, which
-    means the product ships a different build, retry once with the packaged headless shell's
-    executable and log a warning. Any other launch failure, such as missing system libraries,
-    is re-raised unchanged because launching the same browser again would fail the same way
-    and hide the original error. Timeouts are not retried because they already spent the shared
-    browser budget.
+    """Launch the product-shipped browser.
 
     When the packaged executable is missing, raise an ``ADRException`` naming the incomplete
-    build before any launch. When ``expected_build`` is known and differs from the packaged
-    build, the normal launch cannot succeed, so the packaged executable is launched directly.
-    Both avoid the temporary folders Playwright leaves behind after a launch that fails.
+    build before any launch: no launch can succeed, and a failed launch leaves temporary folders
+    behind.
+
+    ``launch`` runs Playwright's normal lookup in the product browser folder. That lookup can
+    only succeed when the product ships the build this Playwright version expects. When
+    ``expected_build`` is known and differs from the packaged build, launch the packaged
+    headless shell's executable by path instead and log a warning. This is decided by comparing
+    the two build names, not by interpreting a failed launch, and it also avoids the temporary
+    folders Playwright leaves behind after a launch that fails.
+
+    Otherwise, including when ``expected_build`` is unknown, launch normally and let any failure
+    propagate unchanged: a launch that fails for another reason, such as missing system
+    libraries, would fail the same way for the packaged build and hide the original error.
     """
     packaged_build = binary_info.packaged_binary_dir
     executable = _packaged_headless_shell_executable(binary_info)
@@ -394,15 +393,7 @@ def _launch_product_browser(
             expected_build,
         )
         return _launch_packaged_browser(launch, binary_info, executable, logger)
-    try:
-        return launch()
-    except PlaywrightTimeoutError:
-        raise
-    except PlaywrightError as exc:
-        if _MISSING_BROWSER_EXECUTABLE_ERROR not in str(exc):
-            raise
-        logger.debug("Default browser launch failed.", exc_info=True)
-        return _launch_packaged_browser(launch, binary_info, executable, logger)
+    return launch()
 
 
 class _BasePlaywrightPDFRenderer(ABC):
