@@ -52,6 +52,7 @@ import shutil
 import sys
 import tempfile
 from typing import Any, Callable
+from typing import TYPE_CHECKING
 import uuid
 import warnings
 from collections.abc import Iterable
@@ -83,6 +84,10 @@ from ..exceptions import (
 )
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
+
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from ..utils.json_item_import import ImportResult
+    from ..utils.json_item_import.importer import OnError
 
 
 class ADR:
@@ -1310,6 +1315,96 @@ class ADR:
         root_template = self._populate_template(root_id_str, root_attr, None)
         root_template.save()
         self._build_templates_from_parent(root_id_str, root_template, templates)
+
+    def import_items_from_json(
+        self,
+        document: str | Path | dict,
+        *,
+        on_error: "OnError" = "collect",
+        base_dir: str | Path | None = None,
+    ) -> "ImportResult":
+        """Import ADR report items from a JSON document into database.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
+
+        Report structure is out of scope: use
+        :meth:`load_templates_from_file` to import report templates.
+
+        Parameters
+        ----------
+        document : str, pathlib.Path, or dict
+            Path to the JSON document, or the already-decoded document, for
+            example the result of ``json.load``.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str or pathlib.Path, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing the JSON file, or to the current working
+            directory for a dict.
+
+        Returns
+        -------
+        ImportResult
+            Counts and any per-item failures.
+
+        Raises
+        ------
+        ImportItemValidationError
+            If the document violates the item import contract.
+        ImportItemVersionError
+            If the document schema version is unsupported.
+        """
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from ..utils.json_item_import import import_items, load_document
+
+        self.ensure_setup()
+        validated = load_document(document, base_dir=base_dir, logger=self._logger)
+        return import_items(validated, self._populate_item, on_error=on_error, logger=self._logger)
+
+    def _populate_item(self, item_data: dict[str, Any], doc_tags: Any) -> Item:
+        """Create one :class:`Item` from a validated import item.
+
+        Goes through the public :meth:`create_item`, so the serverless
+        validators run on every imported item.
+        """
+        from ..utils.json_item_import.mapping import item_content, item_tags, table_fields
+        from ..utils.json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
+
+        # Checked before create_item(), so an invalid tag never persists an item.
+        tags = item_tags(doc_tags, item_data["tags"])
+        # Resolve the subclass through the Item type registry, so "html" binds
+        # to HTML and "animation" to Animation. Collapsing them onto
+        # String/Image would skip the markup validation and route video files
+        # through the image save path.
+        item = self.create_item(
+            Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_data["item_type"]]],
+            name=item_data["name"],
+            content=item_content(item_data),
+            source=item_data["source"],
+            sequence=item_data["sequence"],
+        )
+
+        # Only tables have display fields.
+        fields = table_fields(item_data) if item_data["item_type"] == "table" else {}
+        if tags or fields:
+            try:
+                for key, value in fields.items():
+                    setattr(item, key, value)
+                for key, value in tags:
+                    item.add_tag(key, value)
+                item.save()
+            except Exception:
+                # create_item() already persisted the item, so remove it rather
+                # than leave it without its tags or table display properties.
+                item.delete()
+                raise
+        return item
 
     @staticmethod
     def get_report(**kwargs) -> Template:

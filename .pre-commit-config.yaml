@@ -17,6 +17,11 @@ repos:
   rev: 0.31.0
   hooks:
     - id: check-github-workflows
+    # Keeps the published sample and the generated contract verifying each other.
+    - id: check-jsonschema
+      name: Validate ADR item import samples
+      files: ^tests/test_data/adr_import/.*\.json$
+      args: ["--schemafile", "adr_item_import.schema.json"]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.14.14

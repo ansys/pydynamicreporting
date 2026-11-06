@@ -41,6 +41,7 @@ import os
 import shutil
 import tempfile
 import time
+from pathlib import Path
 
 try:
     from IPython.display import IFrame
@@ -49,6 +50,7 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
+from typing import TYPE_CHECKING
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -71,6 +73,10 @@ from .exceptions import (
     StartingServiceError,
     UnsupportedServerVersionError,
 )
+
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from .utils.json_item_import import ImportResult
+    from .utils.json_item_import.importer import OnError
 
 
 # Main class
@@ -756,6 +762,58 @@ class Service:
         """
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
+
+    def import_items_from_json(
+        self,
+        document: str | Path | dict,
+        *,
+        on_error: "OnError" = "collect",
+        base_dir: str | Path | None = None,
+    ) -> "ImportResult":
+        """Import ADR report items from a JSON document into the connected service.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
+
+        Report structure is out of scope: use :meth:`load_templates` to import
+        report templates.
+
+        Parameters
+        ----------
+        document : str, pathlib.Path, or dict
+            Path to the JSON document, or the already-decoded document, for
+            example the result of ``json.load``.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str or pathlib.Path, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing the JSON file, or to the current working
+            directory for a dict.
+
+        Returns
+        -------
+        ImportResult
+            Counts and any per-item failures.
+
+        Raises
+        ------
+        ImportItemValidationError
+            If the document violates the item import contract.
+        ImportItemVersionError
+            If the document schema version is unsupported.
+        ConnectionToServiceError
+            If the service is not connected.
+        """
+        if self.serverobj is None:
+            self.logger.error("Error: no connection to any service")
+            raise ConnectionToServiceError
+        return self.serverobj.import_items_from_json(
+            document, on_error=on_error, base_dir=base_dir, logger=self.logger
+        )
 
     def query(
         self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""
