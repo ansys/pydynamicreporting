@@ -106,6 +106,22 @@ def test_string_payloads_are_checked_by_the_backend(
     assert result.items_saved == len(items) - invalid
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize("backend", ["rest", "serverless"])
+def test_tags_are_checked_by_the_backend(rest_server, serverless_adr, backend):
+    serverless_adr.ensure_setup = MagicMock()
+    server = rest_server if backend == "rest" else serverless_adr
+    items = [
+        {"item_type": "text", "name": str(index), "value": "v", "tags": tags}
+        for index, tags in enumerate(("a=1", [1], [{}], [{"a": [1]}], [{"a": float("nan")}], None))
+    ]
+    result = server.import_items_from_json(_document(*items))
+    assert [failure.name for failure in result.failures] == [str(i) for i in range(5)]
+    assert result.items_saved == 1
+    result = server.import_items_from_json(_document(items[-1], tags=[{}]))
+    assert "document tags" in result.failures[0].error
+
+
 # --------------------------------------------------------------------------
 # REST server
 # --------------------------------------------------------------------------
@@ -174,7 +190,7 @@ def test_rest_failed_push_removes_the_partial_item(rest_server, push, delete, cl
     rest_server.del_objects = _mock(delete)
     logger = MagicMock()
     with pytest.raises((ADRItemImportError, PermissionDenied)):
-        rest_server._populate_item(_item(TABLE), "", logger=logger)
+        rest_server._populate_item(_item(TABLE), (), logger=logger)
     rest_server.del_objects.assert_called_once()
     assert logger.warning.called is cleanup_warns
 
@@ -203,7 +219,7 @@ def test_serverless_import_creates_every_item_type(serverless_adr, tmp_path: Pat
 
 @pytest.mark.unit
 def test_serverless_table_properties_are_saved(serverless_adr):
-    table = serverless_adr._populate_item(_item(TABLE), "")
+    table = serverless_adr._populate_item(_item(TABLE), ())
     assert table.labels_row == ["x", "y"]
     table.save.assert_called_once()
 
@@ -214,5 +230,5 @@ def test_serverless_failed_table_save_removes_the_table(serverless_adr):
     table.save.side_effect = RuntimeError("db down")
     serverless_adr.create_item = MagicMock(return_value=table)
     with pytest.raises(RuntimeError, match="db down"):
-        serverless_adr._populate_item(_item(TABLE), "")
+        serverless_adr._populate_item(_item(TABLE), ())
     table.delete.assert_called_once()

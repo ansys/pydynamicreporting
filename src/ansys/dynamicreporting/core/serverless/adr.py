@@ -1367,16 +1367,16 @@ class ADR:
         validated = load_document(document, base_dir=base_dir, logger=self._logger)
         return import_items(validated, self._populate_item, on_error=on_error, logger=self._logger)
 
-    def _populate_item(self, item_data: dict[str, Any], doc_tags: str) -> Item:
+    def _populate_item(self, item_data: dict[str, Any], doc_tags: Any) -> Item:
         """Create one :class:`Item` from a validated import item.
 
         Goes through the public :meth:`create_item`, so the serverless
         validators run on every imported item.
         """
-        from ..utils.json_item_import import combine_tags
-        from ..utils.json_item_import.mapping import item_content, table_fields
+        from ..utils.json_item_import.mapping import item_content, item_tags, table_fields
         from ..utils.json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
 
+        tags = item_tags(doc_tags, item_data["tags"])
         # Resolve the subclass through the Item type registry, so "html" binds
         # to HTML and "animation" to Animation. Collapsing them onto
         # String/Image would skip the markup validation and route video files
@@ -1387,7 +1387,7 @@ class ADR:
             content=item_content(item_data),
             source=item_data["source"],
             sequence=item_data["sequence"],
-            tags=combine_tags(doc_tags, item_data["tags"]),
+            tags=tags,
         )
 
         # Only tables have display fields.

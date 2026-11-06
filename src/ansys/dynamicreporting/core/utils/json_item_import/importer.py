@@ -34,7 +34,6 @@ from collections.abc import Callable
 import logging
 from typing import Any, Literal
 
-from .mapping import combine_tags
 from .models import ImportDocument, ImportResult, ItemFailure
 
 OnError = Literal["collect", "raise"]
@@ -46,7 +45,7 @@ ON_ERROR_STRATEGIES: tuple[OnError, ...] = ("collect", "raise")
 
 def import_items(
     document: ImportDocument,
-    populate_item: Callable[[dict[str, Any], str], object],
+    populate_item: Callable[[dict[str, Any], Any], object],
     *,
     on_error: OnError = "collect",
     logger: logging.Logger | None = None,
@@ -58,8 +57,8 @@ def import_items(
     document : ImportDocument
         Validated document.
     populate_item : callable
-        Backend hook called as ``populate_item(item_data, doc_tags)``. It must
-        create and persist one item, raising on failure.
+        Called as ``populate_item(item_data, raw_doc_tags)``; checks tags and
+        creates and persists one item, raising on failure.
     on_error : {'collect', 'raise'}, default: 'collect'
         ``'collect'`` records per-item failures and continues;
         ``'raise'`` stops at the first failure.
@@ -82,10 +81,9 @@ def import_items(
 
     result = ImportResult(schema_version=document.schema_version, app_id=document.app_id)
 
-    doc_tags = combine_tags(document.tags)
     for index, item in enumerate(document.items):
         try:
-            populate_item(item, doc_tags)
+            populate_item(item, document.tags)
         except Exception as exc:
             if logger is not None:
                 logger.error(

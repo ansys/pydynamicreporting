@@ -36,7 +36,8 @@ its location, such as ``items[3].rows[1]``.
 
 - ``tags`` is an array of objects. Each object has at least one key, and every
   value is a string, number, or boolean.
-- Document tags are merged into every item's tags.
+- Each backend checks and merges document/item tags before saving. Invalid item
+  tags fail that item; invalid document tags fail every item.
 
 **Items**
 
@@ -107,8 +108,8 @@ Validate a document before importing it:
    check-jsonschema --schemafile adr_item_import.schema.json my_report.json
 
 Any validator that supports draft 2020-12 works. The schema checks field types,
-required fields, and the version pattern. Text, HTML, table arrays, and tree
-nodes are checked by ADR during item creation.
+required fields, and the version pattern. Tags, text, HTML, table arrays, and
+tree nodes are checked by ADR during item creation.
 
 If you need a field or item type that the schema does not offer, open an issue
 at https://github.com/ansys/pydynamicreporting/issues.

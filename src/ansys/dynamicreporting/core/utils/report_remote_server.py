@@ -39,7 +39,7 @@ import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import urllib
 from urllib.parse import urlparse
 import uuid
@@ -1490,17 +1490,16 @@ class Server:
         )
 
     def _populate_item(
-        self, item_data: dict, doc_tags: str, logger: logging.Logger | None = None
+        self, item_data: dict, doc_tags: Any, logger: logging.Logger | None = None
     ) -> report_objects.ItemREST:
         """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
-        from .json_item_import import combine_tags
-        from .json_item_import.mapping import item_content, table_fields
+        from .json_item_import.mapping import item_content, item_tags, table_fields
         from .json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
 
         item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
         # create_item() skips a falsy source; the document value is stored verbatim.
         item.source = item_data["source"]
-        item.set_tags(combine_tags(doc_tags, item_data["tags"]))
+        item.set_tags(item_tags(doc_tags, item_data["tags"]))
 
         item_type = item_data["item_type"]
         content = item_content(item_data)

@@ -146,13 +146,6 @@ def _check_value(value: Any, spec: FieldSpec, location: str, errors: ErrorCollec
         errors.add(location, f"expected one of [{allowed}], got {value!r}")
         return _INVALID
 
-    if spec.coerce is not None:
-        try:
-            value = spec.coerce(value)
-        except ValueError as exc:
-            errors.add(location, str(exc))
-            return _INVALID
-
     if spec.validate is not None:
         message = spec.validate(value)
         if message is not None:

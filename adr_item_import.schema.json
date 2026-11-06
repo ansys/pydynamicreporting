@@ -141,7 +141,7 @@
           "type": "string"
         },
         "tags": {
-          "description": "Tags applied to this object.",
+          "description": "Tags applied to this object. Checked by the backend when each item is created.",
           "items": {
             "$ref": "#/$defs/tagObject"
           },
@@ -1299,7 +1299,7 @@
       "type": "string"
     },
     "tags": {
-      "description": "Tags applied to this object.",
+      "description": "Tags applied to this object. Checked by the backend when each item is created.",
       "items": {
         "$ref": "#/$defs/tagObject"
       },

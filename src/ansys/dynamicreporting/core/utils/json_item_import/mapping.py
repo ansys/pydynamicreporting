@@ -20,17 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Shared mapping helpers for the ADR item import backends.
-
-``item_content``, ``table_fields``, and ``combine_tags`` are the only helpers
-the backends call; they keep the REST and serverless models fed with identical
-values. The lower-level helpers are their building blocks.
-
-Both backends are required to render tags through :func:`normalize_tags` and
-:func:`combine_tags`. A backend that builds its own ``key=value`` string will
-drift from the other one; the drift guard asserts there is no such local
-rendering.
-"""
+"""Shared payload mapping and tag validation/rendering for both import backends."""
 
 from __future__ import annotations
 
@@ -38,11 +28,12 @@ from pathlib import Path
 from typing import Any
 
 from ..report_objects import ItemREST
-from .spec import TABLE_PROPERTIES
+from .spec import TABLE_PROPERTIES, check_tags
 
 __all__ = [
     "combine_tags",
     "item_content",
+    "item_tags",
     "normalize_tags",
     "resolve_path",
     "table_fields",
@@ -92,6 +83,13 @@ def item_content(item_data: dict[str, Any]) -> Any:
 def table_fields(item_data: dict[str, Any]) -> dict[str, Any]:
     """Return the table display properties the document sets, unchanged."""
     return {key: item_data[key] for key in TABLE_PROPERTIES if item_data[key] is not None}
+
+
+def item_tags(doc_tags: Any, raw_item_tags: Any) -> str:
+    """Check raw document/item tags and merge them into a ``key=value`` string."""
+    return combine_tags(
+        check_tags(doc_tags, "document tags"), check_tags(raw_item_tags, "item tags")
+    )
 
 
 def _render_mapping(mapping: dict[Any, Any]) -> list[str]:

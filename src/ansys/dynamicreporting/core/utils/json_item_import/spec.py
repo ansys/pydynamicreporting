@@ -30,8 +30,9 @@ saved.
 
 It also holds the closed wire vocabularies and the schema version helpers. It
 delegates text and HTML payload validation to the existing backend validators.
-The drift guard asserts the vocabularies stay in sync with the backend
-registries.
+Tags are passed through unchanged too; :func:`check_tags` is the check each
+backend runs before it creates an item. The drift guard asserts the
+vocabularies stay in sync with the backend registries.
 """
 
 from __future__ import annotations
@@ -170,9 +171,6 @@ class FieldSpec:
         Closed set of accepted values.
     item_kind : type or tuple of type, optional
         Element type for list-valued fields.
-    coerce : callable, optional
-        Normalizes an accepted value. Raises :class:`ValueError` with a
-        user-facing message when the value cannot be normalized.
     validate : callable, optional
         Returns an error message, or ``None`` when the value is acceptable.
     min_len : int, optional
@@ -192,7 +190,6 @@ class FieldSpec:
     default_factory: Callable[[], Any] | None = None
     choices: tuple[Any, ...] | None = None
     item_kind: Any = None
-    coerce: Callable[[Any], Any] | None = None
     validate: Callable[[Any], str | None] | None = None
     min_len: int | None = None
     json_type: str | tuple[str, ...] = "string"
@@ -237,7 +234,7 @@ def _extension_validator(allowed: tuple[str, ...]) -> Callable[[str], str | None
 
 
 # --------------------------------------------------------------------------
-# Coercers
+# Tags
 # --------------------------------------------------------------------------
 
 
@@ -245,20 +242,24 @@ _TAG_VALUE_TYPES = (str, int, float, bool)
 """Tag value types; mirrors the ``tagObject`` definition in the JSON Schema."""
 
 
-def coerce_tag_list(value: Any) -> tuple[dict[str, Any], ...]:
-    """Freeze tag objects, rejecting empty objects and non-scalar or non-finite values."""
+def check_tags(value: Any, label: str) -> tuple[dict[str, Any], ...]:
+    """Check raw tags for a backend, using ``label`` to identify invalid tags."""
+    if not isinstance(value, (list, tuple)):
+        raise TypeError(f"{label} must be an array, got {type(value).__name__}")
     out: list[dict[str, Any]] = []
     for index, entry in enumerate(value):
+        if not isinstance(entry, dict):
+            raise TypeError(f"{label} [{index}] must be an object, got {type(entry).__name__}")
         if not entry:
-            raise ValueError(f"tag [{index}] must have at least one key")
+            raise ValueError(f"{label} [{index}] must have at least one key")
         for key, tag_value in entry.items():
             if not isinstance(tag_value, _TAG_VALUE_TYPES):
                 raise ValueError(
-                    f"tag [{index}] {key!r} must be a string, number, or boolean, "
+                    f"{label} [{index}] {key!r} must be a string, number, or boolean, "
                     f"got {type(tag_value).__name__}"
                 )
             if is_non_finite(tag_value):
-                raise ValueError(f"tag [{index}] {key!r}: {NON_FINITE_MESSAGE}")
+                raise ValueError(f"{label} [{index}] {key!r}: {NON_FINITE_MESSAGE}")
         out.append(dict(entry))
     return tuple(out)
 
@@ -271,7 +272,6 @@ def _array(
     *,
     required: bool = False,
     default_factory: Callable[[], Any] | None = None,
-    coerce: Callable[[Any], Any] | None = None,
 ) -> FieldSpec:
     """Build a JSON array field; a string ``items`` names a ``$defs`` entry."""
     return FieldSpec(
@@ -280,7 +280,6 @@ def _array(
         required=required,
         default_factory=default_factory,
         item_kind=item_kind,
-        coerce=coerce,
         json_type="array",
         json_items={"$ref": f"#/$defs/{items}"} if isinstance(items, str) else items,
         description=description,
@@ -291,13 +290,13 @@ def _array(
 # Shared field groups
 # --------------------------------------------------------------------------
 
-_TAGS = _array(
+_TAGS = FieldSpec(
     "tags",
-    dict,
-    "tagObject",
-    "Tags applied to this object.",
+    ANY,
     default_factory=tuple,
-    coerce=coerce_tag_list,
+    json_type="array",
+    json_items={"$ref": "#/$defs/tagObject"},
+    description=("Tags applied to this object. Checked by the backend when each item is created."),
 )
 
 ITEM_COMMON: tuple[FieldSpec, ...] = (

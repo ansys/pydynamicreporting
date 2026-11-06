@@ -71,12 +71,11 @@ def test_a_document_without_items_warns():
 def test_every_problem_is_reported_in_one_pass():
     raw = {
         "app_id": "",
-        "tags": [{}],
         "items": [
             {"item_type": "nope", "name": "n"},
             {"item_type": "text", "name": None, "value": 5, "sequence": True},
-            {"item_type": "html", "name": "h", "value": "no tag", "tags": [{"a": [1]}]},
-            {"item_type": "image", "name": "i", "path": "a.gif", "tags": [{"a": float("nan")}]},
+            {"item_type": "html", "name": "h", "value": "no tag"},
+            {"item_type": "image", "name": "i", "path": "a.gif"},
             {"item_type": "image", "name": "i"},
             {"item_type": "tree", "name": "t", "nodes": ["not a node"]},
         ],
@@ -85,17 +84,14 @@ def test_every_problem_is_reported_in_one_pass():
         build_document(raw)
     assert {location for location, _ in excinfo.value.problems} == {
         "app_id",
-        "tags",
         "items[0].item_type",
         "items[1].name",
         "items[1].sequence",
-        "items[2].tags",
         "items[3].path",
-        "items[3].tags",
         "items[4].path",
         "items[5].nodes[0]",
     }
-    assert "10 problems found" in str(excinfo.value)
+    assert "7 problems found" in str(excinfo.value)
 
 
 @pytest.mark.unit
