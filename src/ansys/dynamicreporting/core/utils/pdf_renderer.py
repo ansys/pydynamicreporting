@@ -66,7 +66,7 @@ size is definitive and content cannot expand it.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
 import json
@@ -308,6 +308,12 @@ def _expected_headless_shell_build(registry_path: Path | None = None) -> str | N
     its driver. Return ``None`` whenever that cannot be read with certainty, for example when the
     file is missing or malformed, or when the revision is platform specific, so that callers keep
     Playwright's own browser lookup instead of guessing.
+
+    For example, ``{"name": "chromium-headless-shell", "revision": "1248"}`` in the
+    registry's ``browsers`` list gives ``"chromium_headless_shell-1248"``: the browser name's
+    hyphens become underscores before the revision is appended. The entry
+    ``{"name": "chromium-headless-shell", "revision": "not-a-number"}`` gives ``None``,
+    as does an entry with ``revisionOverrides``.
     """
     if registry_path is None:
         registry_path = (
@@ -317,9 +323,32 @@ def _expected_headless_shell_build(registry_path: Path | None = None) -> str | N
         browsers = json.loads(registry_path.read_text(encoding="utf-8"))["browsers"]
         entry = next(item for item in browsers if item["name"] == "chromium-headless-shell")
         revision = str(entry["revision"])
-    except (OSError, ValueError, KeyError, TypeError, StopIteration):
+    except (OSError, ValueError, KeyError, TypeError, StopIteration) as exc:
+        get_logger().debug(
+            "Cannot determine the expected headless-shell build from registry %s: "
+            "the registry is unreadable or has no usable headless-shell entry (%s: %s). "
+            "Keeping Playwright's browser lookup.",
+            registry_path,
+            type(exc).__name__,
+            exc,
+            exc_info=True,
+        )
         return None
-    if "revisionOverrides" in entry or not revision.isdigit():
+    if "revisionOverrides" in entry:
+        get_logger().debug(
+            "Cannot determine the expected headless-shell build from registry %s: "
+            "revisionOverrides make the revision platform specific. "
+            "Keeping Playwright's browser lookup.",
+            registry_path,
+        )
+        return None
+    if not revision.isdigit():
+        get_logger().debug(
+            "Cannot determine the expected headless-shell build from registry %s: "
+            "headless-shell revision %r is not numeric. Keeping Playwright's browser lookup.",
+            registry_path,
+            revision,
+        )
         return None
     return f"chromium_headless_shell-{revision}"
 
@@ -376,6 +405,21 @@ def _launch_product_browser(
     packaged_build = binary_info.packaged_binary_dir
     executable = _packaged_headless_shell_executable(binary_info)
     if executable is None:
+        executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
+        if executable_relpath is None:
+            logger.debug(
+                "Cannot launch browser build %s at %s: no known headless-shell executable "
+                "layout for machine architecture %r.",
+                packaged_build,
+                binary_info.path,
+                binary_info.machine_arch,
+            )
+        else:
+            logger.debug(
+                "Cannot launch browser build %s: executable %s is missing.",
+                packaged_build,
+                binary_info.path / packaged_build / executable_relpath,
+            )
         # Name only the build: the folder path would expose Playwright internals to users.
         raise ADRException(
             "Browser PDF rendering failed: the browser build "
@@ -583,7 +627,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         return binary_info
 
     @contextmanager
-    def _playwright_browser_binary_env(self):
+    def _playwright_browser_binary_env(self) -> Iterator[_PlaywrightBrowserBinaryInfo]:
         """Temporarily point Playwright at the product-shipped browser binary path.
 
         Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
@@ -652,14 +696,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                 sync_playwright() as playwright,
             ):
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = _launch_product_browser(
-                    lambda **launch_options: playwright.chromium.launch(
+
+                def launch_chromium(**launch_options: str) -> Browser:
+                    return playwright.chromium.launch(
                         headless=True,
                         timeout=self._remaining_browser_phase_timeout_ms(
                             browser_phase_deadline, "browser launch"
                         ),
                         **launch_options,
-                    ),
+                    )
+
+                browser = _launch_product_browser(
+                    launch_chromium,
                     browser_binary,
                     self._logger,
                     expected_build=_expected_headless_shell_build(),
