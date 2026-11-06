@@ -192,7 +192,7 @@ def create_new_pil_image(pil_image):
     return images
 
 
-def png_compatible_image(pil_image):
+def png_compatible_image(pil_image: Image.Image) -> Image.Image:
     """
     Return an image that Pillow can save as PNG.
 
@@ -253,7 +253,7 @@ def save_tif_stripped(pil_image, data, metadata):
     return data
 
 
-def PIL_image_to_data(img, guid=None):
+def PIL_image_to_data(img: str | bytes, guid: str | None = None) -> dict[str, str | int | bytes]:
     """
     Convert the input image to a dictionary holding the data for the payload.
 
