@@ -36,8 +36,12 @@ its location, such as ``items[3].rows[1]``.
 
 - ``tags`` is an array of objects. Each object has at least one key, and every
   value is a string, number, or boolean.
-- Each backend checks and merges document/item tags before saving. Invalid item
-  tags fail that item; invalid document tags fail every item.
+- Each backend checks document and item tags before saving and adds them with
+  its ``add_tag``. Invalid item tags fail that item; invalid document tags fail
+  every item.
+- An item tag overrides a document tag with the same key. A value of ``0``,
+  ``false``, or ``""`` is stored as a bare key, and only the text before a
+  second ``=`` in a value is kept.
 
 **Items**
 

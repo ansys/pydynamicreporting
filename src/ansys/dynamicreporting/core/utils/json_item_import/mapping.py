@@ -20,28 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Shared payload mapping and tag validation/rendering for both import backends."""
+"""Shared payload mapping and tag validation for both import backends."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from ..report_objects import ItemREST
 from .spec import TABLE_PROPERTIES, check_tags
 
 __all__ = [
-    "combine_tags",
     "item_content",
     "item_tags",
-    "normalize_tags",
     "resolve_path",
     "table_fields",
 ]
-
-# Reuses the REST model's quoting rather than the serverless
-# BaseModel._add_quotes, which would pull in Django.
-_quote = ItemREST.add_quotes
 
 
 def resolve_path(path: object, base_dir: str | None = None) -> object:
@@ -85,71 +78,10 @@ def table_fields(item_data: dict[str, Any]) -> dict[str, Any]:
     return {key: item_data[key] for key in TABLE_PROPERTIES if item_data[key] is not None}
 
 
-def item_tags(doc_tags: Any, raw_item_tags: Any) -> str:
-    """Check raw document/item tags and merge them into a ``key=value`` string."""
-    return combine_tags(
-        check_tags(doc_tags, "document tags"), check_tags(raw_item_tags, "item tags")
-    )
+def item_tags(doc_tags: Any, raw_item_tags: Any) -> list[tuple[str, Any]]:
+    """Check raw document/item tags and return their ``(key, value)`` pairs, document first.
 
-
-def _render_mapping(mapping: dict[Any, Any]) -> list[str]:
-    """Render one tag object as a list of ``key=value`` tokens."""
-    return [
-        f"{_quote(str(key))}={_quote(str(value))}"
-        for key, value in mapping.items()
-        if value is not None
-    ]
-
-
-def normalize_tags(raw_tags: Any) -> str:
-    """Render tags into ADR's space-separated ``key=value`` string.
-
-    Parameters
-    ----------
-    raw_tags : Any
-        ``None``, an already-rendered string, a single mapping, a list of
-        mappings, a list of ``"key=value"`` strings, or a bare scalar.
-
-    Returns
-    -------
-    str
-        Space-separated tag string. Empty when there is nothing to render.
+    Each backend passes the pairs to its own ``add_tag``.
     """
-    if raw_tags is None:
-        return ""
-    if isinstance(raw_tags, str):
-        return raw_tags.strip()
-    if isinstance(raw_tags, dict):
-        return " ".join(_render_mapping(raw_tags))
-    if isinstance(raw_tags, (list, tuple, set)):
-        tokens: list[str] = []
-        for entry in raw_tags:
-            if entry is None:
-                continue
-            if isinstance(entry, dict):
-                tokens.extend(_render_mapping(entry))
-            elif isinstance(entry, str):
-                stripped = entry.strip()
-                if stripped:
-                    tokens.append(stripped)
-            else:
-                tokens.append(_quote(str(entry)))
-        return " ".join(tokens)
-    return _quote(str(raw_tags))
-
-
-def combine_tags(*parts: Any) -> str:
-    """Normalize every part and join the non-empty results.
-
-    Parameters
-    ----------
-    *parts : Any
-        Tag payloads accepted by :func:`normalize_tags`.
-
-    Returns
-    -------
-    str
-        Space-separated tag string.
-    """
-    rendered = [normalize_tags(part) for part in parts]
-    return " ".join(part for part in rendered if part)
+    checked = check_tags(doc_tags, "document tags") + check_tags(raw_item_tags, "item tags")
+    return [pair for tags in checked for pair in tags.items()]

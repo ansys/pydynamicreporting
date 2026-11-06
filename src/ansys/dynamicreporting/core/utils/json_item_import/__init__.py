@@ -31,7 +31,6 @@ validates their payloads.
 
 from ...exceptions import ADRItemImportError, ImportItemValidationError, ImportItemVersionError
 from .importer import import_items
-from .mapping import combine_tags, normalize_tags
 from .models import ImportDocument, ImportResult, ItemFailure
 from .parser import build_document, load_document
 from .spec import ITEM_TYPES, SCHEMA_VERSION, SUPPORTED_MAJOR, check_version
@@ -50,6 +49,4 @@ __all__ = [
     "build_document",
     "load_document",
     "check_version",
-    "combine_tags",
-    "normalize_tags",
 ]

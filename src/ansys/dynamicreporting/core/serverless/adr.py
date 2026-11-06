@@ -1376,6 +1376,7 @@ class ADR:
         from ..utils.json_item_import.mapping import item_content, item_tags, table_fields
         from ..utils.json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
 
+        # Checked before create_item(), so an invalid tag never persists an item.
         tags = item_tags(doc_tags, item_data["tags"])
         # Resolve the subclass through the Item type registry, so "html" binds
         # to HTML and "animation" to Animation. Collapsing them onto
@@ -1387,18 +1388,20 @@ class ADR:
             content=item_content(item_data),
             source=item_data["source"],
             sequence=item_data["sequence"],
-            tags=tags,
         )
 
         # Only tables have display fields.
-        if item_data["item_type"] == "table":
+        fields = table_fields(item_data) if item_data["item_type"] == "table" else {}
+        if tags or fields:
             try:
-                for key, value in table_fields(item_data).items():
+                for key, value in fields.items():
                     setattr(item, key, value)
+                for key, value in tags:
+                    item.add_tag(key, value)
                 item.save()
             except Exception:
-                # create_item() already persisted the table, so remove it
-                # rather than leave a table without its display properties.
+                # create_item() already persisted the item, so remove it rather
+                # than leave it without its tags or table display properties.
                 item.delete()
                 raise
         return item

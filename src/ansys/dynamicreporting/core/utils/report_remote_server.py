@@ -1499,7 +1499,8 @@ class Server:
         item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
         # create_item() skips a falsy source; the document value is stored verbatim.
         item.source = item_data["source"]
-        item.set_tags(item_tags(doc_tags, item_data["tags"]))
+        for key, value in item_tags(doc_tags, item_data["tags"]):
+            item.add_tag(key, value)
 
         item_type = item_data["item_type"]
         content = item_content(item_data)

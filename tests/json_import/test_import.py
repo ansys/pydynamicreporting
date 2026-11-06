@@ -35,7 +35,7 @@ import pytest
 from ansys.dynamicreporting.core.exceptions import ADRItemImportError
 from ansys.dynamicreporting.core.serverless.item import Item
 from ansys.dynamicreporting.core.utils.exceptions import PermissionDenied
-from ansys.dynamicreporting.core.utils.json_item_import import build_document, combine_tags
+from ansys.dynamicreporting.core.utils.json_item_import import build_document
 from ansys.dynamicreporting.core.utils.json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
 
 TEST_DATA = Path(__file__).parents[1] / "test_data"
@@ -64,7 +64,12 @@ def _every_item_type(directory: Path) -> list[dict[str, Any]]:
     for name in ("a.mp4", "a.avz", "a.txt"):
         (directory / name).write_bytes(b"payload")
     return [
-        {"item_type": "text", "name": "text", "value": "v", "tags": [{"section": "intro"}]},
+        {
+            "item_type": "text",
+            "name": "text",
+            "value": "v",
+            "tags": [{"section": "intro x", "report": "x"}],
+        },
         {"item_type": "html", "name": "html", "value": "<p>v</p>"},
         TABLE,
         {"item_type": "tree", "name": "tree", "nodes": [{"key": "k", "name": "n", "value": 1}]},
@@ -74,12 +79,6 @@ def _every_item_type(directory: Path) -> list[dict[str, Any]]:
         {"item_type": "scene", "name": "scene", "path": "a.avz"},
         {"item_type": "file", "name": "file", "path": "a.txt"},
     ]
-
-
-@pytest.mark.unit
-def test_combine_tags_renders_every_supported_shape():
-    parts = (None, " a=1 ", {"b": 2, "c": None}, [None, {"d": "x y"}, " e ", "", 7], 8)
-    assert combine_tags(*parts) == "a=1 b=2 d='x y' e 7 8"
 
 
 def _create_with_content(item_class, **kwargs):
@@ -167,7 +166,8 @@ def test_rest_import_pushes_every_item_type(rest_server, tmp_path: Path):
     assert {name: item.type for name, item in pushed.items()} == {
         item["name"]: ITEM_TYPE_TO_ADR_TYPE[item["item_type"]] for item in items
     }
-    assert pushed["text"].get_tags() == "report=r section=intro"
+    # add_tag quotes values with spaces, and an item tag overrides a document tag.
+    assert pushed["text"].get_tags() == "section='intro x' report=x"
     assert pushed["table"].payloaddata["labels_row"] == ["x", "y"]
     assert pushed["animation"].fileobj.closed
 
