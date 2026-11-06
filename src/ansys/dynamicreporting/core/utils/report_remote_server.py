@@ -54,7 +54,7 @@ from .. import common_utils
 from ..adr_utils import build_query_url
 from ..common_utils import PDFPageSize, populate_template
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION, validate_supported_server_install_version
-from ..constants import JSON_ATTR_KEYS
+from ..constants import IMAGE_EXTENSIONS, JSON_ATTR_KEYS
 from ..exceptions import (
     ADRException,
     ADRItemImportError,
@@ -1508,8 +1508,11 @@ class Server:
             # dictionary adr_item.Item builds for set_payload_table.
             content = {**content, **table_fields(item_data)}
         elif item_type == "image":
-            # set_payload_image expects image bytes. As in adr_item.Item, PNG
-            # files are passed through and any other format is converted first.
+            # set_payload_image expects image bytes and never sees the path, so
+            # check the path with the validator the other REST media setters use.
+            item.validate_file(content, "image file", list(IMAGE_EXTENSIONS))
+            # As in adr_item.Item, PNG files are passed through and any other
+            # format is converted first.
             if content.lower().endswith(".png"):
                 with open(content, "rb") as handle:
                     content = handle.read()

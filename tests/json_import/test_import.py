@@ -110,18 +110,25 @@ def test_string_payloads_are_checked_by_the_backend(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("backend", ["rest", "serverless"])
-def test_tree_and_table_payloads_are_checked_by_the_backend(rest_server, serverless_adr, backend):
+def test_tree_table_and_image_payloads_are_checked_by_the_backend(
+    rest_server, serverless_adr, backend, tmp_path: Path
+):
     serverless_adr.ensure_setup = MagicMock()
     serverless_adr.create_item.side_effect = _create_with_content
     server = rest_server if backend == "rest" else serverless_adr
+    gif = tmp_path / "a.gif"
+    shutil.copy(TEST_DATA / "aa_00_0_alpha1.png", gif)
     items = [
         {"item_type": "tree", "name": "0"},
         {"item_type": "tree", "name": "1", "nodes": ["x"]},
         {"item_type": "table", "name": "2", "array": "x"},
         {"item_type": "table", "name": "3", "array": [[1.0]], "dtype": 5},
+        {"item_type": "image", "name": "4"},
+        {"item_type": "image", "name": "5", "path": str(gif)},
     ]
     result = server.import_items_from_json(_document(*items))
-    assert [failure.name for failure in result.failures] == ["0", "1", "2", "3"]
+    assert [failure.name for failure in result.failures] == ["0", "1", "2", "3", "4", "5"]
+    assert "not supported" in result.failures[-1].error
 
 
 @pytest.mark.unit

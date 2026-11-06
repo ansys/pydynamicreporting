@@ -40,7 +40,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 import math
-from pathlib import PurePath
 import re
 from typing import Any
 
@@ -81,19 +80,9 @@ MEDIA_EXTENSIONS: dict[str, tuple[str, ...] | None] = {
 }
 """Accepted lowercase file extensions per media ``item_type``; ``None`` accepts any.
 
-The tuples are the ones both backends validate against. They are published
-in the schema descriptions, but only image extensions are checked here; see
-:data:`_IMPORT_CHECKED_EXTENSIONS`.
-"""
-
-_IMPORT_CHECKED_EXTENSIONS = frozenset({"image"})
-"""Media types whose ``path`` extension the import itself checks.
-
-The REST backend converts images to PNG bytes before ``set_payload_image``,
-which never sees the path, so without this check it would accept image formats
-the serverless backend rejects. Animation, scene, and file extensions are left
-to the backends, which both check them at save time (``ItemREST.validate_file``
-and the serverless ``FileValidator``).
+The tuples are the ones both backends validate against when the item is saved
+(``ItemREST.validate_file`` and the serverless ``FileValidator``). They are
+published in the schema descriptions only.
 """
 
 # --------------------------------------------------------------------------
@@ -171,8 +160,6 @@ class FieldSpec:
         Closed set of accepted values.
     item_kind : type or tuple of type, optional
         Element type for list-valued fields.
-    validate : callable, optional
-        Returns an error message, or ``None`` when the value is acceptable.
     min_len : int, optional
         Minimum length for strings and lists.
     json_type : str or tuple of str
@@ -190,7 +177,6 @@ class FieldSpec:
     default_factory: Callable[[], Any] | None = None
     choices: tuple[Any, ...] | None = None
     item_kind: Any = None
-    validate: Callable[[Any], str | None] | None = None
     min_len: int | None = None
     json_type: str | tuple[str, ...] = "string"
     json_items: dict[str, Any] | None = None
@@ -217,20 +203,6 @@ def is_non_finite(value: Any) -> bool:
     not valid JSON and the published schema rejects them.
     """
     return isinstance(value, float) and not math.isfinite(value)
-
-
-def _extension_validator(allowed: tuple[str, ...]) -> Callable[[str], str | None]:
-    """Build a ``path`` validator that accepts only the ``allowed`` extensions."""
-    listed = ", ".join(f"'.{extension}'" for extension in allowed)
-
-    def _validate(path: str) -> str | None:
-        extension = PurePath(path).suffix.lower().lstrip(".")
-        if extension in allowed:
-            return None
-        found = f"'.{extension}'" if extension else "no extension"
-        return f"file type {found} is not supported; expected one of [{listed}]"
-
-    return _validate
 
 
 # --------------------------------------------------------------------------
@@ -322,27 +294,12 @@ ITEM_COMMON_NAMES = frozenset(spec.name for spec in ITEM_COMMON)
 
 
 def _path_spec(item_type: str) -> FieldSpec:
-    """Build the ``path`` field of a media item type.
-
-    Every type with known extensions lists them in its description. Only the
-    types in :data:`_IMPORT_CHECKED_EXTENSIONS` are checked here; the others
-    accept any value, and the backend file validators check it when the item
-    is saved.
-    """
+    """Build the ``path`` field of a media item type, listing any known extensions."""
     allowed = MEDIA_EXTENSIONS[item_type]
     description = "Path to the payload file, absolute or relative to the document."
     if allowed is not None:
         listed = ", ".join(f".{extension}" for extension in allowed)
         description += f" Accepted extensions (case-insensitive): {listed}."
-    if item_type in _IMPORT_CHECKED_EXTENSIONS:
-        return FieldSpec(
-            "path",
-            str,
-            required=True,
-            min_len=1,
-            validate=_extension_validator(allowed),
-            description=description,
-        )
     return FieldSpec(
         "path",
         ANY,

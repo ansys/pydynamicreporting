@@ -58,12 +58,9 @@ its location, such as ``items[3].rows[1]``.
   ``.tif``, ``.tiff``; ``animation`` takes ``.mp4``; ``scene`` takes ``.stl``,
   ``.ply``, ``.csf``, ``.avz``, ``.scdoc``, ``.scdocx``, ``.dsco``, ``.glb``,
   ``.obj``; ``file`` takes any extension.
-- An ``image`` path is checked during validation: it is required, non-empty,
-  and has a supported extension.
-- ``animation``, ``scene``, and ``file`` paths are checked when the item is
-  saved, so a missing, empty, or non-string path, an unsupported extension, or
-  a missing file is a per-item failure, not a validation error.
-- Image file existence is also checked when the item is saved.
+- Every media ``path`` is checked when the item is saved, so a missing, empty,
+  or non-string path, an unsupported extension, or a missing file is a per-item
+  failure, not a validation error.
 
 **Tables**
 
@@ -110,8 +107,8 @@ Validate a document before importing it:
    check-jsonschema --schemafile adr_item_import.schema.json my_report.json
 
 Any validator that supports draft 2020-12 works. The schema checks field types,
-required fields, and the version pattern. Tags, text, HTML, table arrays, and
-tree nodes are checked by ADR during item creation.
+required fields, and the version pattern. Tags, text, HTML, table arrays, tree
+nodes, and media paths are checked by ADR during item creation.
 
 If you need a field or item type that the schema does not offer, open an issue
 at https://github.com/ansys/pydynamicreporting/issues.

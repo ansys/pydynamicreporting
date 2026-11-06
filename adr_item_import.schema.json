@@ -81,14 +81,12 @@
               "const": "image"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .png, .jpg, .tif, .tiff.",
-              "minLength": 1,
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .png, .jpg, .tif, .tiff. Checked by the backend when the item is saved.",
               "type": "string"
             }
           },
           "required": [
-            "item_type",
-            "path"
+            "item_type"
           ]
         }
       ]

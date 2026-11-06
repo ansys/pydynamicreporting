@@ -75,8 +75,8 @@ def test_every_problem_is_reported_in_one_pass():
             {"item_type": "nope", "name": "n"},
             {"item_type": "text", "name": None, "value": 5, "sequence": True},
             {"item_type": "html", "name": "h", "value": "no tag"},
-            {"item_type": "image", "name": "i", "path": "a.gif"},
-            {"item_type": "image", "name": "i"},
+            # Required here because REST silently substitutes [[1]] for a missing array.
+            {"item_type": "table", "name": "t"},
         ],
     }
     with pytest.raises(ImportItemValidationError) as excinfo:
@@ -86,10 +86,9 @@ def test_every_problem_is_reported_in_one_pass():
         "items[0].item_type",
         "items[1].name",
         "items[1].sequence",
-        "items[3].path",
-        "items[4].path",
+        "items[3].array",
     }
-    assert "6 problems found" in str(excinfo.value)
+    assert "5 problems found" in str(excinfo.value)
 
 
 @pytest.mark.unit
