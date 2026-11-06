@@ -55,6 +55,9 @@ its location, such as ``items[3].rows[1]``.
   ``.tif``, ``.tiff``; ``animation`` takes ``.mp4``; ``scene`` takes ``.stl``,
   ``.ply``, ``.csf``, ``.avz``, ``.scdoc``, ``.scdocx``, ``.dsco``, ``.glb``,
   ``.obj``; ``file`` takes any extension.
+- Image extensions are checked during validation. Animation and scene
+  extensions are checked when the item is saved, like file existence, so an
+  unsupported one is a per-item failure, not a validation error.
 - File existence is checked when the item is saved, so a missing file is a
   per-item failure, not a validation error.
 
@@ -69,16 +72,24 @@ its location, such as ``items[3].rows[1]``.
 
 **Trees**
 
-- Each node requires a non-empty ``name``. ``value`` is a scalar or an array of
-  scalars and defaults to the name; ``key`` is optional; ``children`` is an
-  array of nodes.
-- Nesting deeper than 100 levels is rejected.
+- ``nodes`` is an array of complete ADR tree nodes, which are passed to the
+  backend unchanged. Each node requires ``key``, ``name``, and ``value``.
+  ``children`` is an optional array of nodes; ``state`` and ``header`` are
+  optional display hints.
+- ``key`` is a hidden entity type label, not an identifier, so it need not be
+  unique. ``value`` is ``null``, a scalar, or an array of them, and arrays may
+  nest.
+- The backend checks nodes when the item is saved, so a malformed node is a
+  per-item failure, not a validation error. The backend does not check the
+  types of ``key``, ``name``, ``state``, or ``header``, and it accepts ``NaN``
+  and ``Infinity`` values; validate against the schema to catch these.
 
 **Unknown keys**
 
-- Keys that the schema does not define, at any level, are logged as warnings
-  and ignored. A ``templates`` key is ignored the same way: report structure is
-  imported with ``load_templates``.
+- Keys that the schema does not define are logged as warnings and ignored, except
+  inside tree nodes, which are passed to the backend unchanged. A ``templates``
+  key is ignored the same way: report structure is imported with
+  ``load_templates``.
 
 Validating a document
 =====================

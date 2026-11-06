@@ -88,7 +88,17 @@ CANONICAL_DOCUMENT: dict[str, Any] = {
             "item_type": "tree",
             "name": "Mesh",
             "tags": [{"section": "results"}],
-            "nodes": [{"name": "Assembly", "children": [{"name": "Part A"}, {"name": "Part B"}]}],
+            "nodes": [
+                {
+                    "key": "assembly",
+                    "name": "Assembly",
+                    "value": None,
+                    "children": [
+                        {"key": "part", "name": "Part A", "value": 1},
+                        {"key": "part", "name": "Part B", "value": 2},
+                    ],
+                }
+            ],
         },
     ],
 }
@@ -177,12 +187,8 @@ def test_canonical_image_path(canonical):
 
 
 @pytest.mark.unit
-def test_canonical_tree_keeps_both_children(canonical):
-    root = canonical.items[TREE]["nodes"][0]
-    assert root["name"] == "Assembly"
-    assert [child["name"] for child in root["children"]] == ["Part A", "Part B"]
-    # An omitted value defaults to the node name.
-    assert root["value"] == "Assembly"
+def test_canonical_tree_is_passed_through_unchanged(canonical):
+    assert canonical.items[TREE]["nodes"] == CANONICAL_DOCUMENT["items"][TREE]["nodes"]
 
 
 @pytest.mark.unit
@@ -321,8 +327,8 @@ def _non_scalar_cell(document):
     document["items"][TABLE]["rows"][0][2] = {"value": 290.0}
 
 
-def _nested_tree_node_without_a_name(document):
-    document["items"][TREE]["nodes"][0]["children"][1] = {"value": "Part B"}
+def _tree_node_is_not_an_object(document):
+    document["items"][TREE]["nodes"].append("Part C")
 
 
 @pytest.mark.unit
@@ -339,7 +345,7 @@ def _nested_tree_node_without_a_name(document):
         (_xaxis_is_not_a_column, f"items[{TABLE}].xaxis"),
         (_yaxis_is_not_a_column, f"items[{TABLE}].yaxis[1]"),
         (_non_scalar_cell, f"items[{TABLE}].rows[0][2]"),
-        (_nested_tree_node_without_a_name, f"items[{TREE}].nodes[0].children[1].name"),
+        (_tree_node_is_not_an_object, f"items[{TREE}].nodes[1]"),
     ],
     ids=lambda value: value.__name__.lstrip("_") if callable(value) else value,
 )
@@ -404,7 +410,7 @@ def test_every_break_is_reported_in_one_pass():
         del document["app_id"]
         del document["items"][TEXT]["value"]
         document["items"][TABLE]["xaxis"] = "pressure"
-        document["items"][TREE]["nodes"][0]["children"][1] = {"value": "Part B"}
+        document["items"][TREE]["nodes"].append("Part C")
 
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_mutated(mutate))
@@ -414,7 +420,7 @@ def test_every_break_is_reported_in_one_pass():
         "app_id",
         f"items[{TEXT}].value",
         f"items[{TABLE}].xaxis",
-        f"items[{TREE}].nodes[0].children[1].name",
+        f"items[{TREE}].nodes[1]",
     } <= locations
 
 

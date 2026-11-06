@@ -35,7 +35,6 @@ from ansys.dynamicreporting.core.exceptions import (
     ImportItemVersionError,
 )
 from ansys.dynamicreporting.core.utils.json_item_import.parser import (
-    MAX_TREE_DEPTH,
     build_document,
     load_document,
     read_document,
@@ -152,46 +151,6 @@ def test_null_is_the_supported_missing_number():
 
 
 @pytest.mark.unit
-def test_deeply_nested_tree_is_a_validation_error_not_a_crash():
-    # The builders recurse during parsing, so an unbounded depth would abort
-    # the whole document with a RecursionError before any item could be saved.
-    node = {"name": "leaf"}
-    for _ in range(MAX_TREE_DEPTH + 5):
-        node = {"name": "n", "children": [node]}
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
-    assert any("nesting is deeper" in message for _, message in excinfo.value.problems)
-
-
-@pytest.mark.unit
-def test_tree_at_the_depth_limit_is_accepted():
-    node = {"name": "leaf"}
-    for _ in range(MAX_TREE_DEPTH - 1):
-        node = {"name": "n", "children": [node]}
-    doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
-    assert doc.items[0]["nodes"]
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("value", [float("nan"), float("inf"), [1.0, float("-inf")]])
-def test_non_finite_tree_values_are_rejected(value):
-    node = {"name": "root", "value": value}
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
-    assert any(
-        location.startswith("items[0].nodes[0].value") and "NaN and Infinity" in message
-        for location, message in excinfo.value.problems
-    )
-
-
-@pytest.mark.unit
-def test_finite_tree_values_are_accepted():
-    node = {"name": "root", "value": [1.5, None, "x"]}
-    doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
-    assert doc.items[0]["nodes"][0]["value"] == [1.5, None, "x"]
-
-
-@pytest.mark.unit
 def test_non_finite_tag_values_are_rejected():
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(tags=[{"run": float("nan")}]))
@@ -220,16 +179,25 @@ def test_html_with_a_tag_is_accepted(value):
     [
         ("image", "plot.jpeg"),
         ("image", "plot.bmp"),
-        ("animation", "clip.avi"),
-        ("scene", "model.png"),
         ("image", "no_extension"),
     ],
 )
-def test_unsupported_media_extensions_are_rejected(item_type, path):
+def test_unsupported_image_extensions_are_rejected(item_type, path):
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": item_type, "name": "n", "path": path}]))
     assert "items[0].path" in _locations(excinfo)
     assert any("is not supported" in message for _, message in excinfo.value.problems)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("item_type", "path"),
+    [("animation", "clip.avi"), ("scene", "model.png"), ("scene", "no_extension")],
+)
+def test_animation_and_scene_extensions_are_left_to_the_backends(item_type, path):
+    # Both backends reject these at save time; see test_backend_parity.
+    doc = build_document(_document(items=[{"item_type": item_type, "name": "n", "path": path}]))
+    assert doc.items[0]["path"] == path
 
 
 @pytest.mark.unit
@@ -579,125 +547,55 @@ def test_tree_node_entries_must_be_objects():
     assert "items[0].nodes[0]" in _locations(excinfo)
 
 
-@pytest.mark.unit
-def test_tree_child_entries_must_be_objects():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(
-            _document(
-                items=[
-                    {
-                        "item_type": "tree",
-                        "name": "t",
-                        "nodes": [{"name": "a", "children": ["nope"]}],
-                    }
-                ]
-            )
-        )
-    assert "items[0].nodes[0].children[0]" in _locations(excinfo)
-
-
 # --------------------------------------------------------------------------
 # Items - tree
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.unit
-def test_tree_nodes_recurse():
-    doc = build_document(
-        _document(
-            items=[
-                {
-                    "item_type": "tree",
-                    "name": "mesh",
-                    "nodes": [
-                        {
-                            "name": "Assembly",
-                            "children": [
-                                {"name": "Part A"},
-                                {"name": "Part B", "children": [{"name": "Face 1"}]},
-                            ],
-                        }
-                    ],
-                }
-            ]
-        )
-    )
-    root = doc.items[0]["nodes"][0]
-    assert root["name"] == "Assembly"
-    assert len(root["children"]) == 2
-    assert root["children"][1]["children"][0]["name"] == "Face 1"
+def _tree_nodes(nodes: list) -> list:
+    doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": nodes}]))
+    return doc.items[0]["nodes"]
 
 
 @pytest.mark.unit
-def test_tree_node_value_defaults_to_the_name():
-    doc = build_document(
-        _document(items=[{"item_type": "tree", "name": "t", "nodes": [{"name": "Alpha"}]}])
-    )
-    assert doc.items[0]["nodes"][0]["value"] == "Alpha"
+def test_complete_tree_nodes_are_passed_through_unchanged():
+    nodes = [
+        {
+            "key": "assembly",
+            "name": "Assembly",
+            "value": None,
+            "state": "expanded",
+            "header": True,
+            "children": [{"key": "part", "name": "Part A", "value": [1, [2, 3]]}],
+        }
+    ]
+    assert _tree_nodes(nodes) == nodes
 
 
 @pytest.mark.unit
-def test_tree_node_keeps_an_explicit_value_and_key():
-    doc = build_document(
-        _document(
-            items=[
-                {
-                    "item_type": "tree",
-                    "name": "t",
-                    "nodes": [{"name": "Alpha", "value": [1, 2], "key": "alpha"}],
-                }
-            ]
-        )
-    )
-    node = doc.items[0]["nodes"][0]
-    assert node["value"] == [1, 2]
-    assert node["key"] == "alpha"
+@pytest.mark.parametrize(
+    "node",
+    [
+        {"name": "missing key and value"},
+        {"key": "k", "name": "n", "value": {}},
+        {"key": "k", "name": "n", "value": float("nan")},
+        {"key": "k", "name": "n", "value": 1, "children": ["not a node"]},
+    ],
+    ids=["missing-fields", "object-value", "nan-value", "non-object-child"],
+)
+def test_tree_node_contents_are_left_to_the_backend(node):
+    # The backend tree validators own node checks, so the parser does not
+    # reject what they would; the item fails when it is saved instead.
+    assert _tree_nodes([node])[0] is node
 
 
 @pytest.mark.unit
-def test_tree_node_requires_a_name():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [{}]}]))
-    assert "items[0].nodes[0].name" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_tree_node_value_rejects_a_nested_object():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(
-            _document(
-                items=[{"item_type": "tree", "name": "t", "nodes": [{"name": "a", "value": {}}]}]
-            )
-        )
-    assert "items[0].nodes[0].value" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_tree_node_value_rejects_a_list_of_objects():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(
-            _document(
-                items=[{"item_type": "tree", "name": "t", "nodes": [{"name": "a", "value": [{}]}]}]
-            )
-        )
-    assert "items[0].nodes[0].value[0]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_nested_tree_problems_report_their_full_location():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(
-            _document(
-                items=[
-                    {
-                        "item_type": "tree",
-                        "name": "t",
-                        "nodes": [{"name": "a", "children": [{"name": 5}]}],
-                    }
-                ]
-            )
-        )
-    assert "items[0].nodes[0].children[0].name" in _locations(excinfo)
+def test_a_deep_tree_does_not_recurse_in_the_parser():
+    # The parser no longer walks nodes, so depth is limited only by the backends.
+    node = {"key": "k", "name": "leaf", "value": 1}
+    for _ in range(500):
+        node = {"key": "k", "name": "n", "value": 1, "children": [node]}
+    assert _tree_nodes([node])[0] is node
 
 
 # --------------------------------------------------------------------------

@@ -66,10 +66,12 @@
       "tags": [{ "section": "results" }],
       "nodes": [
         {
+          "key": "assembly",
           "name": "Assembly",
+          "value": null,
           "children": [
-            { "name": "Part A", "value": 1204 },
-            { "name": "Part B", "value": 876 }
+            { "key": "part", "name": "Part A", "value": 1204 },
+            { "key": "part", "name": "Part B", "value": 876 }
           ]
         }
       ]

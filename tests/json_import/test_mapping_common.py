@@ -33,7 +33,6 @@ import pytest
 from ansys.dynamicreporting.core.utils.json_item_import.mapping import (
     column_labels,
     derive_axes,
-    flatten_tree,
     item_content,
     resolve_path,
     rows_to_array,
@@ -168,72 +167,6 @@ def test_derive_axes_accepts_an_explicit_empty_yaxis():
 
 
 # --------------------------------------------------------------------------
-# flatten_tree
-# --------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-def test_flatten_tree_recurses_to_full_depth():
-    tree = (
-        {
-            "name": "Assembly",
-            "value": "Assembly",
-            "key": None,
-            "children": (
-                {"name": "Part A", "value": "Part A", "key": None, "children": ()},
-                {
-                    "name": "Part B",
-                    "value": "Part B",
-                    "key": None,
-                    "children": (
-                        {"name": "Face 1", "value": "Face 1", "key": None, "children": ()},
-                    ),
-                },
-            ),
-        },
-    )
-    flat = flatten_tree(tree)
-    assert len(flat) == 1
-    assert len(flat[0]["children"]) == 2
-    assert flat[0]["children"][1]["children"][0]["name"] == "Face 1"
-
-
-@pytest.mark.unit
-def test_flatten_tree_carries_name_and_value():
-    flat = flatten_tree(({"name": "Alpha", "value": 7, "key": None, "children": ()},))
-    assert flat[0]["name"] == "Alpha"
-    assert flat[0]["value"] == 7
-
-
-@pytest.mark.unit
-def test_flatten_tree_generates_collision_free_keys_for_duplicate_names():
-    tree = (
-        {
-            "name": "root",
-            "value": None,
-            "key": None,
-            "children": (
-                {"name": "same", "value": None, "key": None, "children": ()},
-                {"name": "same", "value": None, "key": None, "children": ()},
-            ),
-        },
-    )
-    keys = [child["key"] for child in flatten_tree(tree)[0]["children"]]
-    assert len(set(keys)) == 2
-
-
-@pytest.mark.unit
-def test_flatten_tree_preserves_an_explicit_key():
-    flat = flatten_tree(({"name": "Alpha", "value": None, "key": "custom", "children": ()},))
-    assert flat[0]["key"] == "custom"
-
-
-@pytest.mark.unit
-def test_flatten_tree_of_nothing_is_empty():
-    assert flatten_tree(()) == []
-
-
-# --------------------------------------------------------------------------
 # resolve_path
 # --------------------------------------------------------------------------
 
@@ -282,9 +215,11 @@ def test_item_content_transposes_a_table():
 
 
 @pytest.mark.unit
-def test_item_content_flattens_a_tree():
-    model = _model({"item_type": "tree", "name": "t", "nodes": [{"name": "root"}]})
-    assert item_content(model)[0]["name"] == "root"
+def test_item_content_is_the_tree_as_given():
+    nodes = [{"key": "k", "name": "root", "value": None}]
+    model = _model({"item_type": "tree", "name": "t", "nodes": nodes})
+    assert item_content(model) is model["nodes"]
+    assert item_content(model) == nodes
 
 
 @pytest.mark.unit

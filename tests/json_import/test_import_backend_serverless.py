@@ -89,7 +89,7 @@ def test_every_item_type_dispatches_to_its_class(item_type, adr, tmp_path: Path)
         "text": {"value": "body"},
         "html": {"value": "<p>body</p>"},
         "table": {"columns": ["a", "b"], "rows": [[1, 2]]},
-        "tree": {"nodes": [{"name": "root"}]},
+        "tree": {"nodes": [{"key": "k", "name": "root", "value": None}]},
         "image": {"path": "a.png"},
         "animation": {"path": "a.mp4"},
         "scene": {"path": "a.avz"},
@@ -144,18 +144,18 @@ def test_absolute_media_paths_are_left_alone(adr, tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_tree_content_is_flattened_recursively(adr):
-    model = _item(
+def test_tree_content_is_passed_through_unchanged(adr):
+    nodes = [
         {
-            "item_type": "tree",
-            "name": "t",
-            "nodes": [{"name": "root", "children": [{"name": "child"}]}],
+            "key": "assembly",
+            "name": "root",
+            "value": None,
+            "children": [{"key": "part", "name": "child", "value": 1}],
         }
-    )
+    ]
+    model = _item({"item_type": "tree", "name": "t", "nodes": nodes})
     adr._populate_item(model, "")
-    content = adr.create_item.call_args.kwargs["content"]
-    assert content[0]["name"] == "root"
-    assert content[0]["children"][0]["name"] == "child"
+    assert adr.create_item.call_args.kwargs["content"] == nodes
 
 
 # --------------------------------------------------------------------------

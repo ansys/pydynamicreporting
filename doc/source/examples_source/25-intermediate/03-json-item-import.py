@@ -90,7 +90,17 @@ document = {
             "item_type": "tree",
             "name": "Mesh",
             "tags": [{"section": "results"}],
-            "nodes": [{"name": "Assembly", "children": [{"name": "Part A"}, {"name": "Part B"}]}],
+            "nodes": [
+                {
+                    "key": "assembly",
+                    "name": "Assembly",
+                    "value": None,
+                    "children": [
+                        {"key": "part", "name": "Part A", "value": 1204},
+                        {"key": "part", "name": "Part B", "value": 876},
+                    ],
+                }
+            ],
         },
     ],
 }

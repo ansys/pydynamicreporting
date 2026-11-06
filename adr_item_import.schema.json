@@ -302,7 +302,7 @@
               "const": "tree"
             },
             "nodes": {
-              "description": "Root nodes of the tree.",
+              "description": "Root nodes of the ADR tree, passed to the backend unchanged.",
               "items": {
                 "$ref": "#/$defs/treeNode"
               },
@@ -326,24 +326,32 @@
           },
           "type": "array"
         },
+        "header": {
+          "description": "Display the node row as a header.",
+          "type": "boolean"
+        },
         "key": {
-          "description": "Stable node key; generated when absent.",
+          "description": "Entity type label; not displayed and need not be unique.",
           "type": "string"
         },
         "name": {
-          "description": "Node label.",
-          "minLength": 1,
+          "description": "Text displayed in the tree view.",
+          "type": "string"
+        },
+        "state": {
+          "description": "Initial display state of the node.",
+          "enum": [
+            "expanded",
+            "collapsed",
+            "expandRecursive",
+            "collapseRecursive"
+          ],
           "type": "string"
         },
         "value": {
-          "description": "Node value. Defaults to the node name.",
+          "description": "Node value: null, a scalar, or a possibly nested array of them.",
           "items": {
-            "type": [
-              "string",
-              "number",
-              "boolean",
-              "null"
-            ]
+            "$ref": "#/$defs/treeNode/properties/value"
           },
           "type": [
             "string",
@@ -355,7 +363,9 @@
         }
       },
       "required": [
-        "name"
+        "key",
+        "name",
+        "value"
       ],
       "type": "object"
     }

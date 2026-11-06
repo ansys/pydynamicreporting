@@ -48,7 +48,6 @@ from .spec import (
     ITEM_SPECS,
     ITEM_TYPES,
     NON_FINITE_MESSAGE,
-    TREE_NODE_SPEC,
     FieldSpec,
     check_version,
     is_non_finite,
@@ -58,15 +57,7 @@ _INVALID = object()
 """Sentinel returned when a value failed validation."""
 
 _JSON_SCALARS = (str, int, float, bool, type(None))
-"""Scalar types that can appear in a table cell or a tree value."""
-
-MAX_TREE_DEPTH = 100
-"""Deepest ``children`` nesting accepted.
-
-Reported as a validation error rather than allowed to exhaust the interpreter
-stack: the recursive builders run during parsing, so a RecursionError there
-would abort the whole document before any item could be saved.
-"""
+"""Scalar types that can appear in a table cell."""
 
 _T = TypeVar("_T")
 
@@ -238,54 +229,6 @@ def _check_scalar(value: Any, location: str, errors: ErrorCollector, expected: s
         errors.add(location, NON_FINITE_MESSAGE)
 
 
-def _validate_tree_value(value: Any, location: str, errors: ErrorCollector) -> None:
-    """Check that a tree node value is a finite JSON scalar or a list of them."""
-    if isinstance(value, list):
-        for index, element in enumerate(value):
-            _check_scalar(element, f"{location}[{index}]", errors, "tree values must be scalars")
-    else:
-        _check_scalar(value, location, errors, "tree values must be a scalar or a list of scalars")
-
-
-def build_tree_node(
-    raw: Any,
-    location: str,
-    errors: ErrorCollector,
-    *,
-    logger: Any = None,
-    depth: int = 1,
-) -> dict[str, Any] | None:
-    """Build one tree node, recursing into its children."""
-    if not isinstance(raw, dict):
-        errors.add(location, f"expected an object, got {type(raw).__name__}")
-        return None
-
-    if depth > MAX_TREE_DEPTH:
-        errors.add(location, f"tree nesting is deeper than {MAX_TREE_DEPTH} levels")
-        return None
-
-    values = apply_spec(raw, TREE_NODE_SPEC, location, errors, logger=logger)
-
-    value = values["value"]
-    if value is None:
-        # The schema defines an omitted value as the node name.
-        value = values["name"]
-    else:
-        _validate_tree_value(value, f"{location}.value", errors)
-
-    children = _build_each(
-        values["children"],
-        lambda child, index: build_tree_node(
-            child,
-            f"{location}.children[{index}]",
-            errors,
-            logger=logger,
-            depth=depth + 1,
-        ),
-    )
-    return {"name": values["name"], "value": value, "key": values["key"], "children": children}
-
-
 def _validate_table(values: dict[str, Any], location: str, errors: ErrorCollector) -> None:
     """Check table shape, cell types, and axis references."""
     columns = values["columns"] or ()
@@ -343,13 +286,6 @@ def build_item(
 
     if item_type == "table":
         _validate_table(values, location, errors)
-    elif item_type == "tree":
-        values["nodes"] = _build_each(
-            values["nodes"] or (),
-            lambda node, node_index: build_tree_node(
-                node, f"{location}.nodes[{node_index}]", errors, logger=logger
-            ),
-        )
 
     return {**values, "base_dir": base_dir}
 

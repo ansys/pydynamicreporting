@@ -35,7 +35,6 @@ rendering.
 from __future__ import annotations
 
 from pathlib import Path
-import re
 from typing import Any
 
 import numpy
@@ -46,15 +45,12 @@ __all__ = [
     "column_labels",
     "combine_tags",
     "derive_axes",
-    "flatten_tree",
     "item_content",
     "normalize_tags",
     "resolve_path",
     "rows_to_array",
     "table_fields",
 ]
-
-_SLUG_RE = re.compile(r"[^0-9a-z]+")
 
 # Reuses the REST model's quoting rather than the serverless
 # BaseModel._add_quotes, which would pull in Django.
@@ -125,37 +121,6 @@ def derive_axes(
     return resolved_x, resolved_y
 
 
-def _slug(text: str) -> str:
-    """Lowercase ``text`` and collapse non-alphanumeric runs to underscores."""
-    return _SLUG_RE.sub("_", text.lower()).strip("_")
-
-
-def flatten_tree(nodes: Any) -> list[dict[str, Any]]:
-    """Convert tree node payloads into ADR's nested dict structure.
-
-    Generated keys embed the position of the node in the tree, so two
-    siblings with the same name cannot collide. An explicit ``key`` on a node
-    is preserved.
-    """
-
-    def _convert(node: Any, path: str) -> dict[str, Any]:
-        name = node["name"]
-        children = [
-            _convert(child, f"{path}_{index}_{_slug(child['name'])}")
-            for index, child in enumerate(node["children"])
-        ]
-        return {
-            "key": node["key"] or path,
-            "name": name,
-            "value": node["value"],
-            "children": children,
-        }
-
-    return [
-        _convert(node, f"node_{index}_{_slug(node['name'])}") for index, node in enumerate(nodes)
-    ]
-
-
 def resolve_path(path: str, base_dir: str | None = None) -> str:
     """Resolve a media path against the directory holding the document.
 
@@ -174,8 +139,8 @@ def item_content(item_data: dict[str, Any]) -> Any:
     -------
     str, numpy.ndarray, or list of dict
         The inline string for ``text``/``html``, the series-per-row array for
-        ``table``, the nested node dicts for ``tree``, and the resolved file
-        path for every media type.
+        ``table``, the ``nodes`` exactly as the document gave them for ``tree``,
+        and the resolved file path for every media type.
     """
     item_type = item_data["item_type"]
     if item_type in ("text", "html"):
@@ -183,7 +148,7 @@ def item_content(item_data: dict[str, Any]) -> Any:
     if item_type == "table":
         return rows_to_array(item_data["rows"], len(item_data["columns"]))
     if item_type == "tree":
-        return flatten_tree(item_data["nodes"])
+        return item_data["nodes"]
     return resolve_path(item_data["path"], item_data["base_dir"])
 
 

@@ -143,7 +143,14 @@ def test_import_from_json_end_to_end(adr_serverless: ADR, tmp_path: Path):
             {
                 "item_type": "tree",
                 "name": "e2e tree",
-                "nodes": [{"name": "Assembly", "children": [{"name": "Part A"}]}],
+                "nodes": [
+                    {
+                        "key": "assembly",
+                        "name": "Assembly",
+                        "value": None,
+                        "children": [{"key": "part", "name": "Part A", "value": 1}],
+                    }
+                ],
             },
             {
                 "item_type": "image",

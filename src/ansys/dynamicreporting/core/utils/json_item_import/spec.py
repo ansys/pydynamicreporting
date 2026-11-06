@@ -29,9 +29,11 @@ enforces the cross-field rules JSON Schema cannot express, such as equal row
 widths and axis names that match a column.
 
 It also holds the closed wire vocabularies and the schema version helpers. It
-must not import any backend module, so that the import core stays
-backend-agnostic; the drift guard asserts the vocabularies stay in sync with
-the backend registries.
+imports no backend module at load time, so that the import core stays
+backend-agnostic; the one exception is :func:`validate_html`, which lazily
+imports the serverless ``HTMLParser`` so both backends apply the same check.
+The drift guard asserts the vocabularies stay in sync with the backend
+registries.
 """
 
 from __future__ import annotations
@@ -79,8 +81,19 @@ MEDIA_EXTENSIONS: dict[str, tuple[str, ...] | None] = {
 }
 """Accepted lowercase file extensions per media ``item_type``; ``None`` accepts any.
 
-The tuples are the ones both backends validate against, so a path accepted
-here is accepted at save time.
+The tuples are the ones both backends validate against. They are published
+in the schema descriptions, but only image extensions are checked here; see
+:data:`_IMPORT_CHECKED_EXTENSIONS`.
+"""
+
+_IMPORT_CHECKED_EXTENSIONS = frozenset({"image"})
+"""Media types whose ``path`` extension the import itself checks.
+
+The REST backend converts images to PNG bytes before ``set_payload_image``,
+which never sees the path, so without this check it would accept image formats
+the serverless backend rejects. Animation, scene, and file extensions are left
+to the backends, which both check them at save time (``ItemREST.validate_file``
+and the serverless ``FileValidator``).
 """
 
 # --------------------------------------------------------------------------
@@ -342,7 +355,11 @@ ITEM_COMMON_NAMES = frozenset(spec.name for spec in ITEM_COMMON)
 
 
 def _path_spec(item_type: str) -> FieldSpec:
-    """Build the ``path`` field of a media item type, with its extension check."""
+    """Build the ``path`` field of a media item type.
+
+    Every type with known extensions lists them in its description; only the
+    types in :data:`_IMPORT_CHECKED_EXTENSIONS` are also checked here.
+    """
     allowed = MEDIA_EXTENSIONS[item_type]
     description = "Path to the payload file, absolute or relative to the document."
     if allowed is not None:
@@ -353,7 +370,9 @@ def _path_spec(item_type: str) -> FieldSpec:
         str,
         required=True,
         min_len=1,
-        validate=_extension_validator(allowed) if allowed is not None else None,
+        validate=(
+            _extension_validator(allowed) if item_type in _IMPORT_CHECKED_EXTENSIONS else None
+        ),
         description=description,
     )
 
@@ -402,23 +421,57 @@ ITEM_SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "html": ITEM_COMMON + (_HTML_VALUE,),
     "table": ITEM_COMMON + TABLE_FIELDS,
     "tree": ITEM_COMMON
-    + (_array("nodes", dict, "treeNode", "Root nodes of the tree.", required=True),),
+    + (
+        _array(
+            "nodes",
+            dict,
+            "treeNode",
+            "Root nodes of the ADR tree, passed to the backend unchanged.",
+            required=True,
+        ),
+    ),
     **{item_type: ITEM_COMMON + (_path_spec(item_type),) for item_type in MEDIA_EXTENSIONS},
 }
 """Field tables keyed by ``item_type``."""
 
 TREE_NODE_SPEC: tuple[FieldSpec, ...] = (
-    FieldSpec("name", str, required=True, min_len=1, description="Node label."),
-    FieldSpec("key", str, description="Stable node key; generated when absent."),
+    FieldSpec(
+        "key",
+        str,
+        required=True,
+        description="Entity type label; not displayed and need not be unique.",
+    ),
+    FieldSpec("name", str, required=True, description="Text displayed in the tree view."),
     FieldSpec(
         "value",
         ANY,
+        required=True,
         json_type=("string", "number", "boolean", "null", "array"),
-        json_items={"type": ["string", "number", "boolean", "null"]},
-        description="Node value. Defaults to the node name.",
+        # Arrays may nest, as the backend tree validators accept; the
+        # self-reference keeps the schema in step with them.
+        json_items={"$ref": "#/$defs/treeNode/properties/value"},
+        description="Node value: null, a scalar, or a possibly nested array of them.",
     ),
-    _array("children", dict, "treeNode", "Child nodes.", default_factory=tuple),
+    _array("children", dict, "treeNode", "Child nodes."),
+    FieldSpec(
+        "state",
+        str,
+        choices=("expanded", "collapsed", "expandRecursive", "collapseRecursive"),
+        description="Initial display state of the node.",
+    ),
+    FieldSpec(
+        "header",
+        bool,
+        json_type="boolean",
+        description="Display the node row as a header.",
+    ),
 )
+"""Fields of an ADR tree node, used to generate the schema.
+
+Tree nodes are complete ADR tree entities: the importer passes them to the
+backend unchanged, and the backend tree validators check them when the item is
+saved.
+"""
 
 DOCUMENT_SPEC: tuple[FieldSpec, ...] = (
     FieldSpec(

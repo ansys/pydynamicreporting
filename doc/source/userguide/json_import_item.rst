@@ -170,12 +170,23 @@ Trees
      "item_type": "tree",
      "name": "Mesh",
      "nodes": [
-       { "name": "Assembly", "children": [{ "name": "Part A" }, { "name": "Part B" }] }
+       {
+         "key": "assembly",
+         "name": "Assembly",
+         "value": null,
+         "state": "expanded",
+         "children": [
+           { "key": "part", "name": "Part A", "value": 1204 },
+           { "key": "part", "name": "Part B", "value": 876 }
+         ]
+       }
      ]
    }
 
-A node value defaults to the node name. Node keys are generated from the
-position in the tree, so repeated names never collide.
+Nodes use the ADR tree format and are passed to ADR unchanged. Each node
+requires ``key``, ``name``, and ``value``. The ``key`` is a hidden entity type
+label, so it can repeat. A node can also have ``children`` and the optional
+``state`` and ``header`` display hints.
 
 Error handling
 --------------

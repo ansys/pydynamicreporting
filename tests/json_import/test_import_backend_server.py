@@ -65,7 +65,7 @@ _INLINE = {
     "text": {"value": "body"},
     "html": {"value": "<p>body</p>"},
     "table": {"columns": ["a", "b"], "rows": [[1, 2]]},
-    "tree": {"nodes": [{"name": "root"}]},
+    "tree": {"nodes": [{"key": "k", "name": "root", "value": None}]},
 }
 
 
@@ -125,6 +125,18 @@ def test_non_png_images_are_converted_before_the_payload(rest_server, tmp_path: 
 def test_a_missing_media_file_fails_the_item(rest_server, tmp_path: Path):
     model = _item({"item_type": "file", "name": "n", "path": "missing.txt"}, str(tmp_path))
     with pytest.raises(FileNotFoundError):
+        rest_server._populate_item(model, "")
+    rest_server.put_objects.assert_not_called()
+
+
+@pytest.mark.unit
+def test_an_unsupported_animation_extension_fails_the_item_before_the_push(
+    rest_server, tmp_path: Path
+):
+    # The import leaves animation extensions to ItemREST.validate_file.
+    (tmp_path / "clip.avi").write_bytes(b"payload")
+    model = _item({"item_type": "animation", "name": "n", "path": "clip.avi"}, str(tmp_path))
+    with pytest.raises(ValueError, match="not supported"):
         rest_server._populate_item(model, "")
     rest_server.put_objects.assert_not_called()
 
@@ -250,16 +262,20 @@ def test_table_payload_carries_the_array_and_display_fields(rest_server):
 
 
 @pytest.mark.unit
-def test_tree_children_are_not_dropped(rest_server):
-    model = _item(
+def test_tree_nodes_reach_itemrest_unchanged(rest_server):
+    nodes = [
         {
-            "item_type": "tree",
-            "name": "t",
-            "nodes": [{"name": "root", "children": [{"name": "child"}]}],
+            "key": "assembly",
+            "name": "root",
+            "value": None,
+            "state": "collapsed",
+            "header": True,
+            "children": [{"key": "part", "name": "child", "value": 1}],
         }
-    )
+    ]
+    model = _item({"item_type": "tree", "name": "t", "nodes": nodes})
     item = rest_server._populate_item(model, "")
-    assert item.payloaddata[0]["children"][0]["name"] == "child"
+    assert item.payloaddata == nodes
 
 
 # --------------------------------------------------------------------------
@@ -297,6 +313,33 @@ def test_import_collects_per_item_failures(rest_server, tmp_path: Path):
     result = rest_server.import_items_from_json(path)
     assert result.items_saved == 1
     assert [failure.name for failure in result.failures] == ["bad"]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "node",
+    [
+        {"key": "k", "name": "n", "value": {"a": 1}},
+        {"name": "n", "value": 1},
+        {"key": "k", "name": "n", "value": 1, "children": ["not a node"]},
+    ],
+    ids=["object-value", "missing-key", "non-object-child"],
+)
+def test_an_invalid_tree_node_fails_only_that_item_before_push(rest_server, node):
+    # Tree nodes are checked by ItemREST, so a bad node is a per-item failure
+    # rather than a document validation error.
+    document = {
+        "schema_version": "1.0",
+        "app_id": "demo-app",
+        "items": [
+            {"item_type": "tree", "name": "bad", "nodes": [node]},
+            {"item_type": "text", "name": "good", "value": "v"},
+        ],
+    }
+    result = rest_server.import_items_from_json(document)
+    assert result.items_saved == 1
+    assert [failure.name for failure in result.failures] == ["bad"]
+    assert [call.args[0][0].name for call in rest_server.put_objects.call_args_list] == ["good"]
 
 
 @pytest.mark.unit

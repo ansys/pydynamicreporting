@@ -30,8 +30,10 @@ own unit tests can see.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -39,14 +41,21 @@ import numpy
 import pytest
 import requests
 
+from ansys.dynamicreporting.core.constants import ANIMATION_EXTENSIONS, SCENE_EXTENSIONS
 from ansys.dynamicreporting.core.serverless import ADR
-from ansys.dynamicreporting.core.serverless.item import Item
+from ansys.dynamicreporting.core.serverless.item import (
+    AnimContent,
+    Item,
+    SceneContent,
+    TreeContent,
+)
 from ansys.dynamicreporting.core.utils.json_item_import.importer import import_items
 from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     ITEM_TYPE_TO_ADR_TYPE,
     ITEM_TYPES,
 )
+from ansys.dynamicreporting.core.utils.report_objects import ItemREST
 from ansys.dynamicreporting.core.utils.report_remote_server import Server
 
 DOCUMENT = {
@@ -66,7 +75,14 @@ DOCUMENT = {
         {
             "item_type": "tree",
             "name": "mesh",
-            "nodes": [{"name": "Assembly", "children": [{"name": "Part A"}]}],
+            "nodes": [
+                {
+                    "key": "assembly",
+                    "name": "Assembly",
+                    "value": None,
+                    "children": [{"key": "part", "name": "Part A", "value": 1}],
+                }
+            ],
         },
         {"item_type": "file", "name": "notes", "path": "notes.txt"},
     ],
@@ -160,6 +176,106 @@ def test_both_backends_cover_every_item_type():
     assert set(Server._IMPORT_PAYLOAD_SETTERS) == set(ITEM_TYPE_TO_ADR_TYPE.values())
 
 
+# The import leaves these extensions to the backends, so both must enforce the
+# shared lists themselves.
+_BACKEND_CHECKED_EXTENSIONS = {
+    "animation": (ANIMATION_EXTENSIONS, AnimContent),
+    "scene": (SCENE_EXTENSIONS, SceneContent),
+}
+
+
+def _outcome(check: Callable[[], object]) -> str:
+    """Run one backend check and summarize it, keeping unexpected errors visible."""
+    try:
+        check()
+    except ValueError as exc:
+        return "rejected" if "not supported" in str(exc) else f"error: {exc}"
+    return "accepted"
+
+
+def _backend_outcomes(item_type: str, path: Path) -> tuple[str, str]:
+    """Return how the REST setter and the serverless validator treat ``path``."""
+    setter = Server._IMPORT_PAYLOAD_SETTERS[ITEM_TYPE_TO_ADR_TYPE[item_type]]
+    validator = _BACKEND_CHECKED_EXTENSIONS[item_type][1]()
+    item = ItemREST()
+    try:
+        rest = _outcome(lambda: setter(item, str(path)))
+    finally:
+        # The REST file setters open the payload and never close it.
+        if item.fileobj is not None:
+            item.fileobj.close()
+    serverless = _outcome(lambda: validator.process(str(path), SimpleNamespace()))
+    return rest, serverless
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("item_type", "name"),
+    [("animation", "clip.avi"), ("animation", "clip"), ("scene", "model.png")],
+)
+def test_both_backends_reject_media_extensions_the_import_does_not_check(
+    item_type, name, tmp_path: Path
+):
+    path = tmp_path / name
+    path.write_bytes(b"payload")
+    assert _backend_outcomes(item_type, path) == ("rejected", "rejected")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("item_type", sorted(_BACKEND_CHECKED_EXTENSIONS))
+def test_both_backends_accept_every_listed_media_extension(item_type, tmp_path: Path):
+    extensions = _BACKEND_CHECKED_EXTENSIONS[item_type][0]
+    for extension in extensions:
+        path = tmp_path / f"payload.{extension.upper()}"
+        path.write_bytes(b"payload")
+        assert _backend_outcomes(item_type, path) == ("accepted", "accepted"), extension
+
+
+def _tree_document(value: Any) -> dict[str, Any]:
+    tree = {
+        "item_type": "tree",
+        "name": "t",
+        "nodes": [{"key": "k", "name": "n", "value": value}],
+    }
+    return {"schema_version": "1.0", "app_id": "parity-app", "items": [tree]}
+
+
+def _tree_outcomes(value: Any) -> tuple[str, str]:
+    """Return how the REST and serverless tree validators treat one node ``value``."""
+    tree = build_document(_tree_document(value)).items[0]["nodes"]
+
+    def outcome(check: Callable[[], object]) -> str:
+        try:
+            check()
+        except ValueError:
+            return "rejected"
+        return "accepted"
+
+    return (
+        outcome(lambda: ItemREST().set_payload_tree(tree)),
+        outcome(lambda: TreeContent().process(tree, SimpleNamespace())),
+    )
+
+
+# The import leaves tree value types to the backends, so they must agree.
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("text", "accepted"),
+        ([1, "a", None, True], "accepted"),
+        ([[1, 2], [3, [4]]], "accepted"),
+        (float("nan"), "accepted"),
+        ({}, "rejected"),
+        ([{}], "rejected"),
+        ([[{"a": 1}]], "rejected"),
+    ],
+    ids=["scalar", "list", "nested-lists", "nan", "object", "list-of-objects", "nested-object"],
+)
+def test_both_backends_agree_on_tree_values(value, expected):
+    assert _tree_outcomes(value) == (expected, expected)
+
+
 @pytest.mark.unit
 def test_both_backends_store_the_same_source(serverless_run: Run, server_run: Run):
     # A backend-local default would make the same document produce different
@@ -206,11 +322,9 @@ def test_both_backends_label_the_table_identically(serverless_run: Run, server_r
 
 
 @pytest.mark.unit
-def test_both_backends_produce_the_same_flattened_tree(serverless_run: Run, server_run: Run):
-    assert serverless_run.contents["mesh"] == server_run.contents["mesh"]
-    # Children must survive in both; a non-recursive flatten in one backend
-    # would silently drop them.
-    assert server_run.contents["mesh"][0]["children"][0]["name"] == "Part A"
+def test_both_backends_receive_the_tree_unchanged(serverless_run: Run, server_run: Run):
+    expected = next(item for item in DOCUMENT["items"] if item["name"] == "mesh")["nodes"]
+    assert serverless_run.contents["mesh"] == server_run.contents["mesh"] == expected
 
 
 @pytest.mark.unit
