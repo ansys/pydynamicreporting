@@ -367,9 +367,10 @@ accepts too; the drift guard keeps them in sync.
 """
 
 TABLE_FIELDS: tuple[FieldSpec, ...] = (
+    # Kept required: REST silently substitutes [[1]] for a missing array.
     FieldSpec(
         "array",
-        list,
+        ANY,
         required=True,
         json_type="array",
         description=(
@@ -379,7 +380,7 @@ TABLE_FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         "dtype",
-        str,
+        ANY,
         description="NumPy dtype of the array: 'f8' (the default) for numbers or 'S' for text.",
     ),
     *(
@@ -399,12 +400,12 @@ ITEM_SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "table": ITEM_COMMON + TABLE_FIELDS,
     "tree": ITEM_COMMON
     + (
-        _array(
+        FieldSpec(
             "nodes",
-            dict,
-            "treeNode",
-            "Root nodes of the ADR tree, passed to the backend unchanged.",
-            required=True,
+            ANY,
+            json_type="array",
+            json_items={"$ref": "#/$defs/treeNode"},
+            description="Root nodes of the ADR tree, checked by the backend when the item is saved.",
         ),
     ),
     **{item_type: ITEM_COMMON + (_path_spec(item_type),) for item_type in MEDIA_EXTENSIONS},

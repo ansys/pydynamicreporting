@@ -77,7 +77,6 @@ def test_every_problem_is_reported_in_one_pass():
             {"item_type": "html", "name": "h", "value": "no tag"},
             {"item_type": "image", "name": "i", "path": "a.gif"},
             {"item_type": "image", "name": "i"},
-            {"item_type": "tree", "name": "t", "nodes": ["not a node"]},
         ],
     }
     with pytest.raises(ImportItemValidationError) as excinfo:
@@ -89,9 +88,8 @@ def test_every_problem_is_reported_in_one_pass():
         "items[1].sequence",
         "items[3].path",
         "items[4].path",
-        "items[5].nodes[0]",
     }
-    assert "7 problems found" in str(excinfo.value)
+    assert "6 problems found" in str(excinfo.value)
 
 
 @pytest.mark.unit

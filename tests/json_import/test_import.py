@@ -82,19 +82,21 @@ def test_combine_tags_renders_every_supported_shape():
     assert combine_tags(*parts) == "a=1 b=2 d='x y' e 7 8"
 
 
+def _create_with_content(item_class, **kwargs):
+    """Build a serverless item without a database, so only its content validator runs."""
+    item = object.__new__(item_class)
+    item.content = kwargs["content"]
+    return item
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize("item_type", ["text", "html"])
 @pytest.mark.parametrize("backend", ["rest", "serverless"])
 def test_string_payloads_are_checked_by_the_backend(
     rest_server, serverless_adr, item_type, backend
 ):
-    def create_item(item_class, **kwargs):
-        item = object.__new__(item_class)
-        item.content = kwargs["content"]
-        return item
-
     serverless_adr.ensure_setup = MagicMock()
-    serverless_adr.create_item.side_effect = create_item
+    serverless_adr.create_item.side_effect = _create_with_content
     server = rest_server if backend == "rest" else serverless_adr
     values = [{}, *({"value": value} for value in (None, 5, True, [], {}, "", "plain", "<p>v</p>"))]
     items = [
@@ -104,6 +106,22 @@ def test_string_payloads_are_checked_by_the_backend(
     invalid = 8 if backend == "serverless" and item_type == "html" else 6
     assert [failure.name for failure in result.failures] == [str(i) for i in range(invalid)]
     assert result.items_saved == len(items) - invalid
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("backend", ["rest", "serverless"])
+def test_tree_and_table_payloads_are_checked_by_the_backend(rest_server, serverless_adr, backend):
+    serverless_adr.ensure_setup = MagicMock()
+    serverless_adr.create_item.side_effect = _create_with_content
+    server = rest_server if backend == "rest" else serverless_adr
+    items = [
+        {"item_type": "tree", "name": "0"},
+        {"item_type": "tree", "name": "1", "nodes": ["x"]},
+        {"item_type": "table", "name": "2", "array": "x"},
+        {"item_type": "table", "name": "3", "array": [[1.0]], "dtype": 5},
+    ]
+    result = server.import_items_from_json(_document(*items))
+    assert [failure.name for failure in result.failures] == ["0", "1", "2", "3"]
 
 
 @pytest.mark.unit

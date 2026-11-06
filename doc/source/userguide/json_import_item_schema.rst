@@ -73,9 +73,10 @@ its location, such as ``items[3].rows[1]``.
 - Every ADR table property, such as ``labels_row``, ``xaxis``, ``yaxis``,
   ``plot``, ``format``, ``rowlbls``, and ``collbls``, is accepted and passed to
   the backend unchanged.
-- The backend checks the array when the item is saved, so a ragged or
-  non-numeric array is a per-item failure, not a validation error. It does not
-  check that labels or axes match the array.
+- The backend checks ``array`` and ``dtype`` when the item is saved, so a
+  non-array, ragged, or non-numeric array, or an invalid ``dtype``, is a
+  per-item failure, not a validation error. It does not check that labels or
+  axes match the array.
 
 **Trees**
 
@@ -86,10 +87,11 @@ its location, such as ``items[3].rows[1]``.
 - ``key`` is a hidden entity type label, not an identifier, so it need not be
   unique. ``value`` is ``null``, a scalar, or an array of them, and arrays may
   nest.
-- The backend checks nodes when the item is saved, so a malformed node is a
-  per-item failure, not a validation error. The backend does not check the
-  types of ``key``, ``name``, ``state``, or ``header``, and it accepts ``NaN``
-  and ``Infinity`` values; validate against the schema to catch these.
+- The backend checks ``nodes`` when the item is saved, so a missing or
+  non-array ``nodes`` value, or a malformed node, is a per-item failure, not a
+  validation error. The backend does not check the types of ``key``, ``name``,
+  ``state``, or ``header``, and it accepts ``NaN`` and ``Infinity`` values;
+  validate against the schema to catch these.
 
 **Unknown keys**
 

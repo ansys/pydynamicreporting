@@ -1208,7 +1208,7 @@
               "const": "tree"
             },
             "nodes": {
-              "description": "Root nodes of the ADR tree, passed to the backend unchanged.",
+              "description": "Root nodes of the ADR tree, checked by the backend when the item is saved.",
               "items": {
                 "$ref": "#/$defs/treeNode"
               },
@@ -1216,8 +1216,7 @@
             }
           },
           "required": [
-            "item_type",
-            "nodes"
+            "item_type"
           ]
         }
       ]
