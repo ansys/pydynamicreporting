@@ -53,11 +53,15 @@ __all__ = [
 _quote = ItemREST.add_quotes
 
 
-def resolve_path(path: str, base_dir: str | None = None) -> str:
+def resolve_path(path: object, base_dir: str | None = None) -> object:
     """Resolve a media path against the directory holding the document.
 
     Absolute paths are returned unchanged so a producer keeps full control.
+    A value that is not a string is also returned unchanged, so the backend
+    file validator reports it when the item is saved.
     """
+    if not isinstance(path, str):
+        return path
     candidate = Path(path)
     if candidate.is_absolute() or base_dir is None:
         return str(candidate)

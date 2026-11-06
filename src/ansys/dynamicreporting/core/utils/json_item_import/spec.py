@@ -336,23 +336,29 @@ ITEM_COMMON_NAMES = frozenset(spec.name for spec in ITEM_COMMON)
 def _path_spec(item_type: str) -> FieldSpec:
     """Build the ``path`` field of a media item type.
 
-    Every type with known extensions lists them in its description; only the
-    types in :data:`_IMPORT_CHECKED_EXTENSIONS` are also checked here.
+    Every type with known extensions lists them in its description. Only the
+    types in :data:`_IMPORT_CHECKED_EXTENSIONS` are checked here; the others
+    accept any value, and the backend file validators check it when the item
+    is saved.
     """
     allowed = MEDIA_EXTENSIONS[item_type]
     description = "Path to the payload file, absolute or relative to the document."
     if allowed is not None:
         listed = ", ".join(f".{extension}" for extension in allowed)
         description += f" Accepted extensions (case-insensitive): {listed}."
+    if item_type in _IMPORT_CHECKED_EXTENSIONS:
+        return FieldSpec(
+            "path",
+            str,
+            required=True,
+            min_len=1,
+            validate=_extension_validator(allowed),
+            description=description,
+        )
     return FieldSpec(
         "path",
-        str,
-        required=True,
-        min_len=1,
-        validate=(
-            _extension_validator(allowed) if item_type in _IMPORT_CHECKED_EXTENSIONS else None
-        ),
-        description=description,
+        ANY,
+        description=description + " Checked by the backend when the item is saved.",
     )
 
 

@@ -11,14 +11,12 @@
               "const": "animation"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .mp4.",
-              "minLength": 1,
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .mp4. Checked by the backend when the item is saved.",
               "type": "string"
             }
           },
           "required": [
-            "item_type",
-            "path"
+            "item_type"
           ]
         }
       ]
@@ -34,14 +32,12 @@
               "const": "file"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document.",
-              "minLength": 1,
+              "description": "Path to the payload file, absolute or relative to the document. Checked by the backend when the item is saved.",
               "type": "string"
             }
           },
           "required": [
-            "item_type",
-            "path"
+            "item_type"
           ]
         }
       ]
@@ -163,14 +159,12 @@
               "const": "scene"
             },
             "path": {
-              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .stl, .ply, .csf, .avz, .scdoc, .scdocx, .dsco, .glb, .obj.",
-              "minLength": 1,
+              "description": "Path to the payload file, absolute or relative to the document. Accepted extensions (case-insensitive): .stl, .ply, .csf, .avz, .scdoc, .scdocx, .dsco, .glb, .obj. Checked by the backend when the item is saved.",
               "type": "string"
             }
           },
           "required": [
-            "item_type",
-            "path"
+            "item_type"
           ]
         }
       ]

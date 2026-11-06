@@ -353,6 +353,17 @@ def test_import_collects_per_item_failures(rest_server, tmp_path: Path):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("item_type", ["animation", "scene", "file"])
+def test_a_missing_media_path_fails_only_that_item(rest_server, item_type):
+    items = [
+        {"item_type": item_type, "name": "bad"},
+        {"item_type": "text", "name": "g", "value": "v"},
+    ]
+    result = rest_server.import_items_from_json(_document(items=items))
+    assert [failure.name for failure in result.failures] == ["bad"]
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "node",
     [

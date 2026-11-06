@@ -379,11 +379,17 @@ def test_value_must_be_a_string():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("item_type", ["image", "animation", "scene", "file"])
-def test_media_items_require_a_path(item_type):
+def test_image_items_require_a_path():
     with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[{"item_type": item_type, "name": "n"}]))
+        build_document(_document(items=[{"item_type": "image", "name": "n"}]))
     assert "items[0].path" in _locations(excinfo)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("item_type", ["animation", "scene", "file"])
+def test_other_media_paths_are_left_to_the_backend(item_type):
+    doc = build_document(_document(items=[{"item_type": item_type, "name": "n"}]))
+    assert doc.items[0]["path"] is None
 
 
 @pytest.mark.unit

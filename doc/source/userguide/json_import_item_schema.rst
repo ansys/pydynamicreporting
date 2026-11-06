@@ -49,17 +49,18 @@ its location, such as ``items[3].rows[1]``.
 
 **Media paths**
 
-- ``image``, ``animation``, ``scene``, and ``file`` require a non-empty
-  ``path``, absolute or relative to the document directory (or ``base_dir``).
+- ``image``, ``animation``, ``scene``, and ``file`` take a ``path``, absolute or
+  relative to the document directory (or ``base_dir``).
 - Extensions are matched case-insensitively: ``image`` takes ``.png``, ``.jpg``,
   ``.tif``, ``.tiff``; ``animation`` takes ``.mp4``; ``scene`` takes ``.stl``,
   ``.ply``, ``.csf``, ``.avz``, ``.scdoc``, ``.scdocx``, ``.dsco``, ``.glb``,
   ``.obj``; ``file`` takes any extension.
-- Image extensions are checked during validation. Animation and scene
-  extensions are checked when the item is saved, like file existence, so an
-  unsupported one is a per-item failure, not a validation error.
-- File existence is checked when the item is saved, so a missing file is a
-  per-item failure, not a validation error.
+- An ``image`` path is checked during validation: it is required, non-empty,
+  and has a supported extension.
+- ``animation``, ``scene``, and ``file`` paths are checked when the item is
+  saved, so a missing, empty, or non-string path, an unsupported extension, or
+  a missing file is a per-item failure, not a validation error.
+- Image file existence is also checked when the item is saved.
 
 **Tables**
 
