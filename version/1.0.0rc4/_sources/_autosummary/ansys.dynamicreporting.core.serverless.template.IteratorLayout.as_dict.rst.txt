@@ -1,0 +1,6 @@
+as\_dict
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: IteratorLayout.as_dict

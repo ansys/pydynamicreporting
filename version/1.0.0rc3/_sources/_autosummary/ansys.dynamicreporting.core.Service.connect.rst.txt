@@ -1,0 +1,6 @@
+connect
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Service.connect

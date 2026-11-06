@@ -1,0 +1,6 @@
+item\_justification
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.item_justification

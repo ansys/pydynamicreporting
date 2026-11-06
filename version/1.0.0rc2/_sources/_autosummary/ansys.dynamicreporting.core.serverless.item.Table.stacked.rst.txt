@@ -1,0 +1,6 @@
+stacked
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.stacked

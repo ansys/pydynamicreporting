@@ -1,0 +1,6 @@
+set\_property
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: ItemsComparisonGenerator.set_property

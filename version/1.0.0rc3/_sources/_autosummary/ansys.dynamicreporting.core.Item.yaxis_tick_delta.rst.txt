@@ -1,0 +1,6 @@
+yaxis\_tick\_delta
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.yaxis_tick_delta

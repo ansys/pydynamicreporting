@@ -1,0 +1,6 @@
+table\_scrollx
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.table_scrollx

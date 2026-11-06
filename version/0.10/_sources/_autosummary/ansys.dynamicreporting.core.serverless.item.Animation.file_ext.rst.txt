@@ -1,0 +1,6 @@
+file\_ext
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoproperty:: Animation.file_ext

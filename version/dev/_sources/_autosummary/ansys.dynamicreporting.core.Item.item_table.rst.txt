@@ -1,0 +1,6 @@
+item\_table
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.item_table
