@@ -24,21 +24,12 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.exceptions import ConnectionToServiceError
-from ansys.dynamicreporting.core.utils.json_item_import import ImportResult
-
-
-def _write_document(tmp_path: Path) -> Path:
-    path = tmp_path / "report.json"
-    path.write_text(json.dumps({"schema_version": "1.0", "app_id": "demo-app"}), encoding="utf-8")
-    return path
 
 
 def _service(serverobj) -> Service:
@@ -49,37 +40,21 @@ def _service(serverobj) -> Service:
 
 
 @pytest.mark.unit
-def test_import_from_json_delegates_to_the_server(tmp_path: Path):
-    # Mirrors Service.load_templates, which delegates to serverobj.load_templates.
-    service = _service(MagicMock())
-    path = _write_document(tmp_path)
-    expected = ImportResult(schema_version="1.0", app_id="demo-app")
-    service.serverobj.import_items_from_json.return_value = expected
-
-    result = service.import_items_from_json(path)
-
-    assert result is expected
-    service.serverobj.import_items_from_json.assert_called_once_with(
-        path, on_error="collect", base_dir=None, logger=service.logger
-    )
-
-
-@pytest.mark.unit
-def test_import_from_json_forwards_every_option():
+def test_import_from_json_forwards_every_option_to_the_server():
     service = _service(MagicMock())
     document = {"schema_version": "1.0", "app_id": "demo-app"}
 
-    service.import_items_from_json(document, on_error="raise", base_dir="/media")
+    result = service.import_items_from_json(document, on_error="raise", base_dir="/media")
 
+    assert result is service.serverobj.import_items_from_json.return_value
     service.serverobj.import_items_from_json.assert_called_once_with(
         document, on_error="raise", base_dir="/media", logger=service.logger
     )
 
 
 @pytest.mark.unit
-def test_import_from_json_requires_a_connection(tmp_path: Path):
-    # Same contract as every other Service method that needs a server.
+def test_import_from_json_requires_a_connection():
     service = _service(None)
     with pytest.raises(ConnectionToServiceError):
-        service.import_items_from_json(_write_document(tmp_path))
+        service.import_items_from_json({"app_id": "demo-app"})
     service.logger.error.assert_called_once()
