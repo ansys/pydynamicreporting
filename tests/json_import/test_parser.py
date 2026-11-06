@@ -129,28 +129,6 @@ def test_unapplied_envelope_sections_are_unknown_keys(key):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("literal", ["NaN", "Infinity", "-Infinity"])
-def test_non_finite_numbers_are_rejected(literal):
-    # Python's json reads these, but they are not valid JSON and the published
-    # schema rejects them; the parser must not disagree with the artifact.
-    raw = json.loads(
-        '{"schema_version":"1.0","app_id":"demo-app","items":[{"item_type":"table",'
-        f'"name":"t","columns":["a"],"rows":[[{literal}]]}}]}}'
-    )
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(raw)
-    assert "items[0].rows[0][0]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_null_is_the_supported_missing_number():
-    doc = build_document(
-        _document(items=[{"item_type": "table", "name": "t", "columns": ["a"], "rows": [[None]]}])
-    )
-    assert doc.items[0]["rows"] == ((None,),)
-
-
-@pytest.mark.unit
 def test_non_finite_tag_values_are_rejected():
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(tags=[{"run": float("nan")}]))
@@ -439,105 +417,48 @@ def test_base_dir_accepts_a_path(tmp_path: Path):
 # --------------------------------------------------------------------------
 
 
-def _table(**overrides):
-    base = {
-        "item_type": "table",
-        "name": "t",
-        "columns": ["time", "T_max", "T_min"],
-        "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
-    }
-    base.update(overrides)
-    return base
-
-
 @pytest.mark.unit
-def test_table_columns_are_normalized():
-    doc = build_document(_document(items=[_table()]))
-    assert doc.items[0]["columns"] == (
-        {"name": "time", "type": "string"},
-        {"name": "T_max", "type": "string"},
-        {"name": "T_min", "type": "string"},
-    )
-
-
-@pytest.mark.unit
-def test_table_columns_accept_objects():
-    doc = build_document(
-        _document(items=[_table(columns=[{"name": "time", "type": "float"}, "T_max", "T_min"])])
-    )
-    assert doc.items[0]["columns"][0] == {"name": "time", "type": "float"}
-
-
-@pytest.mark.unit
-def test_table_column_object_requires_a_name():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[_table(columns=[{"type": "float"}, "b", "c"])]))
-    assert "items[0].columns" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_table_rows_must_be_rectangular():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[_table(rows=[[1, 2, 3], [4, 5]])]))
-    assert "items[0].rows[1]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_table_rows_must_match_the_column_count():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[_table(rows=[[1, 2], [3, 4]])]))
-    assert "items[0].rows[0]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_table_cells_must_be_scalars():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[_table(rows=[[1, 2, {"a": 1}], [4, 5, 6]])]))
-    assert "items[0].rows[0][2]" in _locations(excinfo)
-
-
-@pytest.mark.unit
-def test_table_requires_columns_and_rows():
+def test_table_requires_an_array():
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "table", "name": "t"}]))
-    locations = _locations(excinfo)
-    assert "items[0].columns" in locations
-    assert "items[0].rows" in locations
+    assert "items[0].array" in _locations(excinfo)
 
 
 @pytest.mark.unit
-def test_table_axes_must_name_columns():
+def test_table_array_must_be_a_list():
     with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(_document(items=[_table(xaxis="nope", yaxis=["T_max", "missing"])]))
-    locations = _locations(excinfo)
-    assert "items[0].xaxis" in locations
-    assert "items[0].yaxis[1]" in locations
+        build_document(_document(items=[{"item_type": "table", "name": "t", "array": "1,2"}]))
+    assert "items[0].array" in _locations(excinfo)
 
 
 @pytest.mark.unit
-def test_table_accepts_explicit_axes_that_name_columns():
-    doc = build_document(_document(items=[_table(xaxis="time", yaxis=["T_max"], plot="line")]))
-    item = doc.items[0]
-    assert item["xaxis"] == "time"
-    assert item["yaxis"] == ("T_max",)
-    assert item["plot"] == "line"
+def test_table_array_and_properties_are_passed_through_unchanged():
+    array = [[0.0, 1.0], [300.1, 320.5]]
+    properties = {"labels_row": ["time", "T_max"], "xaxis": "time", "line_color": ["red"]}
+    raw = {"item_type": "table", "name": "t", "array": array, "dtype": "f8", **properties}
+    item = build_document(_document(items=[raw])).items[0]
+    assert item["array"] is array
+    assert item["dtype"] == "f8"
+    assert {key: item[key] for key in properties} == properties
 
 
 @pytest.mark.unit
-def test_table_data_wrapper_is_not_accepted():
-    with pytest.raises(ImportItemValidationError) as excinfo:
-        build_document(
-            _document(
-                items=[
-                    {
-                        "item_type": "table",
-                        "name": "t",
-                        "data": {"columns": ["a", "b"], "rows": [[1, 2]]},
-                    }
-                ]
-            )
-        )
-    assert {"items[0].columns", "items[0].rows"} <= _locations(excinfo)
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"array": [[1, 2], [3]]},
+        {"array": [[{"a": 1}]]},
+        {"array": [[float("nan")]]},
+        {"array": [[1, 2]], "labels_row": ["a", "b", "c"]},
+        {"array": [[1, 2]], "xaxis": "not a label"},
+    ],
+    ids=["ragged", "object-cell", "nan", "label-count", "unknown-axis"],
+)
+def test_table_contents_are_left_to_the_backend(fields):
+    # The backend table validators own the array checks, so the parser does
+    # not reject what they would; the item fails when it is saved instead.
+    doc = build_document(_document(items=[{"item_type": "table", "name": "t", **fields}]))
+    assert doc.items[0]["array"] is fields["array"]
 
 
 @pytest.mark.unit

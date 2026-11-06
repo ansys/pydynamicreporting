@@ -27,143 +27,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import numpy
 import pytest
 
+from ansys.dynamicreporting.core.adr_utils import table_attr
 from ansys.dynamicreporting.core.utils.json_item_import.mapping import (
-    column_labels,
-    derive_axes,
     item_content,
     resolve_path,
-    rows_to_array,
     table_fields,
 )
 from tests.json_import.helpers import build_item as _model
-
-COLUMNS = ({"name": "time"}, {"name": "T_max"}, {"name": "T_min"})
-
-
-# --------------------------------------------------------------------------
-# rows_to_array - orientation is the critical behaviour
-# --------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-def test_rows_to_array_transposes_to_series_per_row():
-    # Wire: 2 records x 3 columns. ADR stores 3 series x 2 samples.
-    rows = ((0.0, 300.1, 290.0), (1.0, 320.5, 295.2))
-    array = rows_to_array(rows)
-    assert array.shape == (3, 2)
-    assert array.shape[0] == len(COLUMNS)
-    assert list(array[0]) == [0.0, 1.0]
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(("n_rows", "n_columns"), [(1, 5), (5, 1), (2, 3), (3, 2), (7, 4), (4, 7)])
-def test_rows_to_array_shape_is_columns_by_rows(n_rows, n_columns):
-    rows = tuple(tuple(float(r * n_columns + c) for c in range(n_columns)) for r in range(n_rows))
-    assert rows_to_array(rows).shape == (n_columns, n_rows)
-
-
-@pytest.mark.unit
-def test_rows_to_array_uses_float_for_numeric_data():
-    assert rows_to_array(((1, 2), (3, 4))).dtype.kind == "f"
-
-
-@pytest.mark.unit
-def test_rows_to_array_falls_back_to_bytes_for_text():
-    array = rows_to_array((("alpha", 1), ("beta", 2)))
-    assert array.dtype.kind == "S"
-    assert array.shape == (2, 2)
-
-
-@pytest.mark.unit
-def test_rows_to_array_keeps_numeric_looking_strings_as_text():
-    # JSON strings stay text even when NumPy could parse them as numbers;
-    # otherwise identifiers such as "001" would silently become 1.0.
-    array = rows_to_array((("001", "90210"), ("007", "10001")))
-    assert array.dtype.kind == "S"
-    assert [cell.decode() for cell in array[0]] == ["001", "007"]
-    assert [cell.decode() for cell in array[1]] == ["90210", "10001"]
-
-
-@pytest.mark.unit
-def test_rows_to_array_treats_booleans_and_nulls_as_numeric():
-    array = rows_to_array(((True, None), (False, 2)))
-    assert array.dtype.kind == "f"
-    assert list(array[0]) == [1.0, 0.0]
-    assert numpy.isnan(array[1][0])
-    assert array[1][1] == 2.0
-
-
-@pytest.mark.unit
-def test_rows_to_array_does_not_truncate_long_labels():
-    long_label = "a-really-long-cell-value-well-past-twenty-characters"
-    array = rows_to_array(((long_label, "x"),))
-    assert array[0][0].decode() == long_label
-
-
-@pytest.mark.unit
-def test_rows_to_array_accepts_non_ascii_text():
-    # NumPy encodes str -> bytes as ASCII, so cells are encoded explicitly;
-    # without that, a degree sign raises UnicodeEncodeError.
-    array = rows_to_array((("25 °C", "naïve"),))
-    assert array.dtype.kind == "S"
-    assert array[0][0].decode("utf-8") == "25 °C"
-    assert array[1][0].decode("utf-8") == "naïve"
-
-
-@pytest.mark.unit
-def test_rows_to_array_renders_none_as_empty_text():
-    array = rows_to_array((("alpha", None),))
-    assert array[1][0] == b""
-
-
-@pytest.mark.unit
-def test_rows_to_array_handles_no_rows():
-    array = rows_to_array((), column_count=3)
-    assert array.shape == (3, 0)
-
-
-@pytest.mark.unit
-def test_rows_to_array_handles_no_rows_and_no_columns():
-    assert rows_to_array(()).shape == (0, 0)
-
-
-# --------------------------------------------------------------------------
-# column_labels / derive_axes
-# --------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-def test_column_labels_accepts_mappings_and_strings():
-    assert column_labels(COLUMNS) == ["time", "T_max", "T_min"]
-    assert column_labels(["a", "b"]) == ["a", "b"]
-
-
-@pytest.mark.unit
-def test_derive_axes_defaults_to_first_column_then_the_rest():
-    assert derive_axes(COLUMNS) == ("time", ["T_max", "T_min"])
-
-
-@pytest.mark.unit
-def test_derive_axes_explicit_values_win():
-    assert derive_axes(COLUMNS, "T_max", ["T_min"]) == ("T_max", ["T_min"])
-
-
-@pytest.mark.unit
-def test_derive_axes_with_a_single_column():
-    assert derive_axes(({"name": "only"},)) == ("only", [])
-
-
-@pytest.mark.unit
-def test_derive_axes_with_no_columns():
-    assert derive_axes(()) == (None, [])
-
-
-@pytest.mark.unit
-def test_derive_axes_accepts_an_explicit_empty_yaxis():
-    assert derive_axes(COLUMNS, None, []) == ("time", [])
 
 
 # --------------------------------------------------------------------------
@@ -199,7 +71,7 @@ def test_resolve_path_handles_a_nested_relative_path(tmp_path: Path):
 
 
 def _table(**overrides):
-    raw = {"item_type": "table", "name": "t", "columns": ["x", "y", "z"], "rows": [[0, 1, 2]]}
+    raw = {"item_type": "table", "name": "t", "array": [[0, 1, 2]]}
     return _model({**raw, **overrides})
 
 
@@ -210,8 +82,17 @@ def test_item_content_is_the_inline_value(item_type, value):
 
 
 @pytest.mark.unit
-def test_item_content_transposes_a_table():
-    assert item_content(_table()).shape == (3, 1)
+def test_item_content_of_a_table_is_its_array_as_given():
+    model = _table()
+    content = item_content(model)
+    # An omitted dtype stays omitted, so each backend applies its own default.
+    assert content == {"array": [[0, 1, 2]]}
+    assert content["array"] is model["array"]
+
+
+@pytest.mark.unit
+def test_item_content_of_a_table_carries_an_explicit_dtype():
+    assert item_content(_table(dtype="S")) == {"array": [[0, 1, 2]], "dtype": "S"}
 
 
 @pytest.mark.unit
@@ -233,24 +114,17 @@ def test_item_content_resolves_media_paths(item_type, name, tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_table_fields_derive_labels_and_axes():
-    assert table_fields(_table()) == {
-        "labels_row": ["x", "y", "z"],
-        "xaxis": "x",
-        "yaxis": ["y", "z"],
-    }
+def test_table_fields_are_empty_when_none_are_given():
+    assert table_fields(_table()) == {}
 
 
 @pytest.mark.unit
-def test_table_fields_include_explicit_display_fields():
-    fields = table_fields(_table(xaxis="y", yaxis=["z"], plot="line", format="floatdot1"))
-    assert fields["xaxis"] == "y"
-    assert fields["yaxis"] == ["z"]
-    assert fields["plot"] == "line"
-    assert fields["format"] == "floatdot1"
+def test_table_fields_pass_every_given_property_through_unchanged():
+    given = {"labels_row": ["x"], "xaxis": "x", "line_color": ["red"], "rowlbls": ["r"]}
+    assert table_fields(_table(**given)) == given
 
 
 @pytest.mark.unit
-def test_table_fields_omit_an_empty_y_axis():
-    model = _model({"item_type": "table", "name": "t", "columns": ["x"], "rows": [[0]]})
-    assert table_fields(model) == {"labels_row": ["x"], "xaxis": "x"}
+def test_table_fields_cover_every_adr_table_property():
+    given = {name: f"value-{name}" for name in table_attr}
+    assert table_fields(_table(**given)) == given

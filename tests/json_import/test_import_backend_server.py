@@ -64,7 +64,7 @@ def _media(tmp_path: Path) -> dict[str, dict[str, str]]:
 _INLINE = {
     "text": {"value": "body"},
     "html": {"value": "<p>body</p>"},
-    "table": {"columns": ["a", "b"], "rows": [[1, 2]]},
+    "table": {"array": [[1, 2]]},
     "tree": {"nodes": [{"key": "k", "name": "root", "value": None}]},
 }
 
@@ -242,23 +242,60 @@ def _table_model(**overrides):
     raw = {
         "item_type": "table",
         "name": "t",
-        "columns": ["time", "T_max", "T_min"],
-        "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+        "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+        "labels_row": ["time", "T_max", "T_min"],
     }
     raw.update(overrides)
     return _item(raw)
 
 
 @pytest.mark.unit
-def test_table_payload_carries_the_array_and_display_fields(rest_server):
-    item = rest_server._populate_item(_table_model(plot="line", format="floatdot1"), "")
+def test_table_payload_carries_the_array_and_properties_unchanged(rest_server):
+    item = rest_server._populate_item(
+        _table_model(xaxis="time", plot="line", format="floatdot1", line_color=["red"]), ""
+    )
     payload = item.payloaddata
     assert payload["array"].shape == (3, 2)
+    assert payload["array"].dtype.kind == "f"
     assert payload["labels_row"] == ["time", "T_max", "T_min"]
     assert payload["xaxis"] == "time"
-    assert payload["yaxis"] == ["T_max", "T_min"]
+    assert "yaxis" not in payload
     assert payload["plot"] == "line"
     assert payload["format"] == "floatdot1"
+    assert payload["line_color"] == ["red"]
+
+
+@pytest.mark.unit
+def test_a_text_table_uses_the_given_dtype(rest_server):
+    item = rest_server._populate_item(_table_model(array=[["a", "b"]], dtype="S"), "")
+    assert item.payloaddata["array"].dtype.kind == "S"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"array": [[1, 2], [3]]},
+        {"array": [[{"a": 1}]]},
+        {"array": [["a"]]},
+        {"array": [[1, 2]], "rowlbls": ["a", "b"]},
+    ],
+    ids=["ragged", "object-cell", "text-without-dtype", "rowlbls-count"],
+)
+def test_an_invalid_table_fails_only_that_item_before_push(rest_server, fields):
+    # Table arrays are checked by ItemREST, so a bad table is a per-item
+    # failure rather than a document validation error.
+    document = {
+        "schema_version": "1.0",
+        "app_id": "demo-app",
+        "items": [
+            {"item_type": "table", "name": "bad", **fields},
+            {"item_type": "text", "name": "good", "value": "v"},
+        ],
+    }
+    result = rest_server.import_items_from_json(document)
+    assert [failure.name for failure in result.failures] == ["bad"]
+    assert [call.args[0][0].name for call in rest_server.put_objects.call_args_list] == ["good"]
 
 
 @pytest.mark.unit

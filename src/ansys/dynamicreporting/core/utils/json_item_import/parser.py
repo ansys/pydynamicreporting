@@ -47,17 +47,12 @@ from .spec import (
     DOCUMENT_SPEC,
     ITEM_SPECS,
     ITEM_TYPES,
-    NON_FINITE_MESSAGE,
     FieldSpec,
     check_version,
-    is_non_finite,
 )
 
 _INVALID = object()
 """Sentinel returned when a value failed validation."""
-
-_JSON_SCALARS = (str, int, float, bool, type(None))
-"""Scalar types that can appear in a table cell."""
 
 _T = TypeVar("_T")
 
@@ -221,47 +216,6 @@ def _build_each(raws: Iterable[Any], build: Callable[[Any, int], _T | None]) -> 
     return tuple(entry for entry in built if entry is not None)
 
 
-def _check_scalar(value: Any, location: str, errors: ErrorCollector, expected: str) -> None:
-    """Check that ``value`` is a finite JSON scalar; ``expected`` prefixes the type error."""
-    if not isinstance(value, _JSON_SCALARS):
-        errors.add(location, f"{expected}, got {type(value).__name__}")
-    elif is_non_finite(value):
-        errors.add(location, NON_FINITE_MESSAGE)
-
-
-def _validate_table(values: dict[str, Any], location: str, errors: ErrorCollector) -> None:
-    """Check table shape, cell types, and axis references."""
-    columns = values["columns"] or ()
-    rows = values["rows"] or ()
-    column_names = [column["name"] for column in columns]
-
-    expected_width = len(columns) if columns else (len(rows[0]) if rows else 0)
-    for row_index, row in enumerate(rows):
-        row_location = f"{location}.rows[{row_index}]"
-        if len(row) != expected_width:
-            errors.add(
-                row_location,
-                f"expected {expected_width} cells to match the other rows, got {len(row)}",
-            )
-        for cell_index, cell in enumerate(row):
-            _check_scalar(
-                cell, f"{row_location}[{cell_index}]", errors, "table cells must be scalars"
-            )
-
-    if not column_names:
-        return
-
-    xaxis = values.get("xaxis")
-    if xaxis is not None and xaxis not in column_names:
-        errors.add(f"{location}.xaxis", f"{xaxis!r} does not name a column")
-
-    yaxis = values.get("yaxis")
-    if yaxis is not None:
-        for index, label in enumerate(yaxis):
-            if label not in column_names:
-                errors.add(f"{location}.yaxis[{index}]", f"{label!r} does not name a column")
-
-
 def build_item(
     raw: Any,
     index: int,
@@ -283,10 +237,6 @@ def build_item(
         return None
 
     values = apply_spec(raw, ITEM_SPECS[item_type], location, errors, logger=logger)
-
-    if item_type == "table":
-        _validate_table(values, location, errors)
-
     return {**values, "base_dir": base_dir}
 
 

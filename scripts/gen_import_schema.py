@@ -116,22 +116,6 @@ def build_schema() -> dict[str, Any]:
             "minProperties": 1,
             "additionalProperties": {"type": ["string", "number", "boolean"]},
         },
-        "tableColumn": {
-            "oneOf": [
-                {"type": "string"},
-                {
-                    "type": "object",
-                    "required": ["name"],
-                    "properties": {
-                        "name": {"type": "string", "minLength": 1},
-                        "type": {
-                            "type": "string",
-                            "description": "Informational; not interpreted by the importer.",
-                        },
-                    },
-                },
-            ]
-        },
         "treeNode": _object_schema(TREE_NODE_SPEC),
         "itemBase": _object_schema(
             tuple(spec for spec in ITEM_SPECS["text"] if spec.name in ITEM_COMMON_NAMES),

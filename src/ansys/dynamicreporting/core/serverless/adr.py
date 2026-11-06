@@ -1398,7 +1398,7 @@ class ADR:
                 item.save()
             except Exception:
                 # create_item() already persisted the table, so remove it
-                # rather than leave a table without its labels and axes.
+                # rather than leave a table without its display properties.
                 item.delete()
                 raise
         return item

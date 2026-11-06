@@ -45,16 +45,13 @@
       "item_type": "table",
       "name": "Probe Table",
       "tags": [{ "section": "results" }],
-      "columns": [
-        { "name": "time", "type": "float" },
-        { "name": "T_max", "type": "float" },
-        { "name": "T_min", "type": "float" }
+      "array": [
+        [0.0, 1.0, 2.0],
+        [300.1, 320.5, 318.7],
+        [290.0, 295.2, 294.1]
       ],
-      "rows": [
-        [0.0, 300.1, 290.0],
-        [1.0, 320.5, 295.2],
-        [2.0, 318.7, 294.1]
-      ],
+      "dtype": "f8",
+      "labels_row": ["time", "T_max", "T_min"],
       "plot": "line",
       "format": "floatdot1",
       "xaxis": "time",

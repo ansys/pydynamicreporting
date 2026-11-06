@@ -175,29 +175,6 @@
         }
       ]
     },
-    "tableColumn": {
-      "oneOf": [
-        {
-          "type": "string"
-        },
-        {
-          "properties": {
-            "name": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "type": {
-              "description": "Informational; not interpreted by the importer.",
-              "type": "string"
-            }
-          },
-          "required": [
-            "name"
-          ],
-          "type": "object"
-        }
-      ]
-    },
     "tableItem": {
       "allOf": [
         {
@@ -205,55 +182,978 @@
         },
         {
           "properties": {
-            "columns": {
-              "description": "Column definitions, in wire (record) order.",
-              "items": {
-                "$ref": "#/$defs/tableColumn"
-              },
+            "align_column": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "array": {
+              "description": "Table data as ADR stores it, one inner array per row label. Checked by the backend when the item is saved.",
               "type": "array"
             },
-            "format": {
-              "description": "Cell value format.",
+            "bar_gap": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "bar_mode": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "col_tags": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "collbls": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "column_maximum": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "column_minimum": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "dtype": {
+              "description": "NumPy dtype of the array: 'f8' (the default) for numbers or 'S' for text.",
               "type": "string"
+            },
+            "format": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "format_column": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "format_row": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "height": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "histogram_bin_size": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "histogram_cumulative": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "histogram_normalized": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "histogram_threshold": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "item_justification": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             },
             "item_type": {
               "const": "table"
             },
-            "plot": {
-              "description": "Plot style, for example 'line'.",
-              "type": "string"
+            "labels_column": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             },
-            "rows": {
-              "description": "Record-oriented rows; one inner list per record.",
-              "items": {
-                "items": {
-                  "type": [
-                    "string",
-                    "number",
-                    "boolean",
-                    "null"
-                  ]
-                },
-                "type": "array"
-              },
-              "type": "array"
+            "labels_row": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "legend_position": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_color": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_error_bars": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux0": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux1": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux2": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux3": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux4": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux5": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux6": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux7": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux8": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_aux9": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_opacity": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_scale": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_size": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_marker_text": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_style": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "line_width": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "marker_text_rowname": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "nan_display": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "palette": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "palette_position": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "palette_range": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "palette_show": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "palette_title": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "plot": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "plot_margins": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "plot_title": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "plot_xaxis_type": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "plot_yaxis_type": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "plot_zaxis_type": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "row_tags": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "rowlbls": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "show_border": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "show_legend": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "show_legend_border": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "stacked": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_bordered": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_cond_format": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_condensed": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_default_col_labels": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_page": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_pagemenu": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_scrollx": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_scrolly": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_search": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_sort": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_title": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_wrap_content": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "table_wrap_word": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "title": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "width": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             },
             "xaxis": {
-              "description": "Explicit x-axis label; must name a column.",
-              "type": "string"
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "xaxis_format": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "xaxis_tick_delta": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "xrange": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "xtitle": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             },
             "yaxis": {
-              "description": "Explicit y-axis labels; each must name a column.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "yaxis_format": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "yaxis_tick_delta": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "yrange": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "ytitle": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "zaxis": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "zaxis_format": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "zaxis_tick_delta": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "zrange": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
+            },
+            "ztitle": {
+              "description": "ADR table property, passed to the backend unchanged.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             }
           },
           "required": [
             "item_type",
-            "columns",
-            "rows"
+            "array"
           ]
         }
       ]

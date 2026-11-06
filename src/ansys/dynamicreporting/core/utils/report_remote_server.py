@@ -1507,7 +1507,7 @@ class Server:
         if item_type == "table":
             # Display fields travel inside the table payload, the same
             # dictionary adr_item.Item builds for set_payload_table.
-            content = {"array": content, **table_fields(item_data)}
+            content = {**content, **table_fields(item_data)}
         elif item_type == "image":
             # set_payload_image expects image bytes. As in adr_item.Item, PNG
             # files are passed through and any other format is converted first.

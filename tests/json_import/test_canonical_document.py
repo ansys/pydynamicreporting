@@ -78,8 +78,8 @@ CANONICAL_DOCUMENT: dict[str, Any] = {
             "item_type": "table",
             "name": "Probe Table",
             "tags": [{"section": "results"}],
-            "columns": ["time", "T_max", "T_min"],
-            "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+            "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+            "labels_row": ["time", "T_max", "T_min"],
             "plot": "line",
             "xaxis": "time",
             "yaxis": ["T_max", "T_min"],
@@ -192,17 +192,11 @@ def test_canonical_tree_is_passed_through_unchanged(canonical):
 
 
 @pytest.mark.unit
-def test_canonical_table_is_parsed(canonical):
+def test_canonical_table_is_passed_through_unchanged(canonical):
     table = canonical.items[TABLE]
-    assert table["columns"] == (
-        {"name": "time", "type": "string"},
-        {"name": "T_max", "type": "string"},
-        {"name": "T_min", "type": "string"},
-    )
-    assert table["rows"] == ((0.0, 300.1, 290.0), (1.0, 320.5, 295.2))
-    assert table["plot"] == "line"
-    assert table["xaxis"] == "time"
-    assert table["yaxis"] == ("T_max", "T_min")
+    given = CANONICAL_DOCUMENT["items"][TABLE]
+    for key in ("array", "labels_row", "plot", "xaxis", "yaxis"):
+        assert table[key] == given[key]
 
 
 # --------------------------------------------------------------------------
@@ -241,11 +235,10 @@ def test_canonical_import_reports_what_it_created(imported):
 
 
 @pytest.mark.unit
-def test_canonical_table_is_stored_transposed(imported):
+def test_canonical_table_content_is_the_array_as_given(imported):
     _, created = imported
-    array = created["Probe Table"].imported_content
-    # The specification's worked result: 2x3 on the wire, 3x2 once stored.
-    assert array.shape == (3, 2)
+    content = created["Probe Table"].imported_content
+    assert content == {"array": CANONICAL_DOCUMENT["items"][TABLE]["array"]}
 
 
 @pytest.mark.unit
@@ -253,7 +246,6 @@ def test_canonical_table_labels_and_axes(imported):
     _, created = imported
     table = created["Probe Table"]
     assert table.labels_row == ["time", "T_max", "T_min"]
-    assert len(table.labels_row) == table.imported_content.shape[0]
     assert table.xaxis == "time"
     assert table.yaxis == ["T_max", "T_min"]
     assert table.plot == "line"
@@ -307,24 +299,8 @@ def _drop_image_path(document):
     del document["items"][IMAGE]["path"]
 
 
-def _ragged_rows(document):
-    document["items"][TABLE]["rows"][1] = [1.0, 320.5]
-
-
-def _row_width_mismatches_columns(document):
-    document["items"][TABLE]["columns"] = ["time", "T_max"]
-
-
-def _xaxis_is_not_a_column(document):
-    document["items"][TABLE]["xaxis"] = "pressure"
-
-
-def _yaxis_is_not_a_column(document):
-    document["items"][TABLE]["yaxis"] = ["T_max", "pressure"]
-
-
-def _non_scalar_cell(document):
-    document["items"][TABLE]["rows"][0][2] = {"value": 290.0}
+def _drop_table_array(document):
+    del document["items"][TABLE]["array"]
 
 
 def _tree_node_is_not_an_object(document):
@@ -340,11 +316,7 @@ def _tree_node_is_not_an_object(document):
         (_unknown_item_type, f"items[{TEXT}].item_type"),
         (_drop_text_value, f"items[{TEXT}].value"),
         (_drop_image_path, f"items[{IMAGE}].path"),
-        (_ragged_rows, f"items[{TABLE}].rows[1]"),
-        (_row_width_mismatches_columns, f"items[{TABLE}].rows[0]"),
-        (_xaxis_is_not_a_column, f"items[{TABLE}].xaxis"),
-        (_yaxis_is_not_a_column, f"items[{TABLE}].yaxis[1]"),
-        (_non_scalar_cell, f"items[{TABLE}].rows[0][2]"),
+        (_drop_table_array, f"items[{TABLE}].array"),
         (_tree_node_is_not_an_object, f"items[{TREE}].nodes[1]"),
     ],
     ids=lambda value: value.__name__.lstrip("_") if callable(value) else value,
@@ -409,7 +381,7 @@ def test_every_break_is_reported_in_one_pass():
     def mutate(document):
         del document["app_id"]
         del document["items"][TEXT]["value"]
-        document["items"][TABLE]["xaxis"] = "pressure"
+        document["items"][TABLE]["array"] = "not an array"
         document["items"][TREE]["nodes"].append("Part C")
 
     with pytest.raises(ImportItemValidationError) as excinfo:
@@ -419,7 +391,7 @@ def test_every_break_is_reported_in_one_pass():
     assert {
         "app_id",
         f"items[{TEXT}].value",
-        f"items[{TABLE}].xaxis",
+        f"items[{TABLE}].array",
         f"items[{TREE}].nodes[1]",
     } <= locations
 

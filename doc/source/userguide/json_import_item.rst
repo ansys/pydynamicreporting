@@ -114,7 +114,7 @@ Every item carries ``item_type``, ``name``, and optionally ``tags``,
 =================  ===============================  ========================
 ``text``           ``value``                        ``String``
 ``html``           ``value``                        ``HTML``
-``table``          ``columns``, ``rows``            ``Table``
+``table``          ``array``                        ``Table``
 ``tree``           ``nodes``                        ``Tree``
 ``image``          ``path``                         ``Image``
 ``animation``      ``path``                         ``Animation``
@@ -133,33 +133,26 @@ takes any extension. An ``html`` value must contain at least one HTML tag.
 Tables
 ------
 
-Tables are written **record-oriented**: ``columns`` names the fields and each
-entry of ``rows`` is one record.
+Tables use the ADR table format and are passed to ADR unchanged. ``array`` holds
+one inner array per row label, so each series, such as all ``time`` values,
+is one inner array.
 
 .. code:: json
 
    {
      "item_type": "table",
      "name": "Probe Table",
-     "columns": ["time", "T_max", "T_min"],
-     "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+     "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+     "labels_row": ["time", "T_max", "T_min"],
+     "xaxis": "time",
+     "yaxis": ["T_max", "T_min"],
      "plot": "line"
    }
 
-ADR stores tables series-per-row, so the importer transposes the data on the
-way in. The example above becomes a ``(3, 2)`` array whose row labels are
-``["time", "T_max", "T_min"]``.
-
-If ``xaxis`` and ``yaxis`` are omitted, the first column becomes the x axis and
-the remaining columns become the y axes. When supplied, they must name
-columns.
-
-A table whose cells are all numbers, booleans, or ``null`` is stored as floats.
-A table with any JSON string is stored as text, and numeric-looking strings such
-as ``"001"`` stay unchanged.
-
-Besides ``columns`` and ``rows``, a table accepts ``plot``, ``format``,
-``xaxis``, and ``yaxis``.
+``dtype`` selects how the array is stored: ``"f8"`` (the default) for numbers
+or ``"S"`` for text. A table also accepts every ADR table property, such as
+``labels_row``, ``labels_column``, ``xaxis``, ``yaxis``, ``plot``, ``format``,
+``title``, ``rowlbls``, and ``collbls``.
 
 Trees
 -----

@@ -63,12 +63,15 @@ its location, such as ``items[3].rows[1]``.
 
 **Tables**
 
-- ``columns`` (strings, or objects with a non-empty ``name``) and ``rows``
-  (arrays of cells) are required.
-- Every row has the same number of cells as ``columns``.
-- Cells are strings, numbers, booleans, or ``null``. ``NaN`` and ``Infinity``
-  are rejected; use ``null`` for a missing number.
-- ``xaxis`` and every ``yaxis`` entry must name a column.
+- ``array`` is required: the table data in the ADR table format, one inner array
+  per row label. ``dtype`` is ``"f8"`` (the default) for numbers or ``"S"`` for
+  text.
+- Every ADR table property, such as ``labels_row``, ``xaxis``, ``yaxis``,
+  ``plot``, ``format``, ``rowlbls``, and ``collbls``, is accepted and passed to
+  the backend unchanged.
+- The backend checks the array when the item is saved, so a ragged or
+  non-numeric array is a per-item failure, not a validation error. It does not
+  check that labels or axes match the array.
 
 **Trees**
 
@@ -101,8 +104,9 @@ Validate a document before importing it:
    check-jsonschema --schemafile adr_item_import.schema.json my_report.json
 
 Any validator that supports draft 2020-12 works. The schema checks field types,
-required fields, and the version pattern. The rules that JSON Schema cannot
-express, such as equal row widths and axis names, are checked by the importer.
+required fields, and the version pattern. The importer also checks rules that
+JSON Schema cannot express, such as an ``html`` value containing a tag. Table
+arrays and tree nodes are checked by ADR when each item is saved.
 
 If you need a field or item type that the schema does not offer, open an issue
 at https://github.com/ansys/pydynamicreporting/issues.

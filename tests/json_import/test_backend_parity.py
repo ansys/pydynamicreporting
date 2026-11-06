@@ -47,6 +47,7 @@ from ansys.dynamicreporting.core.serverless.item import (
     AnimContent,
     Item,
     SceneContent,
+    TableContent,
     TreeContent,
 )
 from ansys.dynamicreporting.core.utils.json_item_import.importer import import_items
@@ -68,8 +69,10 @@ DOCUMENT = {
         {
             "item_type": "table",
             "name": "tbl",
-            "columns": ["time", "T_max", "T_min"],
-            "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+            "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+            "labels_row": ["time", "T_max", "T_min"],
+            "xaxis": "time",
+            "yaxis": ["T_max", "T_min"],
             "plot": "line",
         },
         {
@@ -304,7 +307,8 @@ def test_both_backends_create_the_same_items_in_order(serverless_run: Run, serve
 
 @pytest.mark.unit
 def test_both_backends_produce_the_same_table_array(serverless_run: Run, server_run: Run):
-    serverless_array = serverless_run.contents["tbl"]
+    # The serverless create_item is mocked, so run its table validator here.
+    serverless_array = TableContent().process(serverless_run.contents["tbl"], SimpleNamespace())
     server_array = server_run.contents["tbl"]
     assert serverless_array.shape == server_array.shape == (3, 2)
     assert numpy.array_equal(serverless_array, server_array)

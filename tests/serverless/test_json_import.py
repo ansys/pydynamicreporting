@@ -136,8 +136,10 @@ def test_import_from_json_end_to_end(adr_serverless: ADR, tmp_path: Path):
             {
                 "item_type": "table",
                 "name": "e2e table",
-                "columns": ["time", "T_max", "T_min"],
-                "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+                "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+                "labels_row": ["time", "T_max", "T_min"],
+                "xaxis": "time",
+                "yaxis": ["T_max", "T_min"],
                 "plot": "line",
             },
             {
@@ -172,7 +174,7 @@ def test_import_from_json_end_to_end(adr_serverless: ADR, tmp_path: Path):
     assert isinstance(String.get(name="e2e text"), String)
     assert isinstance(HTML.get(name="e2e html"), HTML)
 
-    # The table is stored series-per-row with matching labels.
+    # The table array and its properties are stored as given.
     table = Table.get(name="e2e table")
     assert table.content.shape == (3, 2)
     assert table.labels_row == ["time", "T_max", "T_min"]

@@ -63,10 +63,6 @@ ARTIFACT = REPO_ROOT / "adr_item_import.schema.json"
 GENERATOR = REPO_ROOT / "scripts" / "gen_import_schema.py"
 SAMPLE = REPO_ROOT / "tests" / "test_data" / "adr_import" / "canonical_report.json"
 
-# Display fields promoted to first class; 'columns'/'rows' describe the wire
-# shape rather than an ADR field, so they are not in this set.
-FIRST_CLASS_TABLE_FIELDS = {"plot", "format", "xaxis", "yaxis"}
-
 ITEM_CLASS = {
     item_type: Item._type_registry[ITEM_TYPE_TO_ADR_TYPE[item_type]] for item_type in ITEM_TYPES
 }
@@ -92,20 +88,16 @@ def _load_generator():
 
 
 @pytest.mark.unit
-def test_first_class_table_fields_exist_in_table_attr():
-    assert FIRST_CLASS_TABLE_FIELDS <= set(table_attr)
-
-
-@pytest.mark.unit
-def test_table_spec_promotes_only_known_fields():
-    promoted = {spec.name for spec in TABLE_FIELDS} - {"columns", "rows"}
-    assert promoted == FIRST_CLASS_TABLE_FIELDS
-    assert promoted <= set(table_attr)
+def test_table_spec_accepts_every_adr_table_property():
+    # Table properties are passed through, so the spec must name exactly the
+    # properties the serverless Table stores.
+    passed_through = {spec.name for spec in TABLE_FIELDS} - {"array", "dtype"}
+    assert passed_through == set(Table._properties)
+    assert set(table_attr) <= passed_through
 
 
 @pytest.mark.unit
 def test_labels_row_is_a_real_table_attribute():
-    # The adapters write column names to labels_row.
     assert "labels_row" in table_attr
 
 

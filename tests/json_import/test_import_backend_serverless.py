@@ -88,7 +88,7 @@ def test_every_item_type_dispatches_to_its_class(item_type, adr, tmp_path: Path)
     payloads = {
         "text": {"value": "body"},
         "html": {"value": "<p>body</p>"},
-        "table": {"columns": ["a", "b"], "rows": [[1, 2]]},
+        "table": {"array": [[1, 2]]},
         "tree": {"nodes": [{"key": "k", "name": "root", "value": None}]},
         "image": {"path": "a.png"},
         "animation": {"path": "a.mp4"},
@@ -167,47 +167,42 @@ def _table_model(**overrides):
     raw = {
         "item_type": "table",
         "name": "t",
-        "columns": ["time", "T_max", "T_min"],
-        "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+        "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+        "labels_row": ["time", "T_max", "T_min"],
     }
     raw.update(overrides)
     return _item(raw)
 
 
 @pytest.mark.unit
-def test_table_content_is_transposed_to_series_per_row(adr):
-    adr._populate_item(_table_model(), "")
-    array = adr.create_item.call_args.kwargs["content"]
-    assert array.shape == (3, 2)
+def test_table_content_is_the_array_as_given(adr):
+    model = _table_model(dtype="f8")
+    adr._populate_item(model, "")
+    assert adr.create_item.call_args.kwargs["content"] == {
+        "array": model["array"],
+        "dtype": "f8",
+    }
 
 
 @pytest.mark.unit
-def test_table_labels_row_matches_the_array_rows(adr):
-    item = adr._populate_item(_table_model(), "")
-    array = adr.create_item.call_args.kwargs["content"]
+def test_table_properties_are_applied_unchanged(adr):
+    item = adr._populate_item(
+        _table_model(xaxis="time", plot="line", format="floatdot1", line_color=["red"]), ""
+    )
     assert item.labels_row == ["time", "T_max", "T_min"]
-    assert len(item.labels_row) == array.shape[0]
-
-
-@pytest.mark.unit
-def test_table_axes_are_derived_from_the_columns(adr):
-    item = adr._populate_item(_table_model(), "")
     assert item.xaxis == "time"
-    assert item.yaxis == ["T_max", "T_min"]
-
-
-@pytest.mark.unit
-def test_table_explicit_axes_win(adr):
-    item = adr._populate_item(_table_model(xaxis="T_max", yaxis=["T_min"]), "")
-    assert item.xaxis == "T_max"
-    assert item.yaxis == ["T_min"]
-
-
-@pytest.mark.unit
-def test_table_display_fields_are_applied(adr):
-    item = adr._populate_item(_table_model(plot="line", format="floatdot1"), "")
     assert item.plot == "line"
     assert item.format == "floatdot1"
+    assert item.line_color == ["red"]
+
+
+@pytest.mark.unit
+def test_table_axes_are_not_derived(adr):
+    # Without explicit axes the backend's own defaults apply, so the import
+    # never sets them; unset attributes on the mocked item stay mocks.
+    item = adr._populate_item(_table_model(), "")
+    assert isinstance(item.xaxis, MagicMock)
+    assert isinstance(item.yaxis, MagicMock)
 
 
 @pytest.mark.unit

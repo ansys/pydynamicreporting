@@ -82,8 +82,10 @@ document = {
             "item_type": "table",
             "name": "Probe Table",
             "tags": [{"section": "results"}],
-            "columns": ["time", "T_max", "T_min"],
-            "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+            "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+            "labels_row": ["time", "T_max", "T_min"],
+            "xaxis": "time",
+            "yaxis": ["T_max", "T_min"],
             "plot": "line",
         },
         {

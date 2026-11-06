@@ -37,88 +37,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import numpy
-
 from ..report_objects import ItemREST
+from .spec import TABLE_PROPERTIES
 
 __all__ = [
-    "column_labels",
     "combine_tags",
-    "derive_axes",
     "item_content",
     "normalize_tags",
     "resolve_path",
-    "rows_to_array",
     "table_fields",
 ]
 
 # Reuses the REST model's quoting rather than the serverless
 # BaseModel._add_quotes, which would pull in Django.
 _quote = ItemREST.add_quotes
-
-
-def rows_to_array(rows: Any, column_count: int | None = None) -> numpy.ndarray:
-    """Build the ADR table array from record-oriented rows.
-
-    The wire format is record-oriented (one inner list per record), while ADR
-    stores tables **series-per-row**: a table labelled
-    ``labels_row = ["X", "Sin", "Cos"]`` is a ``(3, n)`` array. The returned
-    array is therefore transposed, so that ``shape[0]`` equals the number of
-    columns and matches the row labels.
-
-    Parameters
-    ----------
-    rows : sequence of sequence
-        Record-oriented rows, already validated as rectangular.
-    column_count : int, optional
-        Number of columns, used to shape the array when ``rows`` is empty.
-
-    Returns
-    -------
-    numpy.ndarray
-        A 2-D array of shape ``(n_columns, n_rows)``, of float dtype when
-        every cell is a JSON number, boolean, or null, and auto-sized bytes
-        dtype otherwise.
-    """
-    if not len(rows):
-        return numpy.zeros((column_count or 0, 0), dtype=float)
-
-    # Decide from the JSON cell types rather than letting NumPy try a float
-    # cast: NumPy parses numeric-looking strings, so "001" would become 1.0.
-    if all(cell is None or isinstance(cell, (int, float)) for row in rows for cell in row):
-        return numpy.array(rows, dtype="float").T
-
-    # Auto-sized bytes. 'S' without a width never truncates, unlike a fixed
-    # '|S20'. Cells are encoded explicitly because NumPy encodes str -> bytes
-    # as ASCII, which rejects a degree sign.
-    text_rows = [
-        [b"" if cell is None else str(cell).encode("utf-8") for cell in row] for row in rows
-    ]
-    return numpy.array(text_rows, dtype="S").T
-
-
-def column_labels(columns: Any) -> list[str]:
-    """Return names from bare strings or normalized column mappings."""
-    return [column if isinstance(column, str) else column["name"] for column in columns]
-
-
-def derive_axes(
-    columns: Any, xaxis: str | None = None, yaxis: Any = None
-) -> tuple[str | None, list[str]]:
-    """Resolve the x and y axis labels for a table.
-
-    Explicit values always win; otherwise column 0 becomes the x axis and the
-    remaining columns become the y axes.
-
-    Returns
-    -------
-    tuple of (str or None, list of str)
-        The resolved x-axis label and y-axis labels.
-    """
-    names = column_labels(columns)
-    resolved_x = xaxis if xaxis is not None else (names[0] if names else None)
-    resolved_y = list(yaxis) if yaxis is not None else names[1:]
-    return resolved_x, resolved_y
 
 
 def resolve_path(path: str, base_dir: str | None = None) -> str:
@@ -137,41 +69,25 @@ def item_content(item_data: dict[str, Any]) -> Any:
 
     Returns
     -------
-    str, numpy.ndarray, or list of dict
-        The inline string for ``text``/``html``, the series-per-row array for
-        ``table``, the ``nodes`` exactly as the document gave them for ``tree``,
-        and the resolved file path for every media type.
+    str, dict, or list of dict
+        The inline string for ``text``/``html``, the ``array`` and ``dtype``
+        given for ``table``, the ``nodes`` exactly as the document gave them for
+        ``tree``, and the resolved file path for every media type.
     """
     item_type = item_data["item_type"]
     if item_type in ("text", "html"):
         return item_data["value"]
     if item_type == "table":
-        return rows_to_array(item_data["rows"], len(item_data["columns"]))
+        # An omitted dtype is left out so each backend applies its own default.
+        return {key: item_data[key] for key in ("array", "dtype") if item_data[key] is not None}
     if item_type == "tree":
         return item_data["nodes"]
     return resolve_path(item_data["path"], item_data["base_dir"])
 
 
 def table_fields(item_data: dict[str, Any]) -> dict[str, Any]:
-    """Return the first-class table display fields to set on a table item.
-
-    Returns
-    -------
-    dict
-        ``labels_row`` always, plus ``xaxis``, ``yaxis``, ``plot``, and
-        ``format`` when they resolve to a value.
-    """
-    columns = item_data["columns"]
-    fields: dict[str, Any] = {"labels_row": column_labels(columns)}
-    xaxis, yaxis = derive_axes(columns, item_data["xaxis"], item_data["yaxis"])
-    if xaxis is not None:
-        fields["xaxis"] = xaxis
-    if yaxis:
-        fields["yaxis"] = yaxis
-    for key in ("plot", "format"):
-        if item_data[key] is not None:
-            fields[key] = item_data[key]
-    return fields
+    """Return the table display properties the document sets, unchanged."""
+    return {key: item_data[key] for key in TABLE_PROPERTIES if item_data[key] is not None}
 
 
 def _render_mapping(mapping: dict[Any, Any]) -> list[str]:

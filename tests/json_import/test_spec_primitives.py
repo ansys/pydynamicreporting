@@ -38,7 +38,6 @@ from ansys.dynamicreporting.core.utils.json_item_import.parser import (
 from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     ANY,
     FieldSpec,
-    coerce_columns,
     coerce_tag_list,
 )
 
@@ -237,16 +236,3 @@ def test_coerce_tag_list_rejects_an_empty_object():
     with pytest.raises(ValueError) as excinfo:
         coerce_tag_list([{}])
     assert "at least one key" in str(excinfo.value)
-
-
-@pytest.mark.unit
-def test_coerce_columns_rejects_a_non_string_type():
-    with pytest.raises(ValueError) as excinfo:
-        coerce_columns([{"name": "a", "type": 7}])
-    assert "'type' must be a string" in str(excinfo.value)
-
-
-@pytest.mark.unit
-def test_coerce_columns_rejects_an_empty_name():
-    with pytest.raises(ValueError):
-        coerce_columns([{"name": ""}])

@@ -24,9 +24,9 @@
 
 This module is the single source of truth for the item import contract. The
 parser validates against these tables, and ``scripts/gen_import_schema.py``
-renders them to the committed JSON Schema artifact. The parser additionally
-enforces the cross-field rules JSON Schema cannot express, such as equal row
-widths and axis names that match a column.
+renders them to the committed JSON Schema artifact. Table and tree payloads are
+passed to the backend unchanged and checked by its validators when the item is
+saved.
 
 It also holds the closed wire vocabularies and the schema version helpers. It
 imports no backend module at load time, so that the import core stays
@@ -45,6 +45,7 @@ from pathlib import PurePath
 import re
 from typing import Any
 
+from ...adr_utils import table_attr
 from ...constants import ANIMATION_EXTENSIONS, IMAGE_EXTENSIONS, SCENE_EXTENSIONS
 from ...exceptions import ImportItemVersionError
 
@@ -210,8 +211,8 @@ class FieldSpec:
 # --------------------------------------------------------------------------
 
 
-NON_FINITE_MESSAGE = "NaN and Infinity are not valid JSON; use null for a missing number"
-"""Problem message for a non-finite number anywhere in a document."""
+NON_FINITE_MESSAGE = "NaN and Infinity are not valid JSON"
+"""Problem message for a non-finite tag value."""
 
 
 def is_non_finite(value: Any) -> bool:
@@ -271,28 +272,6 @@ def coerce_tag_list(value: Any) -> tuple[dict[str, Any], ...]:
                 raise ValueError(f"tag [{index}] {key!r}: {NON_FINITE_MESSAGE}")
         out.append(dict(entry))
     return tuple(out)
-
-
-def coerce_columns(value: Any) -> tuple[dict[str, str], ...]:
-    """Normalize table columns to objects with a name and optional type."""
-    out: list[dict[str, str]] = []
-    for index, entry in enumerate(value):
-        if isinstance(entry, str):
-            out.append({"name": entry, "type": "string"})
-            continue
-        name = entry.get("name")
-        if not isinstance(name, str) or not name:
-            raise ValueError(f"column [{index}] requires a non-empty string 'name'")
-        col_type = entry.get("type", "string")
-        if not isinstance(col_type, str):
-            raise ValueError(f"column [{index}] 'type' must be a string")
-        out.append({"name": name, "type": col_type})
-    return tuple(out)
-
-
-def coerce_rows(value: Any) -> tuple[tuple[Any, ...], ...]:
-    """Freeze table rows. Shape and cell types are checked by the parser."""
-    return tuple(tuple(row) for row in value)
 
 
 def _array(
@@ -387,32 +366,39 @@ _HTML_VALUE = FieldSpec(
     description="Inline HTML body; must contain at least one HTML tag.",
 )
 
+TABLE_PROPERTIES: tuple[str, ...] = table_attr + ("rowlbls", "collbls")
+"""Table display properties passed to the backend unchanged.
+
+The names the serverless ``Table`` stores, which the REST table payload
+accepts too; the drift guard keeps them in sync.
+"""
+
+_ANY_JSON_TYPE = ("string", "number", "boolean", "null", "array", "object")
+
 TABLE_FIELDS: tuple[FieldSpec, ...] = (
-    _array(
-        "columns",
-        (str, dict),
-        "tableColumn",
-        "Column definitions, in wire (record) order.",
-        required=True,
-        coerce=coerce_columns,
-    ),
-    _array(
-        "rows",
+    FieldSpec(
+        "array",
         list,
-        {"type": "array", "items": {"type": ["string", "number", "boolean", "null"]}},
-        "Record-oriented rows; one inner list per record.",
         required=True,
-        coerce=coerce_rows,
+        json_type="array",
+        description=(
+            "Table data as ADR stores it, one inner array per row label. Checked by the "
+            "backend when the item is saved."
+        ),
     ),
-    FieldSpec("plot", str, description="Plot style, for example 'line'."),
-    FieldSpec("format", str, description="Cell value format."),
-    FieldSpec("xaxis", str, description="Explicit x-axis label; must name a column."),
-    _array(
-        "yaxis",
+    FieldSpec(
+        "dtype",
         str,
-        {"type": "string"},
-        "Explicit y-axis labels; each must name a column.",
-        coerce=tuple,
+        description="NumPy dtype of the array: 'f8' (the default) for numbers or 'S' for text.",
+    ),
+    *(
+        FieldSpec(
+            name,
+            ANY,
+            json_type=_ANY_JSON_TYPE,
+            description="ADR table property, passed to the backend unchanged.",
+        )
+        for name in TABLE_PROPERTIES
     ),
 )
 
