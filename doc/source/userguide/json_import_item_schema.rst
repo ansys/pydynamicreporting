@@ -44,8 +44,10 @@ its location, such as ``items[3].rows[1]``.
   ``animation``, ``scene``, or ``file``.
 - ``name`` is a required, non-empty string. ``source`` is a string and
   ``sequence`` an integer; a boolean is not an integer.
-- ``text`` and ``html`` require a string ``value``. An ``html`` value must
-  contain at least one HTML tag.
+- ``text`` and ``html`` values are checked by the backend during item creation,
+  not by the schema or importer. Missing, null, or non-string values are
+  per-item failures. Serverless HTML requires at least one HTML tag; REST
+  accepts any valid UTF-8 string.
 
 **Media paths**
 
@@ -105,9 +107,8 @@ Validate a document before importing it:
    check-jsonschema --schemafile adr_item_import.schema.json my_report.json
 
 Any validator that supports draft 2020-12 works. The schema checks field types,
-required fields, and the version pattern. The importer also checks rules that
-JSON Schema cannot express, such as an ``html`` value containing a tag. Table
-arrays and tree nodes are checked by ADR when each item is saved.
+required fields, and the version pattern. Text, HTML, table arrays, and tree
+nodes are checked by ADR during item creation.
 
 If you need a field or item type that the schema does not offer, open an issue
 at https://github.com/ansys/pydynamicreporting/issues.

@@ -29,9 +29,7 @@ passed to the backend unchanged and checked by its validators when the item is
 saved.
 
 It also holds the closed wire vocabularies and the schema version helpers. It
-imports no backend module at load time, so that the import core stays
-backend-agnostic; the one exception is :func:`validate_html`, which lazily
-imports the serverless ``HTMLParser`` so both backends apply the same check.
+delegates text and HTML payload validation to the existing backend validators.
 The drift guard asserts the vocabularies stay in sync with the backend
 registries.
 """
@@ -224,15 +222,6 @@ def is_non_finite(value: Any) -> bool:
     return isinstance(value, float) and not math.isfinite(value)
 
 
-def validate_html(value: str) -> str | None:
-    """Require at least one HTML tag, using the serverless ``HTMLContent`` check."""
-    # Imported lazily: it is the only backend import here, and loading the
-    # serverless models (and Django) is deferred until an HTML item needs it.
-    from ...serverless.item import HTMLParser
-
-    return None if HTMLParser().validate(value) else "must contain at least one HTML tag"
-
-
 def _extension_validator(allowed: tuple[str, ...]) -> Callable[[str], str | None]:
     """Build a ``path`` validator that accepts only the ``allowed`` extensions."""
     listed = ", ".join(f"'.{extension}'" for extension in allowed)
@@ -362,14 +351,13 @@ def _path_spec(item_type: str) -> FieldSpec:
     )
 
 
-_VALUE = FieldSpec("value", str, required=True, description="Inline payload body.")
+_ANY_JSON_TYPE = ("string", "number", "boolean", "null", "array", "object")
 
-_HTML_VALUE = FieldSpec(
+_VALUE = FieldSpec(
     "value",
-    str,
-    required=True,
-    validate=validate_html,
-    description="Inline HTML body; must contain at least one HTML tag.",
+    ANY,
+    json_type=_ANY_JSON_TYPE,
+    description="Inline text or HTML payload, checked by the backend during item creation.",
 )
 
 TABLE_PROPERTIES: tuple[str, ...] = table_attr + ("rowlbls", "collbls")
@@ -378,8 +366,6 @@ TABLE_PROPERTIES: tuple[str, ...] = table_attr + ("rowlbls", "collbls")
 The names the serverless ``Table`` stores, which the REST table payload
 accepts too; the drift guard keeps them in sync.
 """
-
-_ANY_JSON_TYPE = ("string", "number", "boolean", "null", "array", "object")
 
 TABLE_FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec(
@@ -410,7 +396,7 @@ TABLE_FIELDS: tuple[FieldSpec, ...] = (
 
 ITEM_SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "text": ITEM_COMMON + (_VALUE,),
-    "html": ITEM_COMMON + (_HTML_VALUE,),
+    "html": ITEM_COMMON + (_VALUE,),
     "table": ITEM_COMMON + TABLE_FIELDS,
     "tree": ITEM_COMMON
     + (

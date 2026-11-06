@@ -128,7 +128,11 @@ document. Pass ``base_dir`` to resolve them against a different directory.
 Media files must use an extension that both backends accept: ``image`` takes
 ``.png``, ``.jpg``, ``.tif``, or ``.tiff``; ``animation`` takes ``.mp4``;
 ``scene`` takes the 3D formats listed in :doc:`json_import_item_schema`; ``file``
-takes any extension. An ``html`` value must contain at least one HTML tag.
+takes any extension.
+
+Text and HTML ``value`` payloads are passed to the existing backend validators.
+Missing, null, or non-string values are per-item failures. Serverless HTML
+requires at least one HTML tag; REST accepts any valid UTF-8 string.
 
 Tables
 ------
@@ -197,7 +201,7 @@ from ``ansys.dynamicreporting.core.exceptions`` with the other ADR exceptions:
 
    The ADR import document is not valid : 3 problems found
      app_id: is required
-     items[0].value: is required
+     items[0].name: is required
      items[2].item_type: expected one of ['text', 'html', ...], got 'spreadsheet'
 
 Per-item failures during creation are governed by ``on_error``:

@@ -53,13 +53,19 @@
               "const": "html"
             },
             "value": {
-              "description": "Inline HTML body; must contain at least one HTML tag.",
-              "type": "string"
+              "description": "Inline text or HTML payload, checked by the backend during item creation.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             }
           },
           "required": [
-            "item_type",
-            "value"
+            "item_type"
           ]
         }
       ]
@@ -1174,13 +1180,19 @@
               "const": "text"
             },
             "value": {
-              "description": "Inline payload body.",
-              "type": "string"
+              "description": "Inline text or HTML payload, checked by the backend during item creation.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null",
+                "array",
+                "object"
+              ]
             }
           },
           "required": [
-            "item_type",
-            "value"
+            "item_type"
           ]
         }
       ]

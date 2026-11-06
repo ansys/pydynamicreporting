@@ -82,6 +82,30 @@ def test_combine_tags_renders_every_supported_shape():
     assert combine_tags(*parts) == "a=1 b=2 d='x y' e 7 8"
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize("item_type", ["text", "html"])
+@pytest.mark.parametrize("backend", ["rest", "serverless"])
+def test_string_payloads_are_checked_by_the_backend(
+    rest_server, serverless_adr, item_type, backend
+):
+    def create_item(item_class, **kwargs):
+        item = object.__new__(item_class)
+        item.content = kwargs["content"]
+        return item
+
+    serverless_adr.ensure_setup = MagicMock()
+    serverless_adr.create_item.side_effect = create_item
+    server = rest_server if backend == "rest" else serverless_adr
+    values = [{}, *({"value": value} for value in (None, 5, True, [], {}, "", "plain", "<p>v</p>"))]
+    items = [
+        {"item_type": item_type, "name": str(index), **value} for index, value in enumerate(values)
+    ]
+    result = server.import_items_from_json(_document(*items))
+    invalid = 8 if backend == "serverless" and item_type == "html" else 6
+    assert [failure.name for failure in result.failures] == [str(i) for i in range(invalid)]
+    assert result.items_saved == len(items) - invalid
+
+
 # --------------------------------------------------------------------------
 # REST server
 # --------------------------------------------------------------------------
@@ -96,7 +120,9 @@ def test_rest_import_pushes_every_item_type(rest_server, tmp_path: Path):
     result = rest_server.import_items_from_json(path)
 
     assert result.ok and result.items_saved == len(items)
-    pushed = {call.args[0][0].name: call.args[0][0] for call in rest_server.put_objects.call_args_list}
+    pushed = {
+        call.args[0][0].name: call.args[0][0] for call in rest_server.put_objects.call_args_list
+    }
     assert {name: item.type for name, item in pushed.items()} == {
         item["name"]: ITEM_TYPE_TO_ADR_TYPE[item["item_type"]] for item in items
     }

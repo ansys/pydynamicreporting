@@ -88,16 +88,14 @@ def test_every_problem_is_reported_in_one_pass():
         "tags",
         "items[0].item_type",
         "items[1].name",
-        "items[1].value",
         "items[1].sequence",
-        "items[2].value",
         "items[2].tags",
         "items[3].path",
         "items[3].tags",
         "items[4].path",
         "items[5].nodes[0]",
     }
-    assert "12 problems found" in str(excinfo.value)
+    assert "10 problems found" in str(excinfo.value)
 
 
 @pytest.mark.unit
