@@ -265,7 +265,7 @@ def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDF
     monkeypatch.setattr(
         pdf_renderer_module,
         "_packaged_headless_shell_executable",
-        lambda binary_info: _STUBBED_BROWSER_DIR / "headless-shell",
+        lambda binary_info, logger: _STUBBED_BROWSER_DIR / "headless-shell",
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     return flow
@@ -2639,7 +2639,7 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64", "unsupported"])
+@pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
 def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_missing(
     tmp_path: Path, machine_arch: str
 ) -> None:
@@ -2657,13 +2657,9 @@ def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_
     launch.assert_not_called()
     assert exc_info.value.__cause__ is None
     logger.debug.assert_called_once()
-    if machine_arch == "unsupported":
-        assert "no known headless-shell executable" in logger.debug.call_args.args[0]
-        assert logger.debug.call_args.args[-1] == machine_arch
-    else:
-        assert logger.debug.call_args.args[-1] == _expected_headless_shell_executable(
-            tmp_path, binary_info.packaged_binary_dir, machine_arch
-        )
+    assert logger.debug.call_args.args[-1] == _expected_headless_shell_executable(
+        tmp_path, binary_info.packaged_binary_dir, machine_arch
+    )
 
 
 @pytest.mark.unit

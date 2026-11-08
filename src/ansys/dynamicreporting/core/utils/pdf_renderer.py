@@ -290,13 +290,23 @@ def resolve_playwright_browser_binary_info(
     return _validate_playwright_browsers_path(browser_dir, machine_arch, logger or get_logger())
 
 
-def _packaged_headless_shell_executable(binary_info: _PlaywrightBrowserBinaryInfo) -> Path | None:
+def _packaged_headless_shell_executable(
+    binary_info: _PlaywrightBrowserBinaryInfo, logger: Logger
+) -> Path | None:
     """Return the headless-shell executable packaged in the Ansys installation, if present."""
-    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-    if executable_relpath is None:
-        return None
-    executable = binary_info.path / binary_info.packaged_binary_dir / executable_relpath
-    return executable if executable.is_file() else None
+    executable = (
+        binary_info.path
+        / binary_info.packaged_binary_dir
+        / _PACKAGED_HEADLESS_SHELL_EXECUTABLES[binary_info.machine_arch]
+    )
+    if executable.is_file():
+        return executable
+    logger.debug(
+        "Cannot launch browser build %s: executable %s is missing.",
+        binary_info.packaged_binary_dir,
+        executable,
+    )
+    return None
 
 
 def _launch_product_browser(
@@ -315,23 +325,8 @@ def _launch_product_browser(
     failures propagate unchanged.
     """
     packaged_build = binary_info.packaged_binary_dir
-    executable = _packaged_headless_shell_executable(binary_info)
+    executable = _packaged_headless_shell_executable(binary_info, logger)
     if executable is None:
-        executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-        if executable_relpath is None:
-            logger.debug(
-                "Cannot launch browser build %s at %s: no known headless-shell executable "
-                "layout for machine architecture %r.",
-                packaged_build,
-                binary_info.path,
-                binary_info.machine_arch,
-            )
-        else:
-            logger.debug(
-                "Cannot launch browser build %s: executable %s is missing.",
-                packaged_build,
-                binary_info.path / packaged_build / executable_relpath,
-            )
         # Name only the build: the folder path would expose Playwright internals to users.
         raise ADRException(
             "Browser PDF rendering failed: the browser build "
