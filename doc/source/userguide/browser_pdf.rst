@@ -148,9 +148,6 @@ report service is remote. The local ``Service`` therefore needs ADR 27.1
 installation metadata and the complete product-shipped browser package. You
 don't need to install a browser separately.
 
-An export changes process-wide settings while it runs, so run one browser-PDF
-export at a time in each Python process.
-
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
 newer ADR package over an older installation, are ignored and reported in a

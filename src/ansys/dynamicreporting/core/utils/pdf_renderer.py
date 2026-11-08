@@ -66,11 +66,9 @@ size is definitive and content cannot expand it.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from dataclasses import dataclass, fields
 import json
-import os
 import platform
 import re
 from math import ceil, floor, isfinite
@@ -433,13 +431,6 @@ class _BasePlaywrightPDFRenderer(ABC):
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
-    # This override changes Playwright's platform-specific browser lookup, while
-    # the ADR resolver has already selected the product machine directory.
-    # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
-    # it with the product-shipped browser cache for the duration of a render.
-    _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
-        "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
-    )
     # Browser-PDF depends on a product-shipped Chromium binary introduced with
     # product line 27. Older supported lines can still use other export formats.
     _MIN_BROWSER_PDF_PRODUCT_LINE: int = 27
@@ -537,49 +528,6 @@ class _BasePlaywrightPDFRenderer(ABC):
 
         return binary_info
 
-    @contextmanager
-    def _playwright_browser_binary_env(self) -> Iterator[_PlaywrightBrowserBinaryInfo]:
-        """Temporarily point Playwright at the product-shipped browser binary path.
-
-        Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
-        share browser binaries across environments. Product-coupled browser-PDF
-        renders must use the browser shipped inside the resolved Ansys install
-        rather than any ambient machine-level Playwright browser cache, but the
-        caller's original environment must still be restored afterward. The
-        host-platform override is cleared because it can make Playwright look for
-        a different platform layout than the ADR package resolver selected.
-
-        This mutates ``os.environ`` for the duration of the render and restores it on
-        exit, so two browser-PDF renders must not run concurrently in the same process.
-        The synchronous Playwright driver renders one report at a time, which keeps that
-        constraint satisfied on this export path.
-
-        Yields the validated product browser metadata so the caller can launch it.
-        """
-        restored_override_envs = {
-            env_var: os.environ.pop(env_var)
-            for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
-            if env_var in os.environ
-        }
-        restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-        try:
-            browser_binary_dir = self._resolve_playwright_browser_binary()
-            self._logger.info(
-                "Using product-shipped Playwright browser binary path: %s",
-                browser_binary_dir.path,
-            )
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-            yield browser_binary_dir
-        finally:
-            # Restore the caller's original browser-path override after the
-            # render so the product-specific choice stays scoped to this
-            # browser-PDF operation.
-            if restored_browser_binaries_path is None:
-                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-            else:
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
-            os.environ.update(restored_override_envs)
-
     def render_pdf(self) -> bytes:
         """Render the configured browser-PDF source to PDF bytes.
 
@@ -598,14 +546,11 @@ class _BasePlaywrightPDFRenderer(ABC):
         current_timeout_phase = "browser launch"
 
         try:
-            # Point Playwright at the product-shipped browser binary before the
-            # driver resolves browser binaries so browser-PDF never falls back
-            # to an unrelated machine-level Chromium cache.
-            with (
-                self._playwright_browser_binary_env() as browser_binary,
-                sync_playwright() as playwright,
-            ):
-                self._logger.info("Launching headless Chromium for browser PDF export.")
+            browser_binary = self._resolve_playwright_browser_binary()
+            self._logger.info(
+                "Using product-shipped Playwright browser binary path: %s", browser_binary.path
+            )
+            with sync_playwright() as playwright:
 
                 def launch_chromium(**launch_options: str) -> Browser:
                     return playwright.chromium.launch(

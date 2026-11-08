@@ -176,9 +176,6 @@ PyDynamicReporting uses the browser from the configured ADR 27.1 installation.
 You don't need to install a browser separately. A missing or incomplete
 product browser package raises an ADR-owned error.
 
-An export changes process-wide settings while it runs, so run one browser-PDF
-export at a time in each Python process.
-
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
 newer ADR package over an older installation, are ignored and reported in a
