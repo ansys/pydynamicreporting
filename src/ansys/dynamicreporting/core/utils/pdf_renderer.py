@@ -239,17 +239,8 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    packaged_dir = browser_dir / packaged_name
-    if not packaged_dir.is_dir():
-        logger.warning(
-            "Ignoring product Playwright binary at %s because packaged directory %s named in "
-            "the metadata is missing.",
-            browser_dir,
-            packaged_name,
-        )
-        return None
-
-    marker_path = packaged_dir / "INSTALLATION_COMPLETE"
+    # A missing named folder also fails this check.
+    marker_path = browser_dir / packaged_name / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():
         logger.warning(
             "Ignoring product Playwright binary at %s because installation marker %s is missing.",
@@ -542,13 +533,13 @@ class _BasePlaywrightPDFRenderer(ABC):
             )
             with sync_playwright() as playwright:
 
-                def launch_chromium(**launch_options: str) -> Browser:
+                def launch_chromium(*, executable_path: str) -> Browser:
                     return playwright.chromium.launch(
                         headless=True,
                         timeout=self._remaining_browser_phase_timeout_ms(
                             browser_phase_deadline, "browser launch"
                         ),
-                        **launch_options,
+                        executable_path=executable_path,
                     )
 
                 browser = _launch_product_browser(
