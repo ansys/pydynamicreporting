@@ -249,18 +249,6 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    leftover_dirs = sorted(
-        path.name for path in browser_dir.iterdir() if path.is_dir() and path != packaged_dir
-    )
-    if leftover_dirs:
-        logger.warning(
-            "Ignoring browser directories %s at %s that the metadata does not name; using %s. "
-            "A clean Ansys installation removes them.",
-            ", ".join(leftover_dirs),
-            browser_dir,
-            packaged_name,
-        )
-
     marker_path = packaged_dir / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():
         logger.warning(

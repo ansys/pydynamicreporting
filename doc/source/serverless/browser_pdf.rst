@@ -178,8 +178,7 @@ product browser package raises an ADR-owned error.
 
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
-newer ADR package over an older installation, are ignored and reported in a
-warning.
+newer ADR package over an older installation, are ignored.
 
 Temporary offline bundles are removed after the operation. Cleanup failures
 are retained for debug logging and do not mask a successful PDF or the primary

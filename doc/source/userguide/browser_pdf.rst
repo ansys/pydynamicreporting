@@ -150,8 +150,7 @@ don't need to install a browser separately.
 
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
-newer ADR package over an older installation, are ignored and reported in a
-warning.
+newer ADR package over an older installation, are ignored.
 
 Missing or incomplete product browser packages are reported through the ADR
 export error. Browser and context cleanup failures are logged for diagnostics

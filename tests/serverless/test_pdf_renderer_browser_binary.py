@@ -378,35 +378,31 @@ def test_resolve_playwright_browser_binary_info_ignores_leftover_packaged_dirs(
 
     assert binary_info is not None
     assert binary_info.packaged_binary_dir == _PACKAGED_BROWSER_DIR_NAME
-    logger.warning.assert_called_once()
-    assert _SECOND_PACKAGED_BROWSER_DIR_NAME in logger.warning.call_args.args
+    # The browser is launched by its metadata-named path, so a leftover build is harmless.
+    logger.warning.assert_not_called()
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_warns_through_the_given_logger(
+def test_resolve_playwright_browser_binary_info_warns_through_the_package_logger_by_default(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     install_dir = _fake_install_dir(tmp_path)
-    browser_binary_dir = _create_packaged_browser_binary(
+    _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
         machine_arch="win64",
+        write_metadata=False,
     )
-    (browser_binary_dir / _SECOND_PACKAGED_BROWSER_DIR_NAME).mkdir()
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
     package_logger = Mock()
     monkeypatch.setattr(pdf_renderer_module, "get_logger", lambda: package_logger)
-    logger = Mock()
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir),
-        ansys_version=_DEFAULT_INSTALL_VERSION,
-        logger=logger,
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
-    assert binary_info is not None
-    logger.warning.assert_called_once()
-    assert _SECOND_PACKAGED_BROWSER_DIR_NAME in logger.warning.call_args.args
-    package_logger.warning.assert_not_called()
+    assert binary_info is None
+    package_logger.warning.assert_called_once()
+    assert _BROWSER_METADATA_FILENAME in package_logger.warning.call_args.args
 
 
 @pytest.mark.ado_test
