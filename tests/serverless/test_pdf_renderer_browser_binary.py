@@ -383,6 +383,60 @@ def test_resolve_playwright_browser_binary_info_ignores_leftover_packaged_dirs(
 
 
 @pytest.mark.ado_test
+def test_resolve_playwright_browser_binary_info_warns_through_the_given_logger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_dir = _fake_install_dir(tmp_path)
+    browser_binary_dir = _create_packaged_browser_binary(
+        _machine_root(tmp_path, "win64"),
+        machine_arch="win64",
+    )
+    (browser_binary_dir / _SECOND_PACKAGED_BROWSER_DIR_NAME).mkdir()
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
+    package_logger = Mock()
+    monkeypatch.setattr(pdf_renderer_module, "get_logger", lambda: package_logger)
+    logger = Mock()
+
+    binary_info = resolve_playwright_browser_binary_info(
+        ansys_installation=str(install_dir),
+        ansys_version=_DEFAULT_INSTALL_VERSION,
+        logger=logger,
+    )
+
+    assert binary_info is not None
+    logger.warning.assert_called_once()
+    assert _SECOND_PACKAGED_BROWSER_DIR_NAME in logger.warning.call_args.args
+    package_logger.warning.assert_not_called()
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browser_binary_info_reports_a_rejected_package_to_the_given_logger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_dir = _fake_install_dir(tmp_path)
+    _create_packaged_browser_binary(
+        _machine_root(tmp_path, "win64"),
+        machine_arch="win64",
+        write_metadata=False,
+    )
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
+    package_logger = Mock()
+    monkeypatch.setattr(pdf_renderer_module, "get_logger", lambda: package_logger)
+    logger = Mock()
+
+    binary_info = resolve_playwright_browser_binary_info(
+        ansys_installation=str(install_dir),
+        ansys_version=_DEFAULT_INSTALL_VERSION,
+        logger=logger,
+    )
+
+    assert binary_info is None
+    logger.warning.assert_called_once()
+    assert _BROWSER_METADATA_FILENAME in logger.warning.call_args.args
+    package_logger.warning.assert_not_called()
+
+
+@pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_missing_named_dir_beside_leftover(
     tmp_path, monkeypatch
 ):

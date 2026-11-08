@@ -257,7 +257,7 @@ def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDF
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
+        lambda ansys_installation=None, ansys_version=None, logger=None: _browser_binary_info(
             _STUBBED_BROWSER_DIR
         ),
     )
@@ -292,7 +292,7 @@ def _arrange_product_browser_renderer(
     )
     flow = _mock_playwright_pdf_flow(launch_side_effect=launch_side_effect)
 
-    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None):
+    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None, logger=None):
         """Return the fake product browser metadata needed by most product-browser tests."""
         return _browser_binary_info(browser_binary_dir)
 
@@ -2474,19 +2474,20 @@ def test_playwright_pdf_leaves_the_playwright_environment_untouched(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_forwards_install_to_the_browser_resolver(
+def test_playwright_pdf_forwards_install_and_logger_to_the_browser_resolver(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Forward the renderer's install inputs to the product browser resolver."""
+    """Browser-package warnings reach the renderer's logger instead of the package logger."""
     renderer, _flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     resolver_args: dict[str, object] = {}
 
-    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None):
+    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None, logger=None):
         """Capture forwarded product inputs while returning fake browser metadata."""
         resolver_args.update(
             {
                 "ansys_installation": ansys_installation,
                 "ansys_version": ansys_version,
+                "logger": logger,
             }
         )
         return _browser_binary_info(browser_binary_dir)
@@ -2501,6 +2502,7 @@ def test_playwright_pdf_forwards_install_to_the_browser_resolver(
     assert resolver_args == {
         "ansys_installation": str(renderer._ansys_installation),
         "ansys_version": renderer._ansys_version,
+        "logger": renderer._logger,
     }
 
 
@@ -2535,7 +2537,7 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: None,
+        lambda ansys_installation=None, ansys_version=None, logger=None: None,
     )
     monkeypatch.setattr(
         pdf_renderer_module,
@@ -2727,7 +2729,7 @@ def _arrange_revision_build_renderer(
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: binary_info,
+        lambda ansys_installation=None, ansys_version=None, logger=None: binary_info,
     )
     return renderer, flow, browser_binary_dir, executable
 

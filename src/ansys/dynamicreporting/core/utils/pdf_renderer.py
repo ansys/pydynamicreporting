@@ -165,6 +165,7 @@ def _playwright_machine_arch() -> str | None:
 def _validate_playwright_browsers_path(
     browser_dir: Path,
     machine_arch: str,
+    logger: Logger,
 ) -> _PlaywrightBrowserBinaryInfo | None:
     """Validate the product-shipped Playwright binary layout before advertising it.
 
@@ -181,7 +182,7 @@ def _validate_playwright_browsers_path(
 
     metadata_path = browser_dir / _PLAYWRIGHT_BROWSER_METADATA_NAME
     if not metadata_path.is_file():
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is missing ",
             browser_dir,
             _PLAYWRIGHT_BROWSER_METADATA_NAME,
@@ -191,7 +192,7 @@ def _validate_playwright_browsers_path(
     try:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is unreadable: %s",
             browser_dir,
             metadata_path,
@@ -200,7 +201,7 @@ def _validate_playwright_browsers_path(
         return None
 
     if not isinstance(metadata, dict):
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s does not contain "
             "a JSON object.",
             browser_dir,
@@ -216,7 +217,7 @@ def _validate_playwright_browsers_path(
         or metadata_info.browser_name != _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
         or metadata_info.machine_arch != machine_arch
     ):
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is incomplete or "
             "does not describe a %s binary for machine arch %r.",
             browser_dir,
@@ -230,7 +231,7 @@ def _validate_playwright_browsers_path(
     # The metadata entry must name a direct child folder so it cannot point outside
     # ``playwright-browsers``.
     if Path(packaged_name).name != packaged_name or packaged_name in {".", ".."}:
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata entry %s is not a "
             "packaged directory name.",
             browser_dir,
@@ -240,7 +241,7 @@ def _validate_playwright_browsers_path(
 
     packaged_dir = browser_dir / packaged_name
     if not packaged_dir.is_dir():
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because packaged directory %s named in "
             "the metadata is missing.",
             browser_dir,
@@ -252,7 +253,7 @@ def _validate_playwright_browsers_path(
         path.name for path in browser_dir.iterdir() if path.is_dir() and path != packaged_dir
     )
     if leftover_dirs:
-        get_logger().warning(
+        logger.warning(
             "Ignoring browser directories %s at %s that the metadata does not name; using %s. "
             "A clean Ansys installation removes them.",
             ", ".join(leftover_dirs),
@@ -262,7 +263,7 @@ def _validate_playwright_browsers_path(
 
     marker_path = packaged_dir / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because installation marker %s is missing.",
             browser_dir,
             marker_path,
@@ -275,8 +276,13 @@ def _validate_playwright_browsers_path(
 def resolve_playwright_browser_binary_info(
     ansys_installation: str | None = None,
     ansys_version: int | None = None,
+    logger: Logger | None = None,
 ) -> _PlaywrightBrowserBinaryInfo | None:
-    """Return the validated browser binary path and metadata when the product ships one."""
+    """Return the validated browser binary path and metadata when the product ships one.
+
+    Warnings about an unusable or partly stale browser package go to ``logger``, or to the
+    package logger when it is not given.
+    """
     machine_arch = _playwright_machine_arch()
     # The install directory and version are both required to build the machine-scoped
     # binary path, so bail out when either is missing or the current platform has no
@@ -293,7 +299,7 @@ def resolve_playwright_browser_binary_info(
         / machine_arch
         / "playwright-browsers"
     )
-    return _validate_playwright_browsers_path(browser_dir, machine_arch)
+    return _validate_playwright_browsers_path(browser_dir, machine_arch, logger or get_logger())
 
 
 def _packaged_headless_shell_executable(binary_info: _PlaywrightBrowserBinaryInfo) -> Path | None:
@@ -519,6 +525,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         binary_info = resolve_playwright_browser_binary_info(
             ansys_installation=str(self._ansys_installation),
             ansys_version=self._ansys_version,
+            logger=self._logger,
         )
         if binary_info is None:
             raise ADRException(

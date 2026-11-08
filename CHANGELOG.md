@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contains extra browser builds, for example after copying a newer ADR package
   over an older installation. It uses the build named in the installation's browser
   metadata and logs a warning that names the ignored builds.
+- Browser-PDF warnings about the ADR installation's browser package, such as
+  ignored browser builds or unreadable browser metadata, now go to the logger of
+  the export that found them instead of always to the package logger.
 
 ## [1.0.0rc4] - 2026-11-02
 
