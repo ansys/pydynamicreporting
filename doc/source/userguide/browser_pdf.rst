@@ -107,8 +107,7 @@ finishing within ``render_timeout``) is not visible unless you capture it:
          raise RuntimeError(str(caught[-1].message))
 
 Set the ``ansys.dynamicreporting.core`` logger to ``DEBUG`` for browser-package
-diagnostics. These records name a missing executable, or the browser registry
-path and reason when the expected build cannot be determined.
+diagnostics. These records name a missing executable.
 
 Options
 ========
@@ -151,10 +150,6 @@ don't need to install a browser separately.
 
 An export changes process-wide settings while it runs, so run one browser-PDF
 export at a time in each Python process.
-
-If the ADR installation ships a different browser build than this
-PyDynamicReporting release expects, the export still uses the browser from the
-ADR installation and logs a warning.
 
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
