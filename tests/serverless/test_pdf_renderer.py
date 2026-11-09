@@ -2562,7 +2562,7 @@ def test_playwright_pdf_forwards_install_and_logger_to_the_browser_resolver(
 
     assert renderer.render_pdf() == b"%PDF-mock"
     assert resolver_args == {
-        "ansys_installation": str(renderer._ansys_installation),
+        "ansys_installation": renderer._ansys_installation,
         "ansys_version": renderer._ansys_version,
         "logger": renderer._logger,
     }
@@ -2588,6 +2588,28 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
         ADRException,
         match="not supported for Ansys 2026 R1.*Use Ansys 2027 R1 or newer",
     ):
+        renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_skips_the_product_line_check_for_a_malformed_install_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An install version without a known product release is not rejected as too old."""
+    html_dir = _write_html(tmp_path, "<html><body><p>Unknown release</p></body></html>")
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=_fake_ansys_installation(12),
+        ansys_version=12,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None, logger=None: None,
+    )
+
+    # The product-line check passes, so the export reaches the browser lookup instead.
+    with pytest.raises(ADRException, match="requires a valid product-shipped browser binary"):
         renderer.render_pdf()
 
 

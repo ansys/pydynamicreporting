@@ -62,14 +62,13 @@ def _packaged_browser_metadata(
     browser_name: str | None = None,
 ) -> dict[str, str]:
     """Build the product metadata JSON that points at one packaged browser directory."""
-    return _PlaywrightBrowserBinaryInfo(
-        path=Path("playwright-browsers"),
-        browser_name=browser_name or _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-        machine_arch=machine_arch,
-        packaged_binary_dir=(
+    return {
+        "browser_name": browser_name or _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+        "machine_arch": machine_arch,
+        "packaged_binary_dir": (
             _PACKAGED_BROWSER_DIR_NAME if packaged_binary_dir is None else packaged_binary_dir
         ),
-    ).to_metadata_dict()
+    }
 
 
 def _create_packaged_browser_binary(
@@ -162,26 +161,6 @@ def test_resolve_playwright_browser_binary_info_returns_none_on_unsupported_plat
     )
 
     assert binary_info is None
-
-
-@pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_returns_none_without_required_inputs(monkeypatch):
-    # On a supported platform the resolver still needs both a concrete install directory and a
-    # version to build the machine-scoped binary path; neither input is inferred when omitted.
-    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
-
-    assert (
-        resolve_playwright_browser_binary_info(
-            ansys_installation=None, ansys_version=_DEFAULT_INSTALL_VERSION, logger=Mock()
-        )
-        is None
-    )
-    assert (
-        resolve_playwright_browser_binary_info(
-            ansys_installation="unused-install-dir", ansys_version=None, logger=Mock()
-        )
-        is None
-    )
 
 
 @pytest.mark.ado_test

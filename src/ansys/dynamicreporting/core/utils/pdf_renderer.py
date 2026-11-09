@@ -139,10 +139,6 @@ class _PlaywrightBrowserBinaryInfo:
             },
         )
 
-    def to_metadata_dict(self) -> dict[str, str]:
-        """Serialize the metadata fields using the dataclass schema."""
-        return {field_name: getattr(self, field_name) for field_name in self.metadata_field_names()}
-
 
 def _playwright_machine_arch() -> str | None:
     """Map the current platform to the ADR ``machines/<arch>`` directory name.
@@ -191,7 +187,7 @@ def _validate_playwright_browsers_path(
 
     try:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is unreadable: %s",
             browser_dir,
@@ -253,8 +249,8 @@ def _validate_playwright_browsers_path(
 
 
 def resolve_playwright_browser_binary_info(
-    ansys_installation: str | None = None,
-    ansys_version: int | None = None,
+    ansys_installation: Path | str,
+    ansys_version: int,
     *,
     logger: Logger,
 ) -> _PlaywrightBrowserBinaryInfo | None:
@@ -263,16 +259,14 @@ def resolve_playwright_browser_binary_info(
     Warnings about an unusable or partly stale browser package go to ``logger``.
     """
     machine_arch = _playwright_machine_arch()
-    # The install directory and version are both required to build the machine-scoped
-    # binary path, so bail out when either is missing or the current platform has no
-    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
-    # resolved and validated it through resolve_install_info, so re-validating it here
-    # would only duplicate that frontloaded work.
-    if machine_arch is None or ansys_installation is None or ansys_version is None:
+    # Platforms without an ADR browser package have no layout to resolve. The version is used
+    # as-is: ADR.__init__ already resolved and validated it through resolve_install_info, so
+    # re-validating it here would only duplicate that frontloaded work.
+    if machine_arch is None:
         return None
 
     browser_dir = (
-        Path(ansys_installation).expanduser()
+        Path(ansys_installation)
         / f"apex{ansys_version}"
         / "machines"
         / machine_arch
@@ -464,47 +458,33 @@ class _BasePlaywrightPDFRenderer(ABC):
         self._ansys_version = ansys_version
         self._logger = logger or get_logger()
 
-    def _browser_pdf_product_line(self) -> int | None:
-        """Return the annual product line for the resolved install version."""
-        product_release = self._browser_pdf_product_release()
-        if product_release is None:
-            return None
-
-        return int(product_release_to_product_line(product_release))
-
-    def _browser_pdf_product_release(self) -> str | None:
-        """Return the public product release for the resolved install version."""
-        if self._ansys_version is None:
-            return None
-
-        try:
-            return install_version_to_product_release(self._ansys_version)
-        except ValueError:
-            return None
-
     def _raise_if_product_line_unsupported(self) -> None:
         """Reject product lines that predate the shipped browser-PDF binary."""
-        product_line = self._browser_pdf_product_line()
-        if product_line is not None and product_line < self._MIN_BROWSER_PDF_PRODUCT_LINE:
-            product_release = self._browser_pdf_product_release()
-            if product_release is None:
-                raise ValueError("Product release information could not be determined.")
-            product_name = product_release_to_display_string(product_release)
-            min_product_name = product_release_to_display_string(
-                f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
-            )
-            raise ADRException(
-                f"Browser PDF export is not supported for Ansys {product_name}. "
-                f"Use Ansys {min_product_name} or newer, which ships the required "
-                "browser binary."
-            )
+        try:
+            product_release = install_version_to_product_release(self._ansys_version)
+        except ValueError:
+            return
+        if (
+            int(product_release_to_product_line(product_release))
+            >= self._MIN_BROWSER_PDF_PRODUCT_LINE
+        ):
+            return
+        product_name = product_release_to_display_string(product_release)
+        min_product_name = product_release_to_display_string(
+            f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
+        )
+        raise ADRException(
+            f"Browser PDF export is not supported for Ansys {product_name}. "
+            f"Use Ansys {min_product_name} or newer, which ships the required "
+            "browser binary."
+        )
 
     def _resolve_playwright_browser_binary(self) -> _PlaywrightBrowserBinaryInfo:
         """Return the shipped Playwright browser binary path under the resolved install."""
         self._raise_if_product_line_unsupported()
 
         binary_info = resolve_playwright_browser_binary_info(
-            ansys_installation=str(self._ansys_installation),
+            ansys_installation=self._ansys_installation,
             ansys_version=self._ansys_version,
             logger=self._logger,
         )
