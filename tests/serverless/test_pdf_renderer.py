@@ -23,6 +23,7 @@
 import os
 from dataclasses import dataclass
 from io import BytesIO
+from logging import Logger
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -42,7 +43,6 @@ from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightP
 from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
 _PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
-_STUBBED_BROWSER_DIR = Path("mock-product-browser")
 
 
 def _fake_ansys_installation(version: int) -> str:
@@ -173,7 +173,9 @@ class _ProductPlaywrightContext:
 
 
 @pytest.fixture(scope="module")
-def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightContext:
+def product_playwright_context(
+    request: pytest.FixtureRequest, pytestconfig: pytest.Config
+) -> _ProductPlaywrightContext:
     """Return a product browser path that matches the host platform running this test module."""
 
     # Priority 1: explicit install path when --use-local-launcher is active.
@@ -249,23 +251,25 @@ def _launch_product_chromium(
     return browser
 
 
-def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDFFlow:
-    """Build a fake Chromium stack and route ``sync_playwright`` to it without launching a browser."""
+def _stub_playwright_stack(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> MockPlaywrightPDFFlow:
+    """Stub Playwright and browser discovery around a temporary packaged executable."""
     flow = _mock_playwright_pdf_flow()
-    # Most mocked unit tests do not exercise the product-browser discovery path directly, so
-    # keep their setup focused on downstream render behavior by stubbing the resolver as well.
+    browser_binary_dir = tmp_path / "playwright-browsers"
+    _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
+
+    def resolve_browser_binary_info(
+        ansys_installation: str | None = None,
+        ansys_version: int | None = None,
+        logger: Logger | None = None,
+    ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
+        return _browser_binary_info(browser_binary_dir)
+
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None, logger=None: _browser_binary_info(
-            _STUBBED_BROWSER_DIR
-        ),
-    )
-    # The browser launch is mocked, so any path stands in for the packaged executable.
-    monkeypatch.setattr(
-        pdf_renderer_module,
-        "_packaged_headless_shell_executable",
-        lambda binary_info, logger: _STUBBED_BROWSER_DIR / "headless-shell",
+        resolve_browser_binary_info,
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     return flow
@@ -292,7 +296,11 @@ def _arrange_product_browser_renderer(
     )
     flow = _mock_playwright_pdf_flow(launch_side_effect=launch_side_effect)
 
-    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None, logger=None):
+    def resolve_browser_binary_info(
+        ansys_installation: str | None = None,
+        ansys_version: int | None = None,
+        logger: Logger | None = None,
+    ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
         """Return the fake product browser metadata needed by most product-browser tests."""
         return _browser_binary_info(browser_binary_dir)
 
@@ -308,11 +316,12 @@ def _arrange_product_browser_renderer(
 
 
 def _stub_playwright_render(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    renderer: _OfflinePlaywrightPDFRenderer,
+    renderer: _OfflinePlaywrightPDFRenderer | _ReportURLPlaywrightPDFRenderer,
 ) -> tuple[Mock, Mock, Mock]:
     """Stub browser preparation and return the rendered page."""
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(
         renderer,
@@ -443,7 +452,7 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
         render_timeout=12.5,
         **_browser_metadata_kwargs(),
     )
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     monotonic_values = iter([100.0] * 10)
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
@@ -453,7 +462,11 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     stack.playwright.chromium.launch.assert_called_once_with(
         headless=True,
         timeout=12500,
-        executable_path=str(_STUBBED_BROWSER_DIR / "headless-shell"),
+        executable_path=str(
+            _expected_headless_shell_executable(
+                tmp_path / "playwright-browsers", _PACKAGED_BROWSER_DIR_NAME, "win64"
+            )
+        ),
     )
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
@@ -472,7 +485,7 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(
         render_timeout=0.0001,
         **_browser_metadata_kwargs(),
     )
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     monotonic_values = iter([100.0] * 10)
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
@@ -485,7 +498,11 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(
     stack.playwright.chromium.launch.assert_called_once_with(
         headless=True,
         timeout=1,
-        executable_path=str(_STUBBED_BROWSER_DIR / "headless-shell"),
+        executable_path=str(
+            _expected_headless_shell_executable(
+                tmp_path / "playwright-browsers", _PACKAGED_BROWSER_DIR_NAME, "win64"
+            )
+        ),
     )
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
@@ -495,14 +512,16 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
+def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         render_timeout=10.0,
         **_browser_metadata_kwargs(),
     )
-    _stub_playwright_stack(monkeypatch)
+    _stub_playwright_stack(tmp_path, monkeypatch)
     captured_deadline: dict[str, float] = {}
     monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0])
 
@@ -521,14 +540,16 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 
 
 @pytest.mark.unit
-def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
+def test_playwright_pdf_normalizes_playwright_navigation_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         render_timeout=12.5,
         **_browser_metadata_kwargs(),
     )
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     stack.page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
@@ -548,10 +569,12 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
 
 
 @pytest.mark.unit
-def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
+def test_playwright_pdf_closes_browser_when_new_context_creation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, **_browser_metadata_kwargs())
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
     # The caller-facing message stays generic while preserving the underlying browser failure.
@@ -564,7 +587,9 @@ def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path,
 
 
 @pytest.mark.unit
-def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
+def test_live_report_url_renderer_navigates_to_report_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _ReportURLPlaywrightPDFRenderer(
         url="http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
         auth_cookies=[
@@ -580,7 +605,7 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
         render_timeout=12.5,
         **_browser_metadata_kwargs(),
     )
-    page, context, browser = _stub_playwright_render(monkeypatch, renderer)
+    page, context, browser = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     page.goto.assert_called_once()
@@ -653,9 +678,11 @@ def test_pdf_page_size_is_exported_from_common_utils():
 # Fixed formats and custom dimensions are mutually exclusive Playwright option
 # shapes. These tests pin the public precedence rules as well as their values.
 @pytest.mark.unit
-def test_playwright_pdf_uses_a3_format_when_content_fits(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_a3_format_when_content_fits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -682,7 +709,9 @@ def test_playwright_pdf_uses_a3_format_when_content_fits(tmp_path, monkeypatch):
         PDFPageSize.A6,
     ],
 )
-def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, page_size):
+def test_playwright_pdf_uses_selected_fixed_page_size(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, page_size: PDFPageSize
+) -> None:
     # Deliberately wide content must not replace the caller-selected format with
     # a content-derived width; capture CSS owns overflow handling.
     renderer = _simple_renderer(
@@ -690,7 +719,7 @@ def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, pag
         '<html><body><table style="width: 12000px"><tr><td>Wide</td></tr></table></body></html>',
         page_size=page_size,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -702,14 +731,16 @@ def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, pag
 
 
 @pytest.mark.unit
-def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypatch):
+def test_playwright_landscape_pdf_rotates_selected_fixed_page(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Landscape A3</p></body></html>",
         landscape=True,
         page_size=PDFPageSize.A3,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -721,7 +752,9 @@ def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypa
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Custom dimensions</p></body></html>",
@@ -729,7 +762,7 @@ def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, 
         width="12in",
         height=1728.0,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -741,7 +774,9 @@ def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, 
 
 
 @pytest.mark.unit
-def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monkeypatch):
+def test_playwright_pdf_fixed_format_overrides_custom_dimensions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Fixed format wins</p></body></html>",
@@ -749,7 +784,7 @@ def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monke
         width="1px",
         height="1px",
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -760,7 +795,9 @@ def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monke
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # ``page_size=None`` is also the custom-size switch. With no complete custom
     # pair, it falls back to A3 instead of producing no size.
     renderer = _simple_renderer(
@@ -768,7 +805,7 @@ def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(tmp_path, monkeypatch
         "<html><body><p>Default dimensions</p></body></html>",
         page_size=None,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -838,9 +875,11 @@ def test_browser_context_uses_custom_printable_width(tmp_path, landscape, expect
 
 
 @pytest.mark.unit
-def test_playwright_pdf_prepares_pagination_before_generation(tmp_path, monkeypatch):
+def test_playwright_pdf_prepares_pagination_before_generation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
     call_order: list[str] = []
 
     # Styles establish print geometry, readiness settles the styled DOM, and
@@ -1035,8 +1074,8 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
 @pytest.mark.unit
 def test_apply_pdf_capture_styles_take_effect_under_screen_media(
-    tmp_path, product_playwright_context
-):
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
+) -> None:
     html = """
     <html>
     <head>
@@ -1299,8 +1338,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(
 @pytest.mark.unit
 @pytest.mark.parametrize("landscape", [False, True])
 def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
-    tmp_path, landscape, product_playwright_context
-):
+    tmp_path: Path, landscape: bool, product_playwright_context: _ProductPlaywrightContext
+) -> None:
     """Exercise visual fitting, layout cohesion, and oversized fragmentation together."""
     html = """
     <html>
@@ -1882,8 +1921,10 @@ def _start_wait_script(page, wait_script: str) -> None:
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-no-root-report"
@@ -1906,8 +1947,10 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC gate</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-loaded-report"
@@ -1936,8 +1979,10 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-transition-report"
@@ -1974,8 +2019,10 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loader(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "plotly-ready-report"
@@ -2011,8 +2058,10 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 @pytest.mark.unit
 def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2049,8 +2098,10 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2098,8 +2149,10 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "video-ready-report"
@@ -2142,8 +2195,10 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_double_request_animation_frame_resolves(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Animation frame</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "double-raf-report"
@@ -2481,7 +2536,11 @@ def test_playwright_pdf_forwards_install_and_logger_to_the_browser_resolver(
     renderer, _flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     resolver_args: dict[str, object] = {}
 
-    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None, logger=None):
+    def resolve_browser_binary_info(
+        ansys_installation: str | None = None,
+        ansys_version: int | None = None,
+        logger: Logger | None = None,
+    ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
         """Capture forwarded product inputs while returning fake browser metadata."""
         resolver_args.update(
             {
@@ -2531,8 +2590,8 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
 
 @pytest.mark.unit
 def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_start(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer, _flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     monkeypatch.setattr(
         pdf_renderer_module,
@@ -2553,9 +2612,9 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 
 @pytest.mark.unit
-def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwright(
-    tmp_path, monkeypatch
-):
+def test_playwright_pdf_reports_an_incomplete_browser_build_without_launching(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A missing packaged browser surfaces a clean ADR error without launching."""
     renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(
         tmp_path, monkeypatch, create_executable=False

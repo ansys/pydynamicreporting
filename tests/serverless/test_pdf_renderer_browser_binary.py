@@ -93,8 +93,7 @@ def _create_packaged_browser_binary(
         (packaged_dir / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
 
     if write_metadata:
-        # The JSON lives next to the packaged directories and must describe the exact directory
-        # that should be passed to Playwright through PLAYWRIGHT_BROWSERS_PATH.
+        # The JSON names the packaged directory whose executable the export launches directly.
         metadata = _packaged_browser_metadata(
             machine_arch=machine_arch,
             packaged_binary_dir=packaged_dir_name,
@@ -359,8 +358,8 @@ def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_ignores_leftover_packaged_dirs(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     browser_binary_dir = _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
@@ -434,8 +433,8 @@ def test_resolve_playwright_browser_binary_info_reports_a_rejected_package_to_th
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_missing_named_dir_beside_leftover(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
@@ -462,8 +461,8 @@ def test_resolve_playwright_browser_binary_info_rejects_missing_named_dir_beside
 @pytest.mark.ado_test
 @pytest.mark.parametrize("packaged_binary_dir", ["..", ".", "../outside", "nested/dir"])
 def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_outside_browsers_dir(
-    tmp_path, monkeypatch, packaged_binary_dir
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, packaged_binary_dir: str
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = _create_packaged_browser_binary(machine_root, machine_arch="win64")
