@@ -146,9 +146,7 @@ Local browser requirement
 Rendering happens on the machine that runs PyDynamicReporting, even when the
 report service is remote. The local ``Service`` therefore needs ADR 27.1
 installation metadata and the complete product-shipped browser package. You
-don't need to install a browser separately. On Linux, the machine must also
-have the system libraries the browser needs. A missing library makes the
-export fail when the browser starts.
+don't need to install a browser separately.
 
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
