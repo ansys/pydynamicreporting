@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Browser-PDF warnings about the ADR installation's browser package, such as
   missing or unreadable browser metadata, now go to the logger of the export that
   found them instead of always to the package logger.
+- On Linux, browser-PDF export adds the ADR installation's `runtime_libs` folder
+  to the browser's library path, so ADR can ship the system libraries the browser
+  needs. Only the browser process gets this path.
 
 ## [1.0.0rc4] - 2026-11-02
 
