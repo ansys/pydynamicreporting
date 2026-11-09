@@ -255,12 +255,12 @@ def _validate_playwright_browsers_path(
 def resolve_playwright_browser_binary_info(
     ansys_installation: str | None = None,
     ansys_version: int | None = None,
-    logger: Logger | None = None,
+    *,
+    logger: Logger,
 ) -> _PlaywrightBrowserBinaryInfo | None:
     """Return the validated browser binary path and metadata when the product ships one.
 
-    Warnings about an unusable or partly stale browser package go to ``logger``, or to the
-    package logger when it is not given.
+    Warnings about an unusable or partly stale browser package go to ``logger``.
     """
     machine_arch = _playwright_machine_arch()
     # The install directory and version are both required to build the machine-scoped
@@ -278,7 +278,7 @@ def resolve_playwright_browser_binary_info(
         / machine_arch
         / "playwright-browsers"
     )
-    return _validate_playwright_browsers_path(browser_dir, machine_arch, logger or get_logger())
+    return _validate_playwright_browsers_path(browser_dir, machine_arch, logger)
 
 
 def _packaged_headless_shell_executable(

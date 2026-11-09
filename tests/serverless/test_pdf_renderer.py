@@ -187,6 +187,7 @@ def product_playwright_context(
             binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
                 ansys_installation=explicit_resolution.install_dir,
                 ansys_version=explicit_resolution.version,
+                logger=Mock(),
             )
             if binary_info is not None:
                 return _ProductPlaywrightContext(
@@ -200,6 +201,7 @@ def product_playwright_context(
     binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
         ansys_installation=adr_init.ansys_installation,
         ansys_version=adr_init.ansys_version,
+        logger=Mock(),
     )
     if binary_info is not None:
         return _ProductPlaywrightContext(
@@ -214,6 +216,7 @@ def product_playwright_context(
         binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
             ansys_installation=local_resolution.install_dir,
             ansys_version=local_resolution.version,
+            logger=Mock(),
         )
         if binary_info is not None:
             return _ProductPlaywrightContext(
