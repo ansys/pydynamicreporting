@@ -236,9 +236,9 @@ def _launch_product_chromium(
         binary_info.path, binary_info.packaged_binary_dir, binary_info.machine_arch
     )
 
-    def launch_chromium(*, executable_path: str, env: dict[str, str] | None) -> Browser:
+    def launch_chromium(*, executable_path: str) -> Browser:
         assert Path(executable_path) == expected_executable
-        return playwright.chromium.launch(headless=True, executable_path=executable_path, env=env)
+        return playwright.chromium.launch(headless=True, executable_path=executable_path)
 
     browser = pdf_renderer_module._launch_product_browser(
         launch_chromium,
@@ -454,7 +454,6 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
         headless=True,
         timeout=12500,
         executable_path=str(_STUBBED_BROWSER_DIR / "headless-shell"),
-        env=None,
     )
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
@@ -487,7 +486,6 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(
         headless=True,
         timeout=1,
         executable_path=str(_STUBBED_BROWSER_DIR / "headless-shell"),
-        env=None,
     )
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
@@ -2632,71 +2630,12 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
     browser = pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
     assert browser is launch.return_value
-    launch.assert_called_once_with(executable_path=str(executable), env=None)
+    launch.assert_called_once_with(executable_path=str(executable))
     logger.warning.assert_not_called()
     assert logger.info.call_args_list == [
         call("Launching Ansys installation browser build %s.", packaged_dir),
         call("Using Ansys installation browser %s.", "156.0.8078.4"),
     ]
-
-
-def _browser_with_runtime_libs(
-    tmp_path: Path, machine_arch: str
-) -> tuple[pdf_renderer_module._PlaywrightBrowserBinaryInfo, Path]:
-    """Create an ADR machine folder with a packaged browser and a ``runtime_libs`` folder."""
-    browser_binary_dir = tmp_path / "playwright-browsers"
-    _create_packaged_headless_shell(
-        browser_binary_dir, "chromium_headless_shell-1248", machine_arch
-    )
-    runtime_libs = tmp_path / "runtime_libs"
-    runtime_libs.mkdir()
-    binary_info = _headless_shell_binary_info(
-        browser_binary_dir, "chromium_headless_shell-1248", machine_arch
-    )
-    return binary_info, runtime_libs
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("user_library_path", [None, "/opt/user/lib"], ids=["unset", "set"])
-def test_launch_product_browser_puts_runtime_libs_on_the_linux_browser_library_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, user_library_path: str | None
-) -> None:
-    binary_info, runtime_libs = _browser_with_runtime_libs(tmp_path, "linux_2.6_64")
-    if user_library_path is None:
-        monkeypatch.delenv("LD_LIBRARY_PATH", raising=False)
-    else:
-        monkeypatch.setenv("LD_LIBRARY_PATH", user_library_path)
-    monkeypatch.setenv("ADR_BROWSER_ENV_PROBE", "kept")
-    launch = Mock()
-
-    pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
-
-    env = launch.call_args.kwargs["env"]
-    expected_library_path = os.pathsep.join(filter(None, (str(runtime_libs), user_library_path)))
-    assert env["LD_LIBRARY_PATH"] == expected_library_path
-    # Playwright replaces the browser's whole environment, so the rest must be carried over.
-    assert env["ADR_BROWSER_ENV_PROBE"] == "kept"
-    # Only the browser sees the change; this process's environment is untouched.
-    assert os.environ.get("LD_LIBRARY_PATH") == user_library_path
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("machine_arch", "create_runtime_libs"),
-    [("win64", True), ("linux_2.6_64", False)],
-    ids=["windows", "linux-without-runtime-libs"],
-)
-def test_launch_product_browser_keeps_the_default_browser_environment(
-    tmp_path: Path, machine_arch: str, create_runtime_libs: bool
-) -> None:
-    binary_info, runtime_libs = _browser_with_runtime_libs(tmp_path, machine_arch)
-    if not create_runtime_libs:
-        runtime_libs.rmdir()
-    launch = Mock()
-
-    pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
-
-    assert launch.call_args.kwargs["env"] is None
 
 
 @pytest.mark.unit
@@ -2747,7 +2686,7 @@ def test_launch_product_browser_does_not_retry_a_failed_launch(
         pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
     assert exc_info.value is error
-    launch.assert_called_once_with(executable_path=str(executable), env=None)
+    launch.assert_called_once_with(executable_path=str(executable))
     logger.warning.assert_not_called()
     logger.info.assert_called_once_with(
         "Launching Ansys installation browser build %s.", binary_info.packaged_binary_dir

@@ -69,7 +69,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 import json
-import os
 import platform
 import re
 from math import ceil, floor, isfinite
@@ -301,31 +300,6 @@ def _packaged_headless_shell_executable(
     return None
 
 
-def _browser_library_env(
-    binary_info: _PlaywrightBrowserBinaryInfo, logger: Logger
-) -> dict[str, str] | None:
-    """Return the browser's environment with the ADR runtime libraries on its library path.
-
-    On Linux the headless shell needs operating-system libraries that ADR ships in the
-    ``runtime_libs`` folder next to ``playwright-browsers``. The browser has no RPATH, so the
-    dynamic loader finds them only through ``LD_LIBRARY_PATH``. Playwright replaces the
-    browser's whole environment with the one given, so return a copy of this process's
-    environment with that folder prepended. Return ``None`` to keep Playwright's default
-    environment on other platforms or when the installation has no ``runtime_libs`` folder.
-    """
-    if binary_info.machine_arch != "linux_2.6_64":
-        return None
-    runtime_libs = binary_info.path.parent / "runtime_libs"
-    if not runtime_libs.is_dir():
-        return None
-    library_path = os.environ.get("LD_LIBRARY_PATH")
-    logger.debug("Adding %s to the browser's library path.", runtime_libs)
-    return {
-        **os.environ,
-        "LD_LIBRARY_PATH": os.pathsep.join(filter(None, (str(runtime_libs), library_path))),
-    }
-
-
 def _launch_product_browser(
     launch: Callable[..., Browser],
     binary_info: _PlaywrightBrowserBinaryInfo,
@@ -338,9 +312,8 @@ def _launch_product_browser(
     behind.
 
     Launching by path works whichever build the product ships, but it skips Playwright's
-    host-dependency check, so missing system libraries surface as a launch failure. On Linux,
-    the browser also gets the ADR ``runtime_libs`` folder on its library path. Launch failures
-    propagate unchanged.
+    host-dependency check, so missing system libraries surface as a launch failure. Launch
+    failures propagate unchanged.
     """
     packaged_build = binary_info.packaged_binary_dir
     executable = _packaged_headless_shell_executable(binary_info, logger)
@@ -351,7 +324,7 @@ def _launch_product_browser(
             f"{packaged_build} in the Ansys installation is incomplete."
         )
     logger.info("Launching Ansys installation browser build %s.", packaged_build)
-    browser = launch(executable_path=str(executable), env=_browser_library_env(binary_info, logger))
+    browser = launch(executable_path=str(executable))
     logger.info("Using Ansys installation browser %s.", browser.version)
     return browser
 
@@ -560,14 +533,13 @@ class _BasePlaywrightPDFRenderer(ABC):
             )
             with sync_playwright() as playwright:
 
-                def launch_chromium(*, executable_path: str, env: dict[str, str] | None) -> Browser:
+                def launch_chromium(*, executable_path: str) -> Browser:
                     return playwright.chromium.launch(
                         headless=True,
                         timeout=self._remaining_browser_phase_timeout_ms(
                             browser_phase_deadline, "browser launch"
                         ),
                         executable_path=executable_path,
-                        env=env,
                     )
 
                 browser = _launch_product_browser(
