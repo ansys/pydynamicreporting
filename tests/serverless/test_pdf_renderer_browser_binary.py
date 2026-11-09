@@ -36,7 +36,7 @@ from ansys.dynamicreporting.core.utils.pdf_renderer import (
 _BROWSER_METADATA_FILENAME = "playwright_browser_metadata.json"
 _PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
 _SECOND_PACKAGED_BROWSER_DIR_NAME = "second-packaged-browser-dir"
-_MISMATCHED_PACKAGED_BROWSER_DIR_NAME = "mismatched-packaged-browser-dir"
+_MISSING_PACKAGED_BROWSER_DIR_NAME = "missing-packaged-browser-dir"
 _DEFAULT_INSTALL_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
@@ -130,6 +130,9 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
 
     assert binary_info is not None
     assert binary_info.path == browser_binary_dir
+    assert binary_info.browser_name == _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
+    assert binary_info.machine_arch == "win64"
+    assert binary_info.packaged_binary_dir == _PACKAGED_BROWSER_DIR_NAME
 
 
 @pytest.mark.ado_test
@@ -215,26 +218,6 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
     )
 
     assert binary_info is None
-
-
-@pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_accepts_metadata_matching_packaged_dir(
-    tmp_path, monkeypatch
-):
-    install_dir = _fake_install_dir(tmp_path)
-    machine_root = _machine_root(tmp_path, "win64")
-    browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_binary(machine_root, machine_arch="win64")
-    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
-
-    binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION, logger=Mock()
-    )
-    assert binary_info is not None
-    assert binary_info.path == browser_binary_dir
-    assert binary_info.browser_name == _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
-    assert binary_info.machine_arch == "win64"
-    assert binary_info.packaged_binary_dir == _PACKAGED_BROWSER_DIR_NAME
 
 
 @pytest.mark.ado_test
@@ -424,7 +407,7 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_outside_bro
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismatch(
+def test_resolve_playwright_browser_binary_info_rejects_metadata_naming_a_missing_dir(
     tmp_path, monkeypatch
 ):
     install_dir = _fake_install_dir(tmp_path)
@@ -434,7 +417,7 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismat
     # Metadata names a packaged directory that does not exist on disk.
     metadata = _packaged_browser_metadata(
         machine_arch="win64",
-        packaged_binary_dir=_MISMATCHED_PACKAGED_BROWSER_DIR_NAME,
+        packaged_binary_dir=_MISSING_PACKAGED_BROWSER_DIR_NAME,
     )
     _metadata_path(browser_binary_dir).write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"

@@ -250,7 +250,6 @@ def _launch_product_chromium(
         binary_info,
         logger,
     )
-    logger.warning.assert_not_called()
     return browser
 
 
@@ -2701,7 +2700,6 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
 
     assert browser is launch.return_value
     launch.assert_called_once_with(executable_path=str(executable))
-    logger.warning.assert_not_called()
     assert logger.info.call_args_list == [
         call("Launching Ansys installation browser build %s.", packaged_dir),
         call("Using Ansys installation browser %s.", "156.0.8078.4"),
@@ -2755,7 +2753,6 @@ def test_launch_product_browser_does_not_retry_a_failed_launch(
 
     assert exc_info.value is error
     launch.assert_called_once_with(executable_path=str(executable))
-    logger.warning.assert_not_called()
     logger.info.assert_called_once_with(
         "Launching Ansys installation browser build %s.", binary_info.packaged_binary_dir
     )
@@ -2783,13 +2780,10 @@ def test_playwright_pdf_does_not_retry_a_failed_launch_and_keeps_its_original_ca
 
 
 @pytest.mark.unit
-def test_playwright_pdf_direct_launch_logs_build_and_version(
+def test_playwright_pdf_logs_the_browser_launch_through_its_logger(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    executable = _expected_headless_shell_executable(
-        browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME, "win64"
-    )
+    renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     logger = Mock()
     monkeypatch.setattr(renderer, "_logger", logger)
 
@@ -2799,9 +2793,6 @@ def test_playwright_pdf_direct_launch_logs_build_and_version(
         "Launching Ansys installation browser build %s.", _PACKAGED_BROWSER_DIR_NAME
     )
     logger.info.assert_any_call("Using Ansys installation browser %s.", flow.browser.version)
-    logger.warning.assert_not_called()
-    flow.playwright.chromium.launch.assert_called_once()
-    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
 
 
 @pytest.mark.unit

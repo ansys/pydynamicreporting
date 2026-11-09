@@ -165,8 +165,8 @@ def _validate_playwright_browsers_path(
 ) -> _PlaywrightBrowserBinaryInfo | None:
     """Validate the product-shipped Playwright binary layout before advertising it.
 
-    Browser-PDF export should only point Playwright at a product-managed binary
-    when the stripped package layout is complete and self-consistent. This keeps
+    Browser-PDF export should only launch a product-managed binary when the
+    stripped package layout is complete and self-consistent. This keeps
     the runtime honest to the product packaging contract instead of silently
     accepting stale or partially copied browser directories. The metadata file
     lives inside ``playwright-browsers`` itself and names the packaged browser
