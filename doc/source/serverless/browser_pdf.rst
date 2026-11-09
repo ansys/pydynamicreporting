@@ -176,6 +176,19 @@ PyDynamicReporting uses the browser from the configured ADR 27.1 installation.
 You don't need to install a browser separately. A missing or incomplete
 product browser package raises an ADR-owned error.
 
+The browser also relies on standard system libraries. Windows always provides
+them, so nothing extra is needed there. Most Linux machines that run ADR also
+provide them, but a minimal Linux server or container can lack some. The
+export then fails as soon as the browser starts. To find the missing library,
+set the ``ansys.dynamicreporting.core`` logger to ``DEBUG`` and repeat the
+export. The logged browser error contains a line such as
+``error while loading shared libraries: libgbm.so.1``. Install the system
+package that provides that library, or ask your system administrator to, then
+export again. Playwright's `system dependency documentation
+<https://playwright.dev/python/docs/browsers#install-system-dependencies>`__
+describes a command that installs all of them at once on supported Linux
+distributions.
+
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
 newer ADR package over an older installation, are ignored.
