@@ -336,13 +336,15 @@ def _stub_playwright_render(
 
 def _browser_binary_info(
     browser_binary_dir: Path,
+    packaged_binary_dir: str = _PACKAGED_BROWSER_DIR_NAME,
+    machine_arch: str = "win64",
 ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
-    """Create validated product-binary metadata for renderer tests."""
+    """Create validated product-binary metadata for one packaged headless-shell build."""
     return pdf_renderer_module._PlaywrightBrowserBinaryInfo(
         path=browser_binary_dir,
         browser_name=pdf_renderer_module._PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-        machine_arch="win64",
-        packaged_binary_dir=_PACKAGED_BROWSER_DIR_NAME,
+        machine_arch=machine_arch,
+        packaged_binary_dir=packaged_binary_dir,
     )
 
 
@@ -2660,18 +2662,6 @@ def test_playwright_pdf_reports_an_incomplete_browser_build_without_launching(
     flow.playwright.chromium.launch.assert_not_called()
 
 
-def _headless_shell_binary_info(
-    browser_binary_dir: Path, packaged_binary_dir: str, machine_arch: str = "win64"
-) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
-    """Create product-browser metadata for one packaged headless-shell build."""
-    return pdf_renderer_module._PlaywrightBrowserBinaryInfo(
-        path=browser_binary_dir,
-        browser_name=pdf_renderer_module._PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-        machine_arch=machine_arch,
-        packaged_binary_dir=packaged_binary_dir,
-    )
-
-
 def _expected_headless_shell_executable(
     browser_binary_dir: Path, packaged_binary_dir: str, machine_arch: str
 ) -> Path:
@@ -2706,7 +2696,7 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
     tmp_path: Path, machine_arch: str, packaged_dir: str
 ) -> None:
     executable = _create_packaged_headless_shell(tmp_path, packaged_dir, machine_arch)
-    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir, machine_arch)
+    binary_info = _browser_binary_info(tmp_path, packaged_dir, machine_arch)
     launch = Mock()
     launch.return_value.version = "156.0.8078.4"
     logger = Mock()
@@ -2727,9 +2717,7 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
 def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_missing(
     tmp_path: Path, machine_arch: str
 ) -> None:
-    binary_info = _headless_shell_binary_info(
-        tmp_path, "chromium_headless_shell-1223", machine_arch
-    )
+    binary_info = _browser_binary_info(tmp_path, "chromium_headless_shell-1223", machine_arch)
     launch = Mock()
     logger = Mock()
 
@@ -2762,7 +2750,7 @@ def test_launch_product_browser_does_not_retry_a_failed_launch(
 ) -> None:
     """A failed launch is never interpreted: whatever its message, the error propagates as is."""
     executable = _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    binary_info = _browser_binary_info(tmp_path, "chromium_headless_shell-1223")
     launch = Mock(side_effect=error)
     logger = Mock()
 
@@ -2805,7 +2793,7 @@ def _arrange_revision_build_renderer(
     renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     packaged_dir = "chromium_headless_shell-1223"
     executable = _create_packaged_headless_shell(browser_binary_dir, packaged_dir)
-    binary_info = _headless_shell_binary_info(browser_binary_dir, packaged_dir)
+    binary_info = _browser_binary_info(browser_binary_dir, packaged_dir)
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
