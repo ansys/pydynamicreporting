@@ -312,8 +312,15 @@ def _launch_product_browser(
     behind.
 
     Launching by path works whichever build the product ships, but it skips Playwright's
-    host-dependency check, so missing system libraries surface as a launch failure. Launch
-    failures propagate unchanged.
+    host-dependency check. Launch failures propagate unchanged.
+
+    Known limitation: on Linux the browser loads operating-system libraries that ADR does not
+    ship, such as NSS, GLib, GBM, ALSA, ATK, and X11. Desktop and typical ADR hosts have them,
+    but a minimal server or container may not. The browser then fails to start, and the
+    Playwright error chained to the ``ADRException`` contains the loader's message, for example
+    ``error while loading shared libraries: libgbm.so.1``, which names the package to install.
+    Windows needs nothing extra: the browser uses only DLLs that every Windows installation
+    has, and carries its other libraries in its own folder.
     """
     packaged_build = binary_info.packaged_binary_dir
     executable = _packaged_headless_shell_executable(binary_info, logger)
