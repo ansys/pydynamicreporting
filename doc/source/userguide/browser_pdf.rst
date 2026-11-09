@@ -106,9 +106,6 @@ finishing within ``render_timeout``) is not visible unless you capture it:
      if not exported:
          raise RuntimeError(str(caught[-1].message))
 
-Set the ``ansys.dynamicreporting.core`` logger to ``DEBUG`` for browser-package
-diagnostics. These records name a missing executable.
-
 Options
 ========
 

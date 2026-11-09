@@ -134,9 +134,6 @@ specific reason:
    except ADRException as exc:
        raise RuntimeError(f"Browser PDF export failed: {exc}") from exc
 
-Set the ``ansys.dynamicreporting.core`` logger to ``DEBUG`` for browser-package
-diagnostics. These records name a missing executable.
-
 Options
 -------
 
