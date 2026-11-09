@@ -14,9 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
 - Browser-PDF export no longer changes the `PLAYWRIGHT_BROWSERS_PATH` and
-  `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE` environment variables while it runs. It
-  launches the browser from the ADR installation by its executable path, which
-  doesn't use them.
+  `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE` environment variables while it runs.
 
 ### Fixed
 

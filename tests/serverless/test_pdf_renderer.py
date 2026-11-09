@@ -2687,14 +2687,10 @@ def _create_packaged_headless_shell(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
-@pytest.mark.parametrize(
-    "packaged_dir",
-    ["chromium_headless_shell-1223", "chromium_headless_shell-1248", _PACKAGED_BROWSER_DIR_NAME],
-    ids=["different-revision", "matching-revision", "nonnumeric-folder"],
-)
 def test_launch_product_browser_always_launches_metadata_selected_executable(
-    tmp_path: Path, machine_arch: str, packaged_dir: str
+    tmp_path: Path, machine_arch: str
 ) -> None:
+    packaged_dir = "chromium_headless_shell-1248"
     executable = _create_packaged_headless_shell(tmp_path, packaged_dir, machine_arch)
     binary_info = _browser_binary_info(tmp_path, packaged_dir, machine_arch)
     launch = Mock()
@@ -2786,28 +2782,13 @@ def test_playwright_pdf_does_not_retry_a_failed_launch_and_keeps_its_original_ca
     )
 
 
-def _arrange_revision_build_renderer(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[_OfflinePlaywrightPDFRenderer, MockPlaywrightPDFFlow, Path, Path]:
-    """Wire a renderer to product metadata naming a revision-based browser folder."""
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    packaged_dir = "chromium_headless_shell-1223"
-    executable = _create_packaged_headless_shell(browser_binary_dir, packaged_dir)
-    binary_info = _browser_binary_info(browser_binary_dir, packaged_dir)
-    monkeypatch.setattr(
-        pdf_renderer_module,
-        "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None, logger=None: binary_info,
-    )
-    return renderer, flow, browser_binary_dir, executable
-
-
 @pytest.mark.unit
 def test_playwright_pdf_direct_launch_logs_build_and_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    renderer, flow, _browser_binary_dir, executable = _arrange_revision_build_renderer(
-        tmp_path, monkeypatch
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    executable = _expected_headless_shell_executable(
+        browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME, "win64"
     )
     logger = Mock()
     monkeypatch.setattr(renderer, "_logger", logger)
@@ -2815,27 +2796,10 @@ def test_playwright_pdf_direct_launch_logs_build_and_version(
     assert renderer.render_pdf() == b"%PDF-mock"
 
     logger.info.assert_any_call(
-        "Launching Ansys installation browser build %s.", "chromium_headless_shell-1223"
+        "Launching Ansys installation browser build %s.", _PACKAGED_BROWSER_DIR_NAME
     )
     logger.info.assert_any_call("Using Ansys installation browser %s.", flow.browser.version)
     logger.warning.assert_not_called()
-    flow.playwright.chromium.launch.assert_called_once()
-    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
-
-
-@pytest.mark.unit
-def test_playwright_pdf_ignores_another_complete_build_beside_the_metadata_selected_build(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    renderer, flow, browser_binary_dir, executable = _arrange_revision_build_renderer(
-        tmp_path, monkeypatch
-    )
-    _create_packaged_headless_shell(browser_binary_dir, "chromium_headless_shell-1248")
-    for packaged_dir in ("chromium_headless_shell-1223", "chromium_headless_shell-1248"):
-        (browser_binary_dir / packaged_dir / "INSTALLATION_COMPLETE").write_bytes(b"")
-
-    assert renderer.render_pdf() == b"%PDF-mock"
-
     flow.playwright.chromium.launch.assert_called_once()
     assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
 

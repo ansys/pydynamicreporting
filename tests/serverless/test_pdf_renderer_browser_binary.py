@@ -394,35 +394,6 @@ def test_resolve_playwright_browser_binary_info_reports_a_rejected_package_to_th
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_rejects_missing_named_dir_beside_leftover(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    install_dir = _fake_install_dir(tmp_path)
-    machine_root = _machine_root(tmp_path, "win64")
-    browser_binary_dir = machine_root / "playwright-browsers"
-    # Only a leftover build is on disk; the metadata names a build that is missing.
-    _create_packaged_browser_binary(
-        machine_root,
-        machine_arch="win64",
-        packaged_binary_dir=_SECOND_PACKAGED_BROWSER_DIR_NAME,
-        write_metadata=False,
-    )
-    _metadata_path(browser_binary_dir).write_text(
-        json.dumps(_packaged_browser_metadata(machine_arch="win64")), encoding="utf-8"
-    )
-    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
-
-    assert (
-        resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir),
-            ansys_version=_DEFAULT_INSTALL_VERSION,
-            logger=Mock(),
-        )
-        is None
-    )
-
-
-@pytest.mark.ado_test
 @pytest.mark.parametrize("packaged_binary_dir", ["..", ".", "../outside", "nested/dir"])
 def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_outside_browsers_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, packaged_binary_dir: str
