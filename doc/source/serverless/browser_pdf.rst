@@ -174,7 +174,9 @@ Browser and process requirements
 
 PyDynamicReporting uses the browser from the configured ADR 27.1 installation.
 You don't need to install a browser separately. A missing or incomplete
-product browser package raises an ADR-owned error.
+product browser package raises an ADR-owned error. On Linux, the machine must
+also have the system libraries the browser needs. A missing library makes the
+export fail when the browser starts.
 
 The export uses the browser build named in the ADR installation's browser
 metadata. Other browser builds in the same folder, for example from copying a
