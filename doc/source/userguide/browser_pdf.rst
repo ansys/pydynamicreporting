@@ -155,14 +155,16 @@ lack some. ``export_browser_pdf`` then returns ``False`` because the browser
 fails to start. To find the missing library, set the ``ansys.dynamicreporting.core``
 logger to ``DEBUG`` and repeat the export. The logged browser error contains a
 line such as ``error while loading shared libraries: libgbm.so.1``. For
-example, print the log to standard output before exporting (see
-:ref:`connected_logging`):
+example, pass ``log_output="stdout"`` and ``log_level="DEBUG"`` when
+constructing the ``Service`` (see :ref:`connected_logging`):
 
 .. code-block:: python
 
-   from ansys.dynamicreporting.core.adr_utils import get_logger
-
-   get_logger(log_output="stdout", log_level="DEBUG")
+   service = adr.Service(
+       ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
+       log_output="stdout",
+       log_level="DEBUG",
+   )
 
 Install the system package that provides that library, or ask your system
 administrator to, then export again. Playwright's `system dependency documentation

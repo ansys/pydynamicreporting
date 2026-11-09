@@ -182,14 +182,20 @@ provide them, but a minimal Linux server or container can lack some. The
 export then fails as soon as the browser starts. To find the missing library,
 set the ``ansys.dynamicreporting.core`` logger to ``DEBUG`` and repeat the
 export. The logged browser error contains a line such as
-``error while loading shared libraries: libgbm.so.1``. For example, print the
-log to standard output before exporting (see :ref:`serverless_logging`):
+``error while loading shared libraries: libgbm.so.1``. For example, pass
+``log_output="stdout"`` and ``log_level="DEBUG"`` when constructing ``ADR``
+(see :ref:`serverless_logging`):
 
 .. code-block:: python
 
-   from ansys.dynamicreporting.core.adr_utils import get_logger
-
-   get_logger(log_output="stdout", log_level="DEBUG")
+   adr = ADR(
+       ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
+       db_directory=r"C:\reports\database",
+       media_directory=r"C:\reports\media",
+       static_directory=r"C:\reports\static",
+       log_output="stdout",
+       log_level="DEBUG",
+   )
 
 Install the system package that provides that library, or ask your system
 administrator to, then export again. Playwright's `system dependency documentation
