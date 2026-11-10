@@ -768,7 +768,6 @@ class Service:
         document: str | Path | dict,
         *,
         on_error: "OnError" = "collect",
-        base_dir: str | Path | None = None,
     ) -> "ImportResult":
         """Import ADR report items from a JSON document into the connected service.
 
@@ -781,6 +780,9 @@ class Service:
         Report structure is out of scope: use :meth:`load_templates` to import
         report templates.
 
+        Relative media paths resolve against the directory containing the
+        JSON file, or against the current working directory for a dict.
+
         Parameters
         ----------
         document : str, pathlib.Path, or dict
@@ -789,10 +791,6 @@ class Service:
         on_error : {'collect', 'raise'}, default: 'collect'
             ``'collect'`` records per-item failures and continues;
             ``'raise'`` stops at the first failure.
-        base_dir : str or pathlib.Path, optional
-            Directory that relative media paths resolve against. Defaults to
-            the directory containing the JSON file, or to the current working
-            directory for a dict.
 
         Returns
         -------
@@ -812,7 +810,7 @@ class Service:
             self.logger.error("Error: no connection to any service")
             raise ConnectionToServiceError
         return self.serverobj.import_items_from_json(
-            document, on_error=on_error, base_dir=base_dir, logger=self.logger
+            document, on_error=on_error, logger=self.logger
         )
 
     def query(

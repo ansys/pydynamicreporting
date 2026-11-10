@@ -54,7 +54,7 @@ from .. import common_utils
 from ..adr_utils import build_query_url
 from ..common_utils import PDFPageSize, populate_template
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION, validate_supported_server_install_version
-from ..constants import JSON_ATTR_KEYS
+from ..constants import IMAGE_EXTENSIONS, JSON_ATTR_KEYS
 from ..exceptions import (
     ADRException,
     ADRItemImportError,
@@ -1446,42 +1446,35 @@ class Server:
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     _IMPORT_PAYLOAD_SETTERS: dict[str, Callable[[report_objects.ItemREST, object], None]] = {
-        report_objects.ItemREST.type_str: report_objects.ItemREST.set_payload_string,
-        report_objects.ItemREST.type_html: report_objects.ItemREST.set_payload_html,
-        report_objects.ItemREST.type_tbl: report_objects.ItemREST.set_payload_table,
-        report_objects.ItemREST.type_tree: report_objects.ItemREST.set_payload_tree,
-        report_objects.ItemREST.type_img: report_objects.ItemREST.set_payload_image,
-        report_objects.ItemREST.type_anim: report_objects.ItemREST.set_payload_animation,
-        report_objects.ItemREST.type_scn: report_objects.ItemREST.set_payload_scene,
-        report_objects.ItemREST.type_file: report_objects.ItemREST.set_payload_file,
+        "text": report_objects.ItemREST.set_payload_string,
+        "html": report_objects.ItemREST.set_payload_html,
+        "table": report_objects.ItemREST.set_payload_table,
+        "tree": report_objects.ItemREST.set_payload_tree,
+        "image": report_objects.ItemREST.set_payload_image,
+        "animation": report_objects.ItemREST.set_payload_animation,
+        "scene": report_objects.ItemREST.set_payload_scene,
+        "file": report_objects.ItemREST.set_payload_file,
     }
-    """Stored ADR item type to the :class:`report_objects.ItemREST` payload setter.
-
-    Wire ``item_type`` values are translated through ``ITEM_TYPE_TO_ADR_TYPE``
-    first, as the serverless backend does to resolve its :class:`Item` subclass.
-    """
+    """Import ``item_type`` to the :class:`report_objects.ItemREST` payload setter."""
 
     def import_items_from_json(
         self,
         document: str | Path | dict,
         *,
         on_error: "OnError" = "collect",
-        base_dir: str | Path | None = None,
         logger: logging.Logger | None = None,
     ) -> "ImportResult":
         """Import report items from a JSON document into this server.
 
         Backs :meth:`ansys.dynamicreporting.core.Service.import_items_from_json`,
-        which documents every parameter; ``logger`` receives validation warnings
-        and per-item failures. Validation and the per-item error policy are
-        shared with the serverless ``ADR.import_items_from_json``; this method
-        only builds and pushes :class:`report_objects.ItemREST` objects.
+        which documents the parameters; ``logger`` receives validation warnings
+        and per-item failures.
         """
         # Imported lazily so that importing the package does not pull the
         # import machinery for users who never call this.
         from .json_item_import import import_items, load_document
 
-        validated = load_document(document, base_dir=base_dir, logger=logger)
+        validated = load_document(document, logger=logger)
         return import_items(
             validated,
             functools.partial(self._populate_item, logger=logger),
@@ -1490,33 +1483,40 @@ class Server:
         )
 
     def _populate_item(
-        self, item_data: dict, doc_tags: str, logger: logging.Logger | None = None
+        self,
+        item_data: dict,
+        doc_tags: tuple[tuple[str, str], ...],
+        logger: logging.Logger | None = None,
     ) -> report_objects.ItemREST:
         """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
-        from .json_item_import import combine_tags
-        from .json_item_import.mapping import item_content, table_fields
-        from .json_item_import.spec import ITEM_TYPE_TO_ADR_TYPE
+        from .json_item_import.mapping import payload_from_json, table_properties_from_json
+        from .json_item_import.spec import check_tags
 
         item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
         # create_item() skips a falsy source; the document value is stored verbatim.
         item.source = item_data["source"]
-        item.set_tags(combine_tags(doc_tags, item_data["tags"]))
+        # Document tags come first, so an item tag with the same key overrides them.
+        for key, value in (*doc_tags, *check_tags(item_data["tags"], "item tags")):
+            item.add_tag(key, value)
 
         item_type = item_data["item_type"]
-        content = item_content(item_data)
+        content = payload_from_json(item_data)
         if item_type == "table":
             # Display fields travel inside the table payload, the same
             # dictionary adr_item.Item builds for set_payload_table.
-            content = {"array": content, **table_fields(item_data)}
+            content = {**content, **table_properties_from_json(item_data)}
         elif item_type == "image":
-            # set_payload_image expects image bytes. As in adr_item.Item, PNG
-            # files are passed through and any other format is converted first.
+            # set_payload_image expects image bytes and never sees the path, so
+            # check the path with the validator the other REST media setters use.
+            item.validate_file(content, "image file", list(IMAGE_EXTENSIONS))
+            # As in adr_item.Item, PNG files are passed through and any other
+            # format is converted first.
             if content.lower().endswith(".png"):
                 with open(content, "rb") as handle:
                     content = handle.read()
             else:
                 content = report_utils.PIL_image_to_data(content)["file_data"]
-        self._IMPORT_PAYLOAD_SETTERS[ITEM_TYPE_TO_ADR_TYPE[item_type]](item, content)
+        self._IMPORT_PAYLOAD_SETTERS[item_type](item, content)
 
         try:
             status = self.put_objects([item])
@@ -1532,30 +1532,27 @@ class Server:
             # payload behind, whether it is reported by status or raised
             # (for example PermissionDenied). Remove it, as the serverless
             # backend does.
-            self._delete_partial_import_item(item, logger)
+            try:
+                status = self.del_objects([item])
+                # 404 means the record was never created, which needs no cleanup.
+                failure = (
+                    None
+                    if status in (requests.codes.ok, requests.codes.not_found)
+                    else f"HTTP {status}"
+                )
+            except Exception as exc:
+                failure = exc
+            # Logged rather than raised: the push failure is the error to report.
+            if failure is not None and logger is not None:
+                logger.warning(
+                    "Could not remove partially imported item %r: %s", item.name, failure
+                )
             raise
         finally:
             # The file payload setters open the payload and never close it.
             if item.fileobj is not None:
                 item.fileobj.close()
         return item
-
-    def _delete_partial_import_item(
-        self, item: report_objects.ItemREST, logger: logging.Logger | None
-    ) -> None:
-        """Delete an item whose push failed, logging rather than masking the push error."""
-        try:
-            status = self.del_objects([item])
-        except Exception as exc:
-            # The push failure is the error to report; a failed cleanup is secondary.
-            if logger is not None:
-                logger.warning("Could not remove partially imported item %r: %s", item.name, exc)
-            return
-        # 404 means the record was never created, which needs no cleanup.
-        if status not in (requests.codes.ok, requests.codes.not_found) and logger is not None:
-            logger.warning(
-                "Could not remove partially imported item %r (HTTP %s).", item.name, status
-            )
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None

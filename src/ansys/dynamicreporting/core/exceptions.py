@@ -196,27 +196,21 @@ class ImportItemVersionError(ADRItemImportError):
 class ImportItemValidationError(ADRItemImportError):
     """Raised when a document violates the item import contract.
 
-    Unlike a fail-fast validator, this error carries **every** problem found
-    during a single validation pass so that a producer can fix an entire
-    json document in one edit.
+    Carries **every** problem found in one validation pass, so a producer can
+    fix a whole JSON document in one edit.
 
     Parameters
     ----------
     problems : iterable of tuple of (str, str)
-        Pairs of ``(location, message)``, where ``location`` is a dotted and
-        indexed path into the json document such as ``"items[3].path"``.
+        Pairs of ``(location, message)``, where ``location`` is a path into the
+        JSON document such as ``"items[3].path"``.
     """
 
     detail = "The ADR import item json document is not valid"
 
     def __init__(self, problems: Iterable[tuple[str, str]]) -> None:
         self.problems: tuple[tuple[str, str], ...] = tuple(problems)
-        super().__init__(self._render(self.problems))
-
-    @staticmethod
-    def _render(problems: tuple[tuple[str, str], ...]) -> str:
-        """Render all collected problems as a single indented block."""
-        count = len(problems)
-        header = f"{count} problem{'' if count == 1 else 's'} found"
-        lines = [f"  {location}: {message}" for location, message in problems]
-        return "\n".join([header, *lines])
+        count = len(self.problems)
+        lines = [f"{count} problem{'' if count == 1 else 's'} found"]
+        lines += [f"  {location}: {message}" for location, message in self.problems]
+        super().__init__("\n".join(lines))

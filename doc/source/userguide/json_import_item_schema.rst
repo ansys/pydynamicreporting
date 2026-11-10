@@ -1,9 +1,9 @@
-JSON import schema reference
+JSON import format reference
 ############################
 
 .. warning::
 
-   **Beta.** This document format is a beta feature. The schema and the Python
+   **Beta.** This document format is a beta feature. The format and the Python
    API may change in a future release. A breaking change to the format raises
    the ``schema_version`` major.
 
@@ -13,16 +13,15 @@ and
 :func:`ADR.import_items_from_json<ansys.dynamicreporting.core.serverless.ADR.import_items_from_json>`.
 For the fields, examples, and error handling, start with :ref:`ref_json_import_guide`.
 
-The complete machine-readable contract is the JSON Schema (draft 2020-12)
-``adr_item_import.schema.json`` at the root of the PyDynamicReporting
-repository. It is generated from the same definitions the importer validates
-against.
-
 Validation rules
 ================
 
 Validation reports every problem in one ``ImportItemValidationError``, each with
 its location, such as ``items[3].rows[1]``.
+
+An optional field of the document or of an item that is set to ``null`` is
+treated as if it were omitted. Inside tree nodes, ``null`` is accepted only
+where the node rules below allow it.
 
 **Envelope**
 
@@ -36,7 +35,16 @@ its location, such as ``items[3].rows[1]``.
 
 - ``tags`` is an array of objects. Each object has at least one key, and every
   value is a string, number, or boolean.
-- Document tags are merged into every item's tags.
+- Tag keys must be non-empty. Keys and string values must not contain ``=``,
+  quotes, backslashes, tabs, or line breaks, because ADR could not store them
+  unchanged. Spaces are allowed.
+- Document tags are checked when the document is validated, so an invalid
+  document tag raises ``ImportItemValidationError`` and nothing is imported.
+  Each backend checks item tags before saving and adds all tags with its
+  ``add_tag``; invalid item tags fail only that item.
+- An item tag overrides a document tag with the same key. Numbers and booleans
+  are stored as text, so ``0`` is stored as ``key=0`` and ``false`` as
+  ``key=False``. A value of ``""`` is stored as a bare ``key`` tag.
 
 **Items**
 
@@ -44,54 +52,57 @@ its location, such as ``items[3].rows[1]``.
   ``animation``, ``scene``, or ``file``.
 - ``name`` is a required, non-empty string. ``source`` is a string and
   ``sequence`` an integer; a boolean is not an integer.
-- ``text`` and ``html`` require a string ``value``. An ``html`` value must
-  contain at least one HTML tag.
+- ``text`` and ``html`` values are checked by the backend during item creation,
+  not by the importer. Missing, null, or non-string values are
+  per-item failures. Serverless HTML requires at least one HTML tag; REST
+  accepts any valid UTF-8 string.
 
 **Media paths**
 
-- ``image``, ``animation``, ``scene``, and ``file`` require a non-empty
-  ``path``, absolute or relative to the document directory (or ``base_dir``).
+- ``image``, ``animation``, ``scene``, and ``file`` take a ``path``, absolute or
+  relative to the document directory (the current working directory for a
+  dict).
 - Extensions are matched case-insensitively: ``image`` takes ``.png``, ``.jpg``,
   ``.tif``, ``.tiff``; ``animation`` takes ``.mp4``; ``scene`` takes ``.stl``,
   ``.ply``, ``.csf``, ``.avz``, ``.scdoc``, ``.scdocx``, ``.dsco``, ``.glb``,
   ``.obj``; ``file`` takes any extension.
-- File existence is checked when the item is saved, so a missing file is a
-  per-item failure, not a validation error.
+- Every media ``path`` is checked when the item is saved, so a missing, empty,
+  or non-string path, an unsupported extension, or a missing file is a per-item
+  failure, not a validation error.
 
 **Tables**
 
-- ``columns`` (strings, or objects with a non-empty ``name``) and ``rows``
-  (arrays of cells) are required.
-- Every row has the same number of cells as ``columns``.
-- Cells are strings, numbers, booleans, or ``null``. ``NaN`` and ``Infinity``
-  are rejected; use ``null`` for a missing number.
-- ``xaxis`` and every ``yaxis`` entry must name a column.
+- ``array`` is required: the table data in the ADR table format, one inner array
+  per row label. ``dtype`` is ``"f8"`` (the default) for numbers or ``"S"`` for
+  text.
+- Every ADR table property, such as ``labels_row``, ``xaxis``, ``yaxis``,
+  ``plot``, ``format``, ``rowlbls``, and ``collbls``, is accepted and passed to
+  the backend unchanged.
+- The backend checks ``array`` and ``dtype`` when the item is saved, so a
+  non-array, ragged, or non-numeric array, or an invalid ``dtype``, is a
+  per-item failure, not a validation error. It does not check that labels or
+  axes match the array.
 
 **Trees**
 
-- Each node requires a non-empty ``name``. ``value`` is a scalar or an array of
-  scalars and defaults to the name; ``key`` is optional; ``children`` is an
-  array of nodes.
-- Nesting deeper than 100 levels is rejected.
+- ``nodes`` is an array of complete ADR tree nodes, which are passed to the
+  backend unchanged. Each node requires ``key``, ``name``, and ``value``.
+  ``children`` is an optional array of nodes; ``state`` and ``header`` are
+  optional display hints.
+- ``key`` is a hidden entity type label, not an identifier, so it need not be
+  unique. ``value`` is ``null``, a scalar, or an array of them, and arrays may
+  nest.
+- The backend checks ``nodes`` when the item is saved, so a missing or
+  non-array ``nodes`` value, or a malformed node, is a per-item failure, not a
+  validation error. The backend does not check the types of ``key``, ``name``,
+  ``state``, or ``header``, and it accepts ``NaN`` and ``Infinity`` values.
 
 **Unknown keys**
 
-- Keys that the schema does not define, at any level, are logged as warnings
-  and ignored. A ``templates`` key is ignored the same way: report structure is
-  imported with ``load_templates``.
+- Keys that this format does not define are logged as warnings and ignored, except
+  inside tree nodes, which are passed to the backend unchanged. A ``templates``
+  key is ignored the same way: report structure is imported with
+  ``load_templates``.
 
-Validating a document
-=====================
-
-Validate a document before importing it:
-
-.. code:: text
-
-   check-jsonschema --schemafile adr_item_import.schema.json my_report.json
-
-Any validator that supports draft 2020-12 works. The schema checks field types,
-required fields, and the version pattern. The rules that JSON Schema cannot
-express, such as equal row widths and axis names, are checked by the importer.
-
-If you need a field or item type that the schema does not offer, open an issue
+If you need a field or item type that the format does not offer, open an issue
 at https://github.com/ansys/pydynamicreporting/issues.

@@ -82,15 +82,27 @@ document = {
             "item_type": "table",
             "name": "Probe Table",
             "tags": [{"section": "results"}],
-            "columns": ["time", "T_max", "T_min"],
-            "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+            "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+            "labels_row": ["time", "T_max", "T_min"],
+            "xaxis": "time",
+            "yaxis": ["T_max", "T_min"],
             "plot": "line",
         },
         {
             "item_type": "tree",
             "name": "Mesh",
             "tags": [{"section": "results"}],
-            "nodes": [{"name": "Assembly", "children": [{"name": "Part A"}, {"name": "Part B"}]}],
+            "nodes": [
+                {
+                    "key": "assembly",
+                    "name": "Assembly",
+                    "value": None,
+                    "children": [
+                        {"key": "part", "name": "Part A", "value": 1204},
+                        {"key": "part", "name": "Part B", "value": 876},
+                    ],
+                }
+            ],
         },
     ],
 }

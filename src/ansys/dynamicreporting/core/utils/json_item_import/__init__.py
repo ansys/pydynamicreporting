@@ -25,14 +25,12 @@
 This package owns the import document schema, its validation, and the
 per-item orchestration. Like ``populate_template`` for the template JSON
 import, it does not build backend models: ``report_remote_server.Server`` and
-the serverless ``ADR`` pass in the callable that builds their own models. The
-one backend import is the serverless ``HTMLParser``, loaded lazily so both
-backends apply the same HTML check.
+the serverless ``ADR`` pass in the callable that builds their own models and
+validates their payloads.
 """
 
 from ...exceptions import ADRItemImportError, ImportItemValidationError, ImportItemVersionError
 from .importer import import_items
-from .mapping import combine_tags, normalize_tags
 from .models import ImportDocument, ImportResult, ItemFailure
 from .parser import build_document, load_document
 from .spec import ITEM_TYPES, SCHEMA_VERSION, SUPPORTED_MAJOR, check_version
@@ -51,6 +49,4 @@ __all__ = [
     "build_document",
     "load_document",
     "check_version",
-    "combine_tags",
-    "normalize_tags",
 ]

@@ -38,9 +38,9 @@ class ImportDocument:
 
     schema_version: str
     app_id: str
-    tags: tuple[dict[str, Any], ...] = ()
+    # Checked document tags as (key, value) pairs; each backend adds them per item.
+    tags: tuple[tuple[str, str], ...] = ()
     items: tuple[dict[str, Any], ...] = ()
-    base_dir: str | None = None
 
 
 @dataclass

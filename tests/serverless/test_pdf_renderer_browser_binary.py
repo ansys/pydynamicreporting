@@ -22,6 +22,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -357,7 +358,7 @@ def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
+def test_resolve_playwright_browser_binary_info_ignores_leftover_packaged_dirs(
     tmp_path, monkeypatch
 ):
     install_dir = _fake_install_dir(tmp_path)
@@ -365,8 +366,67 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
         _machine_root(tmp_path, "win64"),
         machine_arch="win64",
     )
-    # A second packaged directory breaks the "exactly one browser directory" contract.
+    # A build left behind by copying a newer ADR package over an older install.
     (browser_binary_dir / _SECOND_PACKAGED_BROWSER_DIR_NAME).mkdir()
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
+    logger = Mock()
+    monkeypatch.setattr(pdf_renderer_module, "get_logger", lambda: logger)
+
+    binary_info = resolve_playwright_browser_binary_info(
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
+    )
+
+    assert binary_info is not None
+    assert binary_info.packaged_binary_dir == _PACKAGED_BROWSER_DIR_NAME
+    logger.warning.assert_called_once()
+    assert _SECOND_PACKAGED_BROWSER_DIR_NAME in logger.warning.call_args.args
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browser_binary_info_rejects_missing_named_dir_beside_leftover(
+    tmp_path, monkeypatch
+):
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
+    browser_binary_dir = machine_root / "playwright-browsers"
+    # Only a leftover build is on disk; the metadata names a build that is missing.
+    _create_packaged_browser_binary(
+        machine_root,
+        machine_arch="win64",
+        packaged_binary_dir=_SECOND_PACKAGED_BROWSER_DIR_NAME,
+        write_metadata=False,
+    )
+    _metadata_path(browser_binary_dir).write_text(
+        json.dumps(_packaged_browser_metadata(machine_arch="win64")), encoding="utf-8"
+    )
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
+
+    assert (
+        resolve_playwright_browser_binary_info(
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
+        )
+        is None
+    )
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("packaged_binary_dir", ["..", ".", "../outside", "nested/dir"])
+def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_outside_browsers_dir(
+    tmp_path, monkeypatch, packaged_binary_dir
+):
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
+    browser_binary_dir = _create_packaged_browser_binary(machine_root, machine_arch="win64")
+    # Make every candidate exist with a marker so only the name check can reject it.
+    for candidate in (machine_root / "outside", browser_binary_dir / "nested" / "dir"):
+        candidate.mkdir(parents=True)
+        (candidate / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
+    (browser_binary_dir / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
+    (machine_root / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
+    metadata = _packaged_browser_metadata(
+        machine_arch="win64", packaged_binary_dir=packaged_binary_dir
+    )
+    _metadata_path(browser_binary_dir).write_text(json.dumps(metadata), encoding="utf-8")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (

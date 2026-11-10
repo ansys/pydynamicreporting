@@ -66,6 +66,7 @@ size is definitive and content cannot expand it.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
 import json
@@ -78,6 +79,8 @@ from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
+import playwright as playwright_package
+from playwright.sync_api import Browser
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -91,6 +94,15 @@ from ..exceptions import ADRException
 
 # Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
+# Headless-shell executable inside a packaged ``chromium_headless_shell-<build>`` directory,
+# keyed by the ADR ``machines/<arch>`` name. Launched by path when the product ships a different
+# build than the one Playwright expects.
+_PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
+    "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
+    "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
+}
+# Folder name of a packaged headless-shell build, ``chromium_headless_shell-<revision>``.
+_HEADLESS_SHELL_BUILD_PATTERN = re.compile(r"chromium_headless_shell-\d+")
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
 _PAGINATION_FIT_GUARD_PX = 8.0
 # Direct-child headings that own the content container in an ADR basic layout.
@@ -165,7 +177,9 @@ def _validate_playwright_browsers_path(
     when the stripped package layout is complete and self-consistent. This keeps
     the runtime honest to the product packaging contract instead of silently
     accepting stale or partially copied browser directories. The metadata file
-    lives inside ``playwright-browsers`` itself.
+    lives inside ``playwright-browsers`` itself and names the packaged browser
+    directory to use. Other browser directories, such as a build left behind when
+    a newer ADR package is copied over an older install, are ignored.
     """
     if not browser_dir.is_dir():
         return None
@@ -217,26 +231,39 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    packaged_dirs = sorted(path for path in browser_dir.iterdir() if path.is_dir())
-    if len(packaged_dirs) != 1:
+    packaged_name = metadata_info.packaged_binary_dir
+    # The metadata entry must name a direct child folder so it cannot point outside
+    # ``playwright-browsers``.
+    if Path(packaged_name).name != packaged_name or packaged_name in {".", ".."}:
         get_logger().warning(
-            "Ignoring product Playwright binary at %s because it contains %d packaged browser "
-            "directories instead of exactly one.",
+            "Ignoring product Playwright binary at %s because metadata entry %s is not a "
+            "packaged directory name.",
             browser_dir,
-            len(packaged_dirs),
+            packaged_name,
         )
         return None
 
-    packaged_dir = packaged_dirs[0]
-    if packaged_dir.name != metadata_info.packaged_binary_dir:
+    packaged_dir = browser_dir / packaged_name
+    if not packaged_dir.is_dir():
         get_logger().warning(
-            "Ignoring product Playwright binary at %s because packaged directory %s does not "
-            "match metadata entry %s.",
+            "Ignoring product Playwright binary at %s because packaged directory %s named in "
+            "the metadata is missing.",
             browser_dir,
-            packaged_dir.name,
-            metadata_info.packaged_binary_dir,
+            packaged_name,
         )
         return None
+
+    leftover_dirs = sorted(
+        path.name for path in browser_dir.iterdir() if path.is_dir() and path != packaged_dir
+    )
+    if leftover_dirs:
+        get_logger().warning(
+            "Ignoring browser directories %s at %s that the metadata does not name; using %s. "
+            "A clean Ansys installation removes them.",
+            ", ".join(leftover_dirs),
+            browser_dir,
+            packaged_name,
+        )
 
     marker_path = packaged_dir / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():
@@ -272,6 +299,101 @@ def resolve_playwright_browser_binary_info(
         / "playwright-browsers"
     )
     return _validate_playwright_browsers_path(browser_dir, machine_arch)
+
+
+def _expected_headless_shell_build(registry_path: Path | None = None) -> str | None:
+    """Return the packaged folder name of the headless-shell build Playwright expects.
+
+    Playwright lists the browser revisions it expects in the ``browsers.json`` file shipped with
+    its driver. Return ``None`` whenever that cannot be read with certainty, for example when the
+    file is missing or malformed, or when the revision is platform specific, so that callers keep
+    Playwright's own browser lookup instead of guessing.
+    """
+    if registry_path is None:
+        registry_path = (
+            Path(playwright_package.__file__).parent / "driver" / "package" / "browsers.json"
+        )
+    try:
+        browsers = json.loads(registry_path.read_text(encoding="utf-8"))["browsers"]
+        entry = next(item for item in browsers if item["name"] == "chromium-headless-shell")
+        revision = str(entry["revision"])
+    except (OSError, ValueError, KeyError, TypeError, StopIteration):
+        return None
+    if "revisionOverrides" in entry or not revision.isdigit():
+        return None
+    return f"chromium_headless_shell-{revision}"
+
+
+def _packaged_headless_shell_executable(binary_info: _PlaywrightBrowserBinaryInfo) -> Path | None:
+    """Return the headless-shell executable packaged in the Ansys installation, if present."""
+    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
+    if executable_relpath is None:
+        return None
+    executable = binary_info.path / binary_info.packaged_binary_dir / executable_relpath
+    return executable if executable.is_file() else None
+
+
+def _launch_packaged_browser(
+    launch: Callable[..., Browser],
+    binary_info: _PlaywrightBrowserBinaryInfo,
+    executable: Path,
+    logger: Any,
+) -> Browser:
+    """Launch the headless shell packaged in the Ansys installation by its executable path."""
+    logger.warning(
+        "The Ansys installation does not ship the browser build this PyDynamicReporting "
+        "release expects. Using the browser build %s from the Ansys installation.",
+        binary_info.packaged_binary_dir,
+    )
+    browser = launch(executable_path=str(executable))
+    logger.info("Using Ansys installation browser %s.", browser.version)
+    return browser
+
+
+def _launch_product_browser(
+    launch: Callable[..., Browser],
+    binary_info: _PlaywrightBrowserBinaryInfo,
+    logger: Any,
+    expected_build: str | None = None,
+) -> Browser:
+    """Launch the product-shipped browser.
+
+    When the packaged executable is missing, raise an ``ADRException`` naming the incomplete
+    build before any launch: no launch can succeed, and a failed launch leaves temporary folders
+    behind.
+
+    ``launch`` runs Playwright's normal lookup in the product browser folder. That lookup can
+    only succeed when the product ships the build this Playwright version expects. When
+    ``expected_build`` is known and differs from the packaged build, launch the packaged
+    headless shell's executable by path instead and log a warning. This is decided by comparing
+    the two build names, not by interpreting a failed launch, and it also avoids the temporary
+    folders Playwright leaves behind after a launch that fails.
+
+    Otherwise, including when ``expected_build`` is unknown, launch normally and let any failure
+    propagate unchanged: a launch that fails for another reason, such as missing system
+    libraries, would fail the same way for the packaged build and hide the original error.
+    """
+    packaged_build = binary_info.packaged_binary_dir
+    executable = _packaged_headless_shell_executable(binary_info)
+    if executable is None:
+        # Name only the build: the folder path would expose Playwright internals to users.
+        raise ADRException(
+            "Browser PDF rendering failed: the browser build "
+            f"{packaged_build} in the Ansys installation is incomplete."
+        )
+    if (
+        expected_build is not None
+        and _HEADLESS_SHELL_BUILD_PATTERN.fullmatch(packaged_build)
+        and packaged_build != expected_build
+    ):
+        logger.debug(
+            "Skipping the default browser launch: the Ansys installation ships %s but %s is "
+            "expected.",
+            packaged_build,
+            expected_build,
+        )
+        return _launch_packaged_browser(launch, binary_info, executable, logger)
+    return launch()
 
 
 class _BasePlaywrightPDFRenderer(ABC):
@@ -476,6 +598,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         exit, so two browser-PDF renders must not run concurrently in the same process.
         The synchronous Playwright driver renders one report at a time, which keeps that
         constraint satisfied on this export path.
+
+        Yields the validated product browser metadata so the caller can decide how to
+        launch it.
         """
         restored_override_envs = {
             env_var: os.environ.pop(env_var)
@@ -490,7 +615,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 browser_binary_dir.path,
             )
             os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-            yield
+            yield browser_binary_dir
         finally:
             # Restore the caller's original browser-path override after the
             # render so the product-specific choice stays scoped to this
@@ -522,13 +647,22 @@ class _BasePlaywrightPDFRenderer(ABC):
             # Point Playwright at the product-shipped browser binary before the
             # driver resolves browser binaries so browser-PDF never falls back
             # to an unrelated machine-level Chromium cache.
-            with self._playwright_browser_binary_env(), sync_playwright() as playwright:
+            with (
+                self._playwright_browser_binary_env() as browser_binary,
+                sync_playwright() as playwright,
+            ):
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = playwright.chromium.launch(
-                    headless=True,
-                    timeout=self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "browser launch"
+                browser = _launch_product_browser(
+                    lambda **launch_options: playwright.chromium.launch(
+                        headless=True,
+                        timeout=self._remaining_browser_phase_timeout_ms(
+                            browser_phase_deadline, "browser launch"
+                        ),
+                        **launch_options,
                     ),
+                    browser_binary,
+                    self._logger,
+                    expected_build=_expected_headless_shell_build(),
                 )
                 context = None
 
@@ -1703,7 +1837,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     f"Browser PDF rendering failed: {step_name} timed out after "
                     f"{self._render_timeout:.1f}s"
                 )
-        except Exception as exc:
+        except Exception:
             step_outcome = "failed"
             raise
         finally:

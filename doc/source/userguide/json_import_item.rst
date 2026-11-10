@@ -84,12 +84,12 @@ The serverless call is identical:
 
 If the document is already in memory, for example built by your own code, pass
 the dictionary to the same method. There is no file to resolve relative media
-paths against, so pass ``base_dir``; otherwise they resolve against the current
-working directory:
+paths against, so they resolve against the current working directory. Use
+absolute media paths in that case:
 
 .. code:: python
 
-   result = adr_obj.import_items_from_json(document, base_dir=r"D:\runs\42")
+   result = adr_obj.import_items_from_json(document)
 
 The document envelope
 ---------------------
@@ -114,7 +114,7 @@ Every item carries ``item_type``, ``name``, and optionally ``tags``,
 =================  ===============================  ========================
 ``text``           ``value``                        ``String``
 ``html``           ``value``                        ``HTML``
-``table``          ``columns``, ``rows``            ``Table``
+``table``          ``array``                        ``Table``
 ``tree``           ``nodes``                        ``Tree``
 ``image``          ``path``                         ``Image``
 ``animation``      ``path``                         ``Animation``
@@ -123,43 +123,40 @@ Every item carries ``item_type``, ``name``, and optionally ``tags``,
 =================  ===============================  ========================
 
 Media paths may be absolute, or relative to the directory containing the JSON
-document. Pass ``base_dir`` to resolve them against a different directory.
+document.
 
 Media files must use an extension that both backends accept: ``image`` takes
 ``.png``, ``.jpg``, ``.tif``, or ``.tiff``; ``animation`` takes ``.mp4``;
 ``scene`` takes the 3D formats listed in :doc:`json_import_item_schema`; ``file``
-takes any extension. An ``html`` value must contain at least one HTML tag.
+takes any extension.
+
+Text and HTML ``value`` payloads are passed to the existing backend validators.
+Missing, null, or non-string values are per-item failures. Serverless HTML
+requires at least one HTML tag; REST accepts any valid UTF-8 string.
 
 Tables
 ------
 
-Tables are written **record-oriented**: ``columns`` names the fields and each
-entry of ``rows`` is one record.
+Tables use the ADR table format and are passed to ADR unchanged. ``array`` holds
+one inner array per row label, so each series, such as all ``time`` values,
+is one inner array.
 
 .. code:: json
 
    {
      "item_type": "table",
      "name": "Probe Table",
-     "columns": ["time", "T_max", "T_min"],
-     "rows": [[0.0, 300.1, 290.0], [1.0, 320.5, 295.2]],
+     "array": [[0.0, 1.0], [300.1, 320.5], [290.0, 295.2]],
+     "labels_row": ["time", "T_max", "T_min"],
+     "xaxis": "time",
+     "yaxis": ["T_max", "T_min"],
      "plot": "line"
    }
 
-ADR stores tables series-per-row, so the importer transposes the data on the
-way in. The example above becomes a ``(3, 2)`` array whose row labels are
-``["time", "T_max", "T_min"]``.
-
-If ``xaxis`` and ``yaxis`` are omitted, the first column becomes the x axis and
-the remaining columns become the y axes. When supplied, they must name
-columns.
-
-A table whose cells are all numbers, booleans, or ``null`` is stored as floats.
-A table with any JSON string is stored as text, and numeric-looking strings such
-as ``"001"`` stay unchanged.
-
-Besides ``columns`` and ``rows``, a table accepts ``plot``, ``format``,
-``xaxis``, and ``yaxis``.
+``dtype`` selects how the array is stored: ``"f8"`` (the default) for numbers
+or ``"S"`` for text. A table also accepts every ADR table property, such as
+``labels_row``, ``labels_column``, ``xaxis``, ``yaxis``, ``plot``, ``format``,
+``title``, ``rowlbls``, and ``collbls``.
 
 Trees
 -----
@@ -170,12 +167,23 @@ Trees
      "item_type": "tree",
      "name": "Mesh",
      "nodes": [
-       { "name": "Assembly", "children": [{ "name": "Part A" }, { "name": "Part B" }] }
+       {
+         "key": "assembly",
+         "name": "Assembly",
+         "value": null,
+         "state": "expanded",
+         "children": [
+           { "key": "part", "name": "Part A", "value": 1204 },
+           { "key": "part", "name": "Part B", "value": 876 }
+         ]
+       }
      ]
    }
 
-A node value defaults to the node name. Node keys are generated from the
-position in the tree, so repeated names never collide.
+Nodes use the ADR tree format and are passed to ADR unchanged. Each node
+requires ``key``, ``name``, and ``value``. The ``key`` is a hidden entity type
+label, so it can repeat. A node can also have ``children`` and the optional
+``state`` and ``header`` display hints.
 
 Error handling
 --------------
@@ -191,9 +199,9 @@ from ``ansys.dynamicreporting.core.exceptions`` with the other ADR exceptions:
 
 .. code:: text
 
-   The ADR import document is not valid : 3 problems found
+   The ADR import item json document is not valid : 3 problems found
      app_id: is required
-     items[0].value: is required
+     items[0].name: is required
      items[2].item_type: expected one of ['text', 'html', ...], got 'spreadsheet'
 
 Per-item failures during creation are governed by ``on_error``:
@@ -220,20 +228,12 @@ rejected with ``ImportItemVersionError``.
 While the feature is in beta, the shipped version stays at ``1.0``. Treat a
 major bump as the signal that the format changed incompatibly.
 
-Schema reference
+Format reference
 ----------------
 
 :doc:`json_import_item_schema` summarizes the validation rules.
 
-The machine-readable contract is generated from the same field tables the
-parser validates against, and is committed at the repository root as
-``adr_item_import.schema.json``. To validate your own document before importing it:
-
-.. code:: text
-
-   check-jsonschema --schemafile adr_item_import.schema.json my_report.json
-
 A complete working document that exercises every item type lives at
 ``tests/test_data/adr_import/canonical_report.json``. It is the easiest
-starting point to copy, and it is validated against the committed schema on
-every commit, so it cannot fall out of step with the contract.
+starting point to copy, and a unit test validates it on every run, so it
+cannot fall out of step with the importer.
