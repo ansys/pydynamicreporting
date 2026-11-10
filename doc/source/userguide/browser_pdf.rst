@@ -133,6 +133,15 @@ MathJax, Plotly, images, and videos. Browser layout and pagination use the
 selected printable page dimensions. The live page keeps its normal network
 access. Authentication cookies are scoped to the originating ADR service.
 
+In basic, item-based box, header, tagprops, and footer layouts, print preparation
+keeps a direct section heading and any introductory text with the layout's own content
+when the group fits on one page. Taller sections can still paginate. Headings
+and introductory text are optional. Layouts without a direct heading or a matching
+content container skip only this grouping step; their content still receives normal
+sizing and pagination. Empty content containers are allowed.
+Footer layouts retain their intentional page break.
+Positioned box children and sidebar table-of-contents wrappers are not flattened.
+
 Custom asynchronous JavaScript in raw HTML items or layout HTML does not have
 its own readiness signal. If that code finishes outside the built-in signals,
 the PDF can capture the page before the custom update completes.

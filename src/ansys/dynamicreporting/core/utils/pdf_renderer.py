@@ -100,7 +100,13 @@ _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
 }
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
 _PAGINATION_FIT_GUARD_PX = 8.0
-# Direct-child headings that own the content container in an ADR basic layout.
+# Layout types whose direct heading and content container can be grouped when present.
+_PAGINATION_LAYOUT_SELECTOR = (
+    'div[data-layout-type="basic"], div[data-layout-type="box"], '
+    'div[data-layout-type="header"], div[data-layout-type="tagprops"], '
+    'div[data-layout-type="footer"]'
+)
+# Direct-child headings that own the content container in these layouts.
 _PAGINATION_HEADING_SELECTOR = (
     ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
 )
@@ -856,16 +862,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                     print-color-adjust: exact !important;
                 }
 
-                /* Keep a section heading glued to the content right after it. ":has(+ ...)"
-                   means "a heading immediately followed by a report section". "break-after:
-                   avoid" stops a page break landing between them, so a title is never stranded
-                   alone at the bottom of a page with its table or plot on the next. */
-                h1:has(+ section.adr-container),
-                h2:has(+ section.adr-container),
-                h3:has(+ section.adr-container),
-                h4:has(+ section.adr-container),
-                h5:has(+ section.adr-container),
-                h6:has(+ section.adr-container),
+                /* Keep a section heading glued to its following content. ":has(~ ...)"
+                   means "a heading followed by a report section", allowing introductory
+                   elements between them. "break-after: avoid" asks the browser not to
+                   break immediately after the heading, rather than stranding the title
+                   at the bottom of a page with its table or plot on the next.
+                   The pagination pass also protects those intermediate boundaries. */
+                h1:has(~ section.adr-container),
+                h2:has(~ section.adr-container),
+                h3:has(~ section.adr-container),
+                h4:has(~ section.adr-container),
+                h5:has(~ section.adr-container),
+                h6:has(~ section.adr-container),
                 header:has(+ section.adr-panel-body) {
                     break-after: avoid !important;
                     page-break-after: avoid !important;
@@ -1001,6 +1009,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 const {
                     printableHeightPx,   // usable page height (page minus top/bottom margins)
                     fitGuardPx,          // small safety margin so rounding never overflows a page
+                    layoutSelector,      // layouts owning a heading and content container
                     headingSelector,     // matches a section's heading (h1..h6)
                     visualSelector,      // matches the visuals we may need to resize
                     sceneViewerSelector, // matches the 3D viewer tags
@@ -1238,14 +1247,20 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return true;
                 };
 
-                // Basic layouts own headings and content containers, so fitting
+                // These layouts can own headings and content containers, so fitting
                 // against that group keeps a title with its resized visual.
-                for (const layout of document.querySelectorAll(
-                    'div[data-layout-type="basic"]'
-                )) {
+                // Include introductory content in the first visual's page-height budget.
+                for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
-                    const container = heading?.nextElementSibling;
-                    if (!container?.matches('section.adr-container')) {
+                    // The generated body owns the layout GUID; custom header HTML may
+                    // contain other sections. Standalone HTML may omit this metadata.
+                    const templateGuid = layout.getAttribute('nexus_template');
+                    let container = heading?.nextElementSibling;
+                    while (container && (!container.matches('section.adr-container')
+                            || (templateGuid && container.id !== templateGuid))) {
+                        container = container.nextElementSibling;
+                    }
+                    if (!container) {
                         continue;
                     }
 
@@ -1290,7 +1305,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
                 }
 
-                // Panels without the basic-layout wrapper still need their
+                // Panels without a heading-layout wrapper still need their
                 // shadow-DOM header included in the available-height budget.
                 for (const panel of document.querySelectorAll('adr-panel')) {
                     const panelLayout = panel.closest('div[data-layout-type="panel"]');
@@ -1360,6 +1375,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
                 "visualSelector": _PAGINATION_VISUAL_SELECTOR,
                 "sceneViewerSelector": _SCENE_VIEWER_SELECTOR,
@@ -1368,14 +1384,14 @@ class _BasePlaywrightPDFRenderer(ABC):
         )
 
     def _set_pagination_cohesion(self, page: Any, printable_height_px: float) -> dict[str, Any]:
-        """Keep basic layouts and panels together when they fit on one page."""
+        """Keep heading-content layouts and panels together when they fit on one page."""
         return page.evaluate(
             """(options) => {
                 // This runs in the page. For each report section and panel, decide whether it
                 // fits on one page. If it fits, ask the PDF engine to keep it whole ("avoid" a
                 // break); if not, allow it to split ("auto"), because forcing a too-tall block
                 // onto one page would clip it.
-                const { printableHeightPx, fitGuardPx, headingSelector } = options;
+                const { printableHeightPx, fitGuardPx, layoutSelector, headingSelector } = options;
                 const isVisible = element => {
                     const style = window.getComputedStyle(element);
                     return element.getClientRects().length > 0
@@ -1390,13 +1406,23 @@ class _BasePlaywrightPDFRenderer(ABC):
                 const keptLayouts = [];
                 // Avoid a split only when the complete heading-plus-content
                 // group fits; forcing it on taller content can create clipping.
-                for (const layout of document.querySelectorAll(
-                    'div[data-layout-type="basic"]'
-                )) {
+                for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
-                    const container = heading?.nextElementSibling;
-                    if (!container?.matches('section.adr-container') || !isVisible(layout)) {
+                    const templateGuid = layout.getAttribute('nexus_template');
+                    let container = heading?.nextElementSibling;
+                    while (container && (!container.matches('section.adr-container')
+                            || (templateGuid && container.id !== templateGuid))) {
+                        container = container.nextElementSibling;
+                    }
+                    if (!container || !isVisible(layout)) {
                         continue;
+                    }
+                    // Keep the heading and introductions with the first content fragment,
+                    // even when a taller table must split over subsequent pages.
+                    for (let element = heading; element && element !== container;
+                            element = element.nextElementSibling) {
+                        element.style.setProperty('break-after', 'avoid', 'important');
+                        element.style.setProperty('page-break-after', 'avoid', 'important');
                     }
                     // "avoid" keeps the section whole on one page; "auto" lets it split. Both the
                     // modern and legacy property names are set for wider browser support.
@@ -1442,6 +1468,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
             },
         )
@@ -1451,7 +1478,7 @@ class _BasePlaywrightPDFRenderer(ABC):
     ) -> dict[str, Any]:
         """Allow over-height sliders, items, and tables to split between pages."""
         return page.evaluate(
-            """(printableHeightPx) => {
+            """({ printableHeightPx, layoutSelector }) => {
                 // This runs in the page. The capture CSS earlier asked the PDF engine to keep
                 // sliders and data-items whole. But some are simply taller than a page and must
                 // be allowed to split, or they would overflow. Here we find those over-height
@@ -1489,7 +1516,7 @@ class _BasePlaywrightPDFRenderer(ABC):
 
                     item.style.setProperty('break-inside', 'auto', 'important');
                     item.style.setProperty('page-break-inside', 'auto', 'important');
-                    const layout = item.closest('div[data-layout-type="basic"]');
+                    const layout = item.closest(layoutSelector);
                     if (layout) {
                         layout.style.setProperty('break-inside', 'auto', 'important');
                         layout.style.setProperty('page-break-inside', 'auto', 'important');
@@ -1510,7 +1537,10 @@ class _BasePlaywrightPDFRenderer(ABC):
                     breakableItems
                 };
             }""",
-            printable_height_px,
+            {
+                "printableHeightPx": printable_height_px,
+                "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
+            },
         )
 
     def _log_pagination_preparation(

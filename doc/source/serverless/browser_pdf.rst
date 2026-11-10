@@ -157,9 +157,16 @@ Offline rendering behavior
 --------------------------
 
 The renderer waits for ADR web components, fonts, MathJax, Plotly, images, and
-videos. Print styling keeps headings with the following content and preserves
-the report canvas used by responsive charts. Browser layout and pagination use
-the selected printable page dimensions.
+videos. In basic, item-based box, header, tagprops, and footer layouts, print
+preparation keeps a direct section heading and any introductory text with the layout's own
+content when the group fits on one page. Taller sections can still paginate.
+Headings and introductory text are optional. Layouts without a direct heading
+or a matching content container skip only this grouping step; their content still
+receives normal sizing and pagination. Empty content containers are allowed.
+Footer layouts retain their intentional page break.
+Positioned box children and sidebar table-of-contents wrappers are not flattened.
+The report canvas used by responsive charts is preserved. Browser layout and
+pagination use the selected printable page dimensions.
 
 The staged report blocks external network requests. All content needed by the
 PDF must therefore be present in the offline bundle. Custom asynchronous

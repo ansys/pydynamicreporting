@@ -86,8 +86,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Browser-PDF layout, pagination, and output now use the selected page's printable
   dimensions. Wide content is clipped instead of shrinking the whole report,
-  over-height visuals are fitted to the page, headings stay with content that fits,
-  and only genuinely oversized tables, sliders, and report items split across pages.
+  over-height visuals are fitted to the page, headings and any introductory text in
+  basic, item-based box, header, tagprops, and footer layouts stay with their template-owned
+  content when it fits, and only genuinely oversized tables, sliders, and report
+  items split across pages. Headings, introductions, and content are not required;
+  sections without a heading or matching content container skip only heading grouping.
+  Custom header sections are not mistaken for the generated content body; positioned
+  box children and sidebar TOC wrappers retain their structure. Footer layouts retain
+  their intentional page break.
 - Landscape browser-PDF exports no longer produce a blank first page from a leading
   layout break.
 - Browser-PDF and standalone HTML export now handle both the `ansys-adr-viewer` tag

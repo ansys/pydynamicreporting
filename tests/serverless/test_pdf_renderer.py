@@ -1063,7 +1063,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
     assert ".ansys-nexus-proxy" in css
-    assert "h2:has(+ section.adr-container)" in css
+    assert "h2:has(~ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "--adr-border-color: #adb5bd !important;" in css
@@ -1738,6 +1738,478 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
     assert state["panelPaginationStyle"] is True
     assert state["panelHeaderBreakAfter"] == "avoid"
     assert state["plotlyResizeCount"] == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops", "footer"])
+@pytest.mark.parametrize("with_introduction", [False, True], ids=["adjacent", "with_intro"])
+@pytest.mark.parametrize("content_kind", ["table", "oversized_table", "oversized_visual"])
+@pytest.mark.parametrize("custom_header_sections", [False, True], ids=["plain", "custom_sections"])
+def test_playwright_pdf_keeps_heading_and_introduction_with_content(
+    tmp_path,
+    product_playwright_context,
+    layout_type,
+    with_introduction,
+    content_kind,
+    custom_header_sections,
+):
+    """Keep headings with the first content fragment without clipping oversized content."""
+    template_guid = "11111111-2222-4333-8444-555555555555"
+    heading = "MATERIAL-HEADING"
+    item_type = "image" if content_kind == "oversized_visual" else "table"
+    introductions = ["INTRODUCTION-ONE", "INTRODUCTION-TWO"] if with_introduction else []
+    introduction_html = "".join(f"<p>{text}</p>" for text in introductions)
+    header_before = (
+        '<section class="adr-container" id="custom-before">CUSTOM-BEFORE</section>'
+        if custom_header_sections
+        else ""
+    )
+    header_after = (
+        '<section class="adr-container" id="custom-after">CUSTOM-AFTER</section>'
+        if custom_header_sections
+        else ""
+    )
+    footer_break = '<div style="break-after:page;"></div>' if layout_type == "footer" else ""
+    following_section = "<p>AFTER-FOOTER</p>" if layout_type == "footer" else ""
+    if content_kind == "oversized_visual":
+        (tmp_path / "tall.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="1200">'
+            '<rect width="300" height="1200" fill="blue"/></svg>',
+            encoding="utf-8",
+        )
+        content_markers = ["VISUAL-END"]
+        content = '<img src="tall.svg" width="300" height="1200"><p>VISUAL-END</p>'
+    else:
+        row_count = 20 if content_kind == "oversized_table" else 3
+        content_markers = [f"ROW-{index:02d}" for index in range(row_count)]
+        rows = "".join(f"<tr><td>{marker}</td></tr>" for marker in content_markers)
+        content = f'<div class="table-responsive"><table><tbody>{rows}</tbody></table></div>'
+
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head>
+            <style>
+                body {{ margin: 0; }}
+                h3, p {{ margin: 0; font-size: 16px; line-height: 20px; }}
+                table {{ border-collapse: collapse; width: 100%; }}
+                tr {{ height: 40px; }}
+                td {{ padding: 0; }}
+                .adr-row {{ display: flex; }}
+                .adr-col-6 {{ width: 50%; }}
+            </style>
+        </head>
+        <body class="loaded">
+            <main id="report_root">
+                <div style="height: 430px">PREVIOUS-SECTION</div>
+                <div nexus_template="{template_guid}" data-layout-type="{layout_type}"
+                     aria-label="report layout container">
+                    <a id="TOC_item_tgt_test"></a>
+                    <div style="display: none" aria-label="debug info container"></div>
+                    <br>
+                    {header_before}
+                    <h3>{heading}</h3>
+                    {introduction_html}
+                    {header_after}
+                    <section class="adr-container" id="{template_guid}">
+                        <section class="adr-row">
+                            <section class="adr-col-6 text-center mx-auto">
+                                <adr-data-item id="data_item_test"
+                                    data-item-type="{item_type}">
+                                    <template shadowrootmode="open">
+                                        <section class="adr-data-item-container"><slot></slot></section>
+                                    </template>
+                                    {content}
+                                </adr-data-item>
+                            </section>
+                        </section>
+                    </section>
+                    {footer_break}
+                </div>
+                {following_section}
+            </main>
+        </body>
+        </html>
+        """,
+        page_size=None,
+        width="600px",
+        height="500px",
+        margins={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+    marker_pages = {}
+    custom_markers = ["CUSTOM-BEFORE", "CUSTOM-AFTER"] if custom_header_sections else []
+    following_markers = ["AFTER-FOOTER"] if layout_type == "footer" else []
+    for marker in [heading, *introductions, *content_markers, *custom_markers, *following_markers]:
+        assert sum(text.count(marker) for text in page_text) == 1, (
+            f"Missing or duplicated PDF content: {marker}"
+        )
+        marker_pages[marker] = next(index for index, text in enumerate(page_text) if marker in text)
+
+    for marker in [*introductions, content_markers[0]]:
+        assert marker_pages[marker] == marker_pages[heading]
+    if custom_header_sections:
+        assert marker_pages["CUSTOM-AFTER"] == marker_pages[heading]
+    if content_kind == "oversized_table":
+        assert marker_pages[content_markers[-1]] > marker_pages[content_markers[0]]
+    else:
+        assert len(reader.pages) == (3 if layout_type == "footer" else 2)
+        assert marker_pages[heading] == 1
+        assert marker_pages[content_markers[-1]] == marker_pages[heading]
+    if layout_type == "footer":
+        assert marker_pages["AFTER-FOOTER"] == marker_pages[content_markers[-1]] + 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("footer_kind", ["empty", "html_only", "content_only"])
+def test_playwright_pdf_preserves_footer_page_break_with_optional_parts(
+    tmp_path, product_playwright_context, footer_kind
+):
+    """Preserve the generator's forced page break even when footer parts are absent."""
+    template_guid = "11111111-2222-4333-8444-555555555555"
+    footer_markers = []
+    if footer_kind == "empty":
+        footer_html = f'<div nexus_template="{template_guid}" style="break-after:page;"></div>'
+    else:
+        if footer_kind == "html_only":
+            footer_markers = ["FOOTER-TITLE", "FOOTER-INTRO"]
+            header_html = "<h3>FOOTER-TITLE</h3><p>FOOTER-INTRO</p>"
+            content_html = ""
+        else:
+            footer_markers = [f"FOOTER-ROW-{index:02d}" for index in range(3)]
+            header_html = ""
+            rows = "".join(f"<tr><td>{marker}</td></tr>" for marker in footer_markers)
+            content_html = f"<adr-data-item><table><tbody>{rows}</tbody></table></adr-data-item>"
+        footer_html = (
+            f"<br>{header_html}"
+            f'<section class="adr-container" id="{template_guid}">{content_html}</section>'
+            '<div style="break-after:page;"></div>'
+        )
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head><style>
+            body, h3, p {{ margin: 0; }}
+            h3, p {{ font-size: 16px; line-height: 20px; }}
+            table {{ border-collapse: collapse; }}
+            tr {{ height: 40px; }}
+            td {{ padding: 0; }}
+        </style></head>
+        <body class="loaded"><main id="report_root">
+            <p>BEFORE-FOOTER</p>
+            <div nexus_template="{template_guid}" data-layout-type="footer">
+                {footer_html}
+            </div>
+            <p>AFTER-FOOTER</p>
+        </main></body></html>
+        """,
+        page_size=None,
+        width="600px",
+        height="500px",
+        margins={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+
+    assert len(reader.pages) == 2
+    for marker in ["BEFORE-FOOTER", *footer_markers]:
+        assert page_text[0].count(marker) == 1
+        assert marker not in page_text[1]
+    assert "AFTER-FOOTER" not in page_text[0]
+    assert page_text[1].count("AFTER-FOOTER") == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
+def test_pagination_finds_following_container_without_template_metadata(
+    tmp_path, product_playwright_context, layout_type
+):
+    """Preserve standalone HTML with a custom content section before its heading."""
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head><style>
+            body, h3, p {{ margin: 0; }}
+            h3, p {{ line-height: 20px; }}
+        </style></head>
+        <body><main id="report_root">
+            <div id="standalone" data-layout-type="{layout_type}">
+                <section class="adr-container">Earlier custom HTML</section>
+                <h3>Standalone heading</h3>
+                <p>Introduction</p>
+                <section class="adr-container">
+                    <adr-data-item>
+                        <div class="nexus-plot" style="height: 2000px; width: 300px">Plot</div>
+                    </adr-data-item>
+                </section>
+            </div>
+        </main></body>
+        </html>
+        """,
+        page_size=PDFPageSize.A4,
+    )
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = _launch_product_chromium(playwright, product_playwright_context)
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        renderer._apply_pdf_capture_styles(page)
+        renderer._prepare_content_for_pagination(page)
+        state = page.evaluate(
+            """() => {
+                const layout = document.getElementById('standalone');
+                return {
+                    height: layout.getBoundingClientRect().height,
+                    breakInside: layout.style.getPropertyValue('break-inside')
+                };
+            }"""
+        )
+        browser.close()
+
+    assert state["breakInside"] == "avoid"
+    assert state["height"] <= (
+        renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX + 0.5
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
+@pytest.mark.parametrize(
+    "with_heading, with_introduction, content_kind",
+    [
+        pytest.param(False, False, "visual", id="content_only_visual"),
+        pytest.param(False, False, "table", id="content_only_table"),
+        pytest.param(False, True, "visual", id="introduction_and_content"),
+        pytest.param(True, False, "missing", id="heading_only"),
+        pytest.param(True, True, "missing", id="heading_and_introduction"),
+        pytest.param(True, True, "empty", id="heading_and_introduction_empty_body"),
+        pytest.param(False, False, "missing", id="empty"),
+    ],
+)
+def test_pagination_preserves_optional_report_parts(
+    tmp_path,
+    product_playwright_context,
+    monkeypatch,
+    layout_type,
+    with_heading,
+    with_introduction,
+    content_kind,
+):
+    """Missing report parts must not prevent export or disable standalone media fitting."""
+    heading_html = "<h3>OPTIONAL-TITLE</h3>" if with_heading else ""
+    introduction_html = "<p>OPTIONAL-INTRO</p>" if with_introduction else ""
+    content_markers = []
+    if content_kind == "visual":
+        (tmp_path / "optional.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="1200">'
+            '<rect width="300" height="1200" fill="blue"/></svg>',
+            encoding="utf-8",
+        )
+        content = (
+            '<adr-data-item><img id="optional-visual" src="optional.svg" '
+            'width="300" height="1200"><p>OPTIONAL-VISUAL</p></adr-data-item>'
+        )
+        content_markers = ["OPTIONAL-VISUAL"]
+    elif content_kind == "table":
+        content_markers = [f"OPTIONAL-ROW-{index:02d}" for index in range(20)]
+        rows = "".join(f"<tr><td>{marker}</td></tr>" for marker in content_markers)
+        content = f"<adr-data-item><table><tbody>{rows}</tbody></table></adr-data-item>"
+    else:
+        content = ""
+    container_html = (
+        f'<section class="adr-container" id="optional">{content}</section>'
+        if content_kind != "missing"
+        else ""
+    )
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head><style>
+            body, h3, p {{ margin: 0; }}
+            h3, p {{ font-size: 16px; line-height: 20px; }}
+            table {{ border-collapse: collapse; }}
+            tr {{ height: 40px; }}
+            td {{ padding: 0; }}
+        </style></head>
+        <body class="loaded"><main id="report_root">
+            <p>BEFORE-SECTION</p>
+            <div id="optional-layout" nexus_template="optional" data-layout-type="{layout_type}">
+                {heading_html}
+                {introduction_html}
+                {container_html}
+            </div>
+            <p>AFTER-SECTION</p>
+        </main></body></html>
+        """,
+        page_size=None,
+        width="600px",
+        height="500px",
+        margins={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate(
+                """() => ({
+                    breakInside: document.getElementById('optional-layout')
+                        .style.getPropertyValue('break-inside'),
+                    visualHeight: document.getElementById('optional-visual')
+                        ?.getBoundingClientRect().height
+                })"""
+            )
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+    all_text = "\n".join(page_text)
+
+    assert all_text.count("OPTIONAL-TITLE") == int(with_heading)
+    assert all_text.count("OPTIONAL-INTRO") == int(with_introduction)
+    for marker in ["BEFORE-SECTION", "AFTER-SECTION", *content_markers]:
+        assert all_text.count(marker) == 1
+    expected_grouping = with_heading and content_kind != "missing"
+    assert state["breakInside"] == ("avoid" if expected_grouping else "")
+    if content_kind == "visual":
+        assert (
+            0
+            < state["visualHeight"]
+            <= (renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX)
+        )
+    elif content_kind == "table":
+        first_page = next(
+            index for index, text in enumerate(page_text) if content_markers[0] in text
+        )
+        last_page = next(
+            index for index, text in enumerate(page_text) if content_markers[-1] in text
+        )
+        assert last_page > first_page
+    else:
+        assert len(reader.pages) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
+def test_pagination_does_not_borrow_a_nested_layout_heading(
+    tmp_path, product_playwright_context, layout_type
+):
+    """A heading-free parent must not be grouped using a child's heading and content."""
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html><body><main id="report_root">
+            <div id="parent" nexus_template="parent-content" data-layout-type="{layout_type}">
+                <section class="adr-container" id="parent-content">
+                    <div id="child" nexus_template="child-content" data-layout-type="{layout_type}">
+                        <h3>CHILD-TITLE</h3>
+                        <section class="adr-container" id="child-content">CHILD-CONTENT</section>
+                    </div>
+                </section>
+            </div>
+        </main></body></html>
+        """,
+    )
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = _launch_product_chromium(playwright, product_playwright_context)
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        renderer._apply_pdf_capture_styles(page)
+        result = renderer._set_pagination_cohesion(page, renderer._printable_page_height_px())
+        state = page.evaluate(
+            """() => ({
+                parentBreakInside: document.getElementById('parent')
+                    .style.getPropertyValue('break-inside'),
+                childBreakInside: document.getElementById('child')
+                    .style.getPropertyValue('break-inside')
+            })"""
+        )
+        browser.close()
+
+    assert result["keptLayouts"] == ["CHILD-TITLE"]
+    assert state == {"parentBreakInside": "", "childBreakInside": "avoid"}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrapper_kind", ["positioned_box", "sidebar_toc"])
+def test_pagination_does_not_treat_wrapped_layouts_as_standard_containers(
+    tmp_path, product_playwright_context, wrapper_kind
+):
+    """Respect positioned box children and sidebar wrappers emitted by the generator."""
+    inner = """
+        <div nexus_template="inner" data-layout-type="basic">
+            <br><h3>Inner heading</h3>
+            <section class="adr-container" id="inner">Inner content</section>
+        </div>
+    """
+    if wrapper_kind == "positioned_box":
+        layout_type = "box"
+        content = f"""
+            <h3>Outer heading</h3>
+            <section class="adr-container" id="custom-header">Custom header HTML</section>
+            <div id="box_template_0" style="width: 320px; height: 240px">
+                <div style="position: relative; width: 320px; height: 240px; overflow: hidden">
+                    {inner}
+                </div>
+            </div>
+        """
+    else:
+        layout_type = "basic"
+        content = f"""
+            <section id="toc_container">
+                <br><h3>Outer heading</h3>
+                <section class="adr-container" id="outer">{inner}</section>
+            </section>
+        """
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html><body><main id="report_root">
+            <div id="outer-layout" nexus_template="outer" data-layout-type="{layout_type}">
+                {content}
+            </div>
+        </main></body></html>
+        """,
+    )
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = _launch_product_chromium(playwright, product_playwright_context)
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        renderer._apply_pdf_capture_styles(page)
+        result = renderer._set_pagination_cohesion(page, renderer._printable_page_height_px())
+        state = page.evaluate(
+            """() => ({
+                outerBreakInside: document.getElementById('outer-layout')
+                    .style.getPropertyValue('break-inside'),
+                positionedBox: document.getElementById('box_template_0')?.getAttribute('style')
+            })"""
+        )
+        browser.close()
+
+    assert result["keptLayouts"] == ["Inner heading"]
+    assert state["outerBreakInside"] == ""
+    if wrapper_kind == "positioned_box":
+        assert state["positionedBox"] == "width: 320px; height: 240px"
 
 
 @pytest.mark.unit
