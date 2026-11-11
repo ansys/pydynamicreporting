@@ -18,31 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Browser-PDF visual sizing now includes panel titles and spacing through nested
-  layout wrappers, such as tabs. This avoids blank pages and separated panel
-  titles in shorter page formats, including A4 landscape, without forcing a
-  multi-section panel onto one page.
-- Browser-PDF export now keeps a section heading and any introductory text with
-  the section's content in basic, item-based box, header, tagprops, and footer
-  layouts when the group fits on one page. Previously only a basic layout whose
-  heading was directly followed by its content was kept together. Custom header
-  sections are not mistaken for the section's content, and footer layouts keep
-  their intentional page break.
-- Browser-PDF export now launches the browser packaged in the ADR installation
-  directly by its executable path, instead of first trying a launch and retrying
-  after it fails. This avoids the empty temporary folders that a failed browser
-  launch leaves behind, and the export no longer logs a warning when the ADR
-  installation ships a different browser build than this release expects. A
-  browser build in the ADR installation that is missing its executable is reported
-  before any launch. Browser launch failures, such as missing system libraries, are
-  never retried and keep the original Playwright error as their cause.
+- Browser-PDF export now keeps a panel title on the same page as the panel's
+  first content, including panels that contain tabs. This removes blank pages
+  and stranded panel titles on shorter pages such as A4 landscape. Long panels
+  still continue across pages.
+- Browser-PDF export now keeps a section heading and any introductory text on
+  the same page as the section's content when they fit. This applies to basic,
+  box, header, tagprops, and footer layouts.
+- Browser-PDF export now starts the browser in the ADR installation directly.
+  It no longer leaves empty temporary folders behind after a failed start, and
+  no longer logs a warning when the ADR installation ships a different browser
+  build than this release expects. A failed start, for example because of
+  missing system libraries, is reported once with its original cause.
 - Browser-PDF export no longer fails when the ADR installation's browser folder
   contains extra browser builds, for example after copying a newer ADR package
-  over an older installation. It uses the build named in the installation's browser
-  metadata and ignores the others.
-- Browser-PDF warnings about the ADR installation's browser package, such as
-  missing or unreadable browser metadata, now go to the logger of the export that
-  found them instead of always to the package logger.
+  over an older installation.
+- Browser-PDF warnings about a missing or damaged browser package now go to the
+  logger used by the export instead of the package's default logger.
 
 ## [1.0.0rc4] - 2026-11-02
 

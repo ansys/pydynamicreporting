@@ -133,19 +133,15 @@ MathJax, Plotly, images, and videos. Browser layout and pagination use the
 selected printable page dimensions. The live page keeps its normal network
 access. Authentication cookies are scoped to the originating ADR service.
 
-In basic, item-based box, header, tagprops, and footer layouts, print preparation
-keeps a direct section heading and any introductory text with the layout's own content
-when the group fits on one page. Taller sections can still paginate. Headings
-and introductory text are optional. Layouts without a direct heading or a matching
-content container skip only this grouping step; their content still receives normal
-sizing and pagination. Empty content containers are allowed.
-Footer layouts retain their intentional page break.
-Positioned box children and sidebar table-of-contents wrappers are not flattened.
+The export keeps related content on the same page when it fits:
 
-Visual sizing includes the enclosing panel's title and spacing, even when layout
-wrappers such as tabs sit between the panel and its content. A panel title is
-included only with the first content fragment, not every image. Panels with
-several sections can still span multiple pages.
+- A section heading and any introductory text stay with the section's content.
+- A panel title stays with the first content in the panel, including panels
+  that contain tabs.
+- Images, plots, and 3D scenes that are taller than a page are scaled down to
+  fit, with room left for the heading or panel title above them.
+
+Sections and panels that are too long for one page continue on the next page.
 
 Custom asynchronous JavaScript in raw HTML items or layout HTML does not have
 its own readiness signal. If that code finishes outside the built-in signals,
@@ -159,33 +155,33 @@ report service is remote. The local ``Service`` therefore needs ADR 27.1
 installation metadata and the complete product-shipped browser package. You
 don't need to install a browser separately.
 
-The browser also relies on standard system libraries on that machine. Windows
-always provides them, so nothing extra is needed there. Most Linux machines
-that run ADR also provide them, but a minimal Linux server or container can
-lack some. ``export_browser_pdf`` then returns ``False`` because the browser
-fails to start. To find the missing library, set the ``ansys.dynamicreporting.core``
-logger to ``DEBUG`` and repeat the export. The logged browser error contains a
-line such as ``error while loading shared libraries: libgbm.so.1``. For
-example, pass ``log_output="stdout"`` and ``log_level="DEBUG"`` when
-constructing the ``Service`` (see :ref:`connected_logging`):
+On Windows, nothing else is needed on that machine. On Linux, the browser needs
+some standard system libraries. Most Linux machines already have them, but a
+minimal server or container might not. If one is missing, the browser cannot
+start and ``export_browser_pdf`` returns ``False``.
+
+To see which library is missing, turn on debug logging and run the export
+again (see :ref:`connected_logging`):
 
 .. code-block:: python
 
    service = adr.Service(
-       ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
+       ansys_installation="/ansys_inc/v271",
        log_output="stdout",
        log_level="DEBUG",
    )
 
-Install the system package that provides that library, or ask your system
-administrator to, then export again. Playwright's `system dependency documentation
+Look in the output for a line such as
+``error while loading shared libraries: libgbm.so.1``. Install the system
+package that provides that library, or ask your system administrator to, and
+export again. Playwright's `system dependency documentation
 <https://playwright.dev/python/docs/browsers#install-system-dependencies>`__
-describes a command that installs all of them at once on supported Linux
-distributions.
+describes a command that installs all of the libraries at once on supported
+Linux distributions.
 
-The export uses the browser build named in the ADR installation's browser
-metadata. Other browser builds in the same folder, for example from copying a
-newer ADR package over an older installation, are ignored.
+If the ADR installation contains more than one browser build, for example
+after copying a newer ADR package over an older installation, the export uses
+the build that belongs to the installation and ignores the others.
 
 Missing or incomplete product browser packages are reported through the ADR
 export error. Browser and context cleanup failures are logged for diagnostics
