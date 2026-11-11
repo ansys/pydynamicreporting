@@ -1081,37 +1081,43 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return visuals;
                 };
 
-                const panelContent = new Map();
+                const panelItems = new Map();   // visible content items of each panel, cached
                 const includePanelBounds = (visual, groupStart, groupEnd) => {
-                    // A panel can contain intermediate wrappers or several sections. Include
-                    // its header only with the first content item, and its bottom spacing only
-                    // with the last. Measure current bounds after any earlier visual resizes.
+                    // A panel can contain intermediate wrappers or several sections. Its
+                    // header shares a page with the panel's first content, and its bottom
+                    // spacing with the last. So widen the caller's group to the panel top
+                    // when no item in the panel starts above the group, and to the panel
+                    // bottom when none ends below it. Every visual of that first or last
+                    // group gets the same budget, for example two images in one row.
+                    // Measure current bounds after any earlier visual resizes.
+                    let start = groupStart;
+                    let end = groupEnd;
                     for (let panel = visual.closest('adr-panel'); panel;
                             panel = panel.parentElement?.closest('adr-panel')) {
                         const panelLayout = panel.closest('div[data-layout-type="panel"]');
                         if (!panelLayout) {
                             continue;
                         }
-                        if (!panelContent.has(panel)) {
-                            panelContent.set(panel, {
-                                visuals: findRenderedVisuals(panel),
-                                items: [...panel.querySelectorAll(
-                                    'adr-data-item, adr-slider-template, table'
-                                )].filter(isVisible)
-                            });
+                        if (!panelItems.has(panel)) {
+                            panelItems.set(panel, [...panel.querySelectorAll(
+                                'adr-data-item, adr-slider-template, table'
+                            )].filter(isVisible));
                         }
-                        const { visuals, items } = panelContent.get(panel);
+                        const items = panelItems.get(panel);
                         const panelRect = panelLayout.getBoundingClientRect();
-                        if (visual === visuals[0] && (!items.length
-                                || items[0].contains(visual))) {
-                            groupStart = Math.min(groupStart, panelRect.top);
+                        // Items are in document order, so an earlier item is found at the
+                        // front and a later one at the back. Each search scans the whole
+                        // list only for visuals in the panel's first or last group.
+                        if (!items.some(
+                                item => item.getBoundingClientRect().top < groupStart)) {
+                            start = Math.min(start, panelRect.top);
                         }
-                        if (visual === visuals[visuals.length - 1] && (!items.length
-                                || items[items.length - 1].contains(visual))) {
-                            groupEnd = Math.max(groupEnd, panelRect.bottom);
+                        if (!items.findLast(
+                                item => item.getBoundingClientRect().bottom > groupEnd)) {
+                            end = Math.max(end, panelRect.bottom);
                         }
                     }
-                    return { groupStart, groupEnd };
+                    return { groupStart: start, groupEnd: end };
                 };
 
                 // Build a short human-readable name like "img#plot3" for log messages.
@@ -1310,13 +1316,27 @@ __FIND_LAYOUT_CONTAINER__
                 // These layouts can own headings and content containers, so fitting
                 // against that group keeps a title with its resized visual.
                 // Include introductory content in the first visual's page-height budget.
+                const headingLayouts = [];          // document order: parents before children
+                const layoutContainers = new Set(); // every container owned by such a layout
                 for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
                     const container = findLayoutContainer(layout, heading);
-                    if (!container) {
-                        continue;
+                    if (container) {
+                        headingLayouts.push({ layout, heading, container });
+                        layoutContainers.add(container);
                     }
+                }
+                // The nearest layout-owned container around a visual. Sections added by
+                // custom header HTML are not owned by a layout and are passed over.
+                const owningContainer = visual => {
+                    let section = visual.closest('section.adr-container');
+                    while (section && !layoutContainers.has(section)) {
+                        section = section.parentElement?.closest('section.adr-container');
+                    }
+                    return section;
+                };
 
+                for (const { layout, heading, container } of headingLayouts) {
                     const visuals = findRenderedVisuals(container);
                     if (!visuals.length) {
                         continue;
@@ -1328,11 +1348,19 @@ __FIND_LAYOUT_CONTAINER__
                     ) || visuals[0];
                     for (const visual of visuals) {
                         const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
-                        const ownerRect = owner.getBoundingClientRect();
                         const includesHeading = owner === firstOwner;
+                        // A nested layout with its own heading fits its own visuals in a
+                        // later iteration, so that heading stays in their page budget. Only
+                        // the first owner is fitted here even when it is nested, because it
+                        // shares a page with this layout's heading and introduction.
+                        if (!includesHeading && owningContainer(visual) !== container) {
+                            continue;
+                        }
+                        const ownerRect = owner.getBoundingClientRect();
                         // "groupStart" is the top of everything sharing this visual's page. The
-                        // first visual also carries the heading (and the panel header, if any),
-                        // so its group starts higher; later visuals start at their own top.
+                        // first owner's visuals also carry the heading and introduction, so
+                        // their group starts at the layout top; later visuals start at their
+                        // own top. "fitVisual" adds an enclosing panel's header and spacing.
                         const groupStart = includesHeading ? layoutRect.top : ownerRect.top;
                         fitVisual(
                             visual,
