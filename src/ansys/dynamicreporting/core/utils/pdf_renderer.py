@@ -110,6 +110,24 @@ _PAGINATION_LAYOUT_SELECTOR = (
 _PAGINATION_HEADING_SELECTOR = (
     ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
 )
+# JavaScript helper substituted for ``__FIND_LAYOUT_CONTAINER__`` in the pagination page
+# scripts, so the visual-fitting and cohesion passes agree on which container a layout owns.
+_PAGINATION_FIND_LAYOUT_CONTAINER_JS = """
+                // Return the content container that follows a layout's heading, or a falsy
+                // value when the layout has no heading or no such container. The generated
+                // body carries the layout GUID as its id; custom header HTML may add other
+                // sections before it. Standalone HTML may omit the GUID, and then the first
+                // following section is used.
+                const findLayoutContainer = (layout, heading) => {
+                    const templateGuid = layout.getAttribute('nexus_template');
+                    let container = heading?.nextElementSibling;
+                    while (container && (!container.matches('section.adr-container')
+                            || (templateGuid && container.id !== templateGuid))) {
+                        container = container.nextElementSibling;
+                    }
+                    return container;
+                };
+"""
 # Joining the registered tags produces ``:is(ansys-adr-viewer, ansys-nexus-viewer)``.
 _SCENE_VIEWER_SELECTOR = f":is({', '.join(ANSYS_VIEWER_TAGS)})"
 # Visual elements treated as indivisible and resized instead of split across PDF pages.
@@ -1280,20 +1298,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
                     return true;
                 };
-
+__FIND_LAYOUT_CONTAINER__
                 // These layouts can own headings and content containers, so fitting
                 // against that group keeps a title with its resized visual.
                 // Include introductory content in the first visual's page-height budget.
                 for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
-                    // The generated body owns the layout GUID; custom header HTML may
-                    // contain other sections. Standalone HTML may omit this metadata.
-                    const templateGuid = layout.getAttribute('nexus_template');
-                    let container = heading?.nextElementSibling;
-                    while (container && (!container.matches('section.adr-container')
-                            || (templateGuid && container.id !== templateGuid))) {
-                        container = container.nextElementSibling;
-                    }
+                    const container = findLayoutContainer(layout, heading);
                     if (!container) {
                         continue;
                     }
@@ -1388,7 +1399,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     window.clearTimeout(timeoutHandle);
                 }
                 return result;
-            }""",
+            }""".replace("__FIND_LAYOUT_CONTAINER__", _PAGINATION_FIND_LAYOUT_CONTAINER_JS),
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
@@ -1419,18 +1430,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                 // so a block sitting exactly at the edge is not forced to stay whole.
                 const fitsOnPage = element =>
                     element.getBoundingClientRect().height <= printableHeightPx - fitGuardPx;
-
+__FIND_LAYOUT_CONTAINER__
                 const keptLayouts = [];
                 // Avoid a split only when the complete heading-plus-content
                 // group fits; forcing it on taller content can create clipping.
                 for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
-                    const templateGuid = layout.getAttribute('nexus_template');
-                    let container = heading?.nextElementSibling;
-                    while (container && (!container.matches('section.adr-container')
-                            || (templateGuid && container.id !== templateGuid))) {
-                        container = container.nextElementSibling;
-                    }
+                    const container = findLayoutContainer(layout, heading);
                     if (!container || !isVisible(layout)) {
                         continue;
                     }
@@ -1481,7 +1487,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
 
                 return { keptLayouts, keptPanels };
-            }""",
+            }""".replace("__FIND_LAYOUT_CONTAINER__", _PAGINATION_FIND_LAYOUT_CONTAINER_JS),
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
