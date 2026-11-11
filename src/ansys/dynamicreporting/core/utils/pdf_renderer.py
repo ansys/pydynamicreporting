@@ -94,6 +94,12 @@ from ..exceptions import ADRException
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 # Headless-shell executable inside a packaged ``chromium_headless_shell-<build>`` directory,
 # keyed by the ADR ``machines/<arch>`` name. Browser-PDF export launches it by path.
+# Playwright's installer writes this inner layout and Playwright does not document it. The
+# layout is fixed by the Playwright release that built the ADR browser
+# (``chromium_headless_shell-1248`` for Playwright 1.64.1), not by the Playwright version
+# installed here. A product build with a different inner layout makes every export fail,
+# reporting the browser build as incomplete. The keys must match the values
+# ``_playwright_machine_arch`` returns.
 _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
     "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
     "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
@@ -303,6 +309,8 @@ def _packaged_headless_shell_executable(
     binary_info: _PlaywrightBrowserBinaryInfo, logger: Logger
 ) -> Path | None:
     """Return the headless-shell executable packaged in the Ansys installation, if present."""
+    # The table lookup cannot miss: ``_validate_playwright_browsers_path`` rejects metadata
+    # whose machine arch differs from this machine's ``_playwright_machine_arch`` value.
     executable = (
         binary_info.path
         / binary_info.packaged_binary_dir
