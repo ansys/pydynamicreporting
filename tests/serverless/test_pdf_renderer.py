@@ -1935,6 +1935,221 @@ def test_playwright_pdf_does_not_repeat_panel_header_budget(
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("column_count", [1, 2, 3])
+@pytest.mark.parametrize("parent_parts", ["none", "heading", "heading_and_introduction"])
+@pytest.mark.parametrize("continuation", ["none", "row", "column"])
+def test_playwright_pdf_keeps_parent_heading_with_first_column_fragments(
+    tmp_path, product_playwright_context, monkeypatch, column_count, parent_parts, continuation
+):
+    """Share the parent's heading space across columns, but not later fragments."""
+    for column, color in enumerate(["red", "green", "blue"][:column_count]):
+        Image.new("RGB", (240, 900), color).save(tmp_path / f"column-{column}.png")
+
+    def section_html(group: int, column: int) -> str:
+        guid = f"group-{group}-column-{column}"
+        return f"""
+            <div data-layout-type="basic" nexus_template="{guid}">
+                <h2>CHILD-{group}-{column}</h2>
+                <section class="adr-container" id="{guid}">
+                    <adr-data-item>
+                        <img id="image-{group}-{column}" src="column-{column}.png"
+                             style="width:240px;height:900px">
+                        <p>END-{group}-{column}</p>
+                    </adr-data-item>
+                </section>
+            </div>
+        """
+
+    def row_html(columns: list[str]) -> str:
+        if column_count == 1:
+            return "".join(columns)
+        cells = "".join(
+            f'<section class="adr-col-{12 // column_count}" '
+            f'style="flex:0 0 auto;width:{100 / column_count:.8f}%;height:fit-content">'
+            f"{content}</section>"
+            for content in columns
+        )
+        return f'<section class="adr-row" style="display:flex;flex-wrap:wrap">{cells}</section>'
+
+    first_columns = []
+    for column in range(column_count):
+        content = section_html(0, column)
+        if continuation == "column":
+            content += section_html(1, column)
+            content = (
+                f'<div data-layout-type="basic" nexus_template="branch-{column}">'
+                f'<section class="adr-container" id="branch-{column}">{content}</section></div>'
+            )
+        first_columns.append(content)
+    content = row_html(first_columns)
+    if column_count > 1:
+        # The generator emits an empty row before the first populated row.
+        content = '<section class="adr-row"></section>' + content
+    if continuation == "row":
+        content += row_html([section_html(1, column) for column in range(column_count)])
+
+    parent_html = "<h2>PARENT-TITLE</h2>" if parent_parts != "none" else ""
+    if parent_parts == "heading_and_introduction":
+        parent_html += "<p>PARENT-INTRODUCTION</p>"
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<p style="break-after:page">PREVIOUS-SECTION</p>'
+            '<div id="parent-layout" data-layout-type="basic" nexus_template="parent">'
+            f'{parent_html}<section class="adr-container" id="parent">{content}</section></div>'
+        ),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => {
+                const parent = document.getElementById('parent-layout');
+                return {
+                    parentHeight: parent.getBoundingClientRect().height,
+                    prefixHeight: document.getElementById('parent').getBoundingClientRect().top
+                        - parent.getBoundingClientRect().top,
+                    parentBreak: getComputedStyle(parent).breakInside,
+                    heights: Object.fromEntries([...document.querySelectorAll('img')].map(
+                        image => [image.id, image.getBoundingClientRect().height]))
+                };
+            }""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    group_count = 1 if continuation == "none" else 2
+    assert len(reader.pages) == group_count + 1
+    assert all(page.strip() for page in text)
+    assert text[0].strip() == "PREVIOUS-SECTION"
+    assert len(reader.pages[0].images) == 0
+    assert sum(page.count("PARENT-TITLE") for page in text) == int(parent_parts != "none")
+    assert sum(page.count("PARENT-INTRODUCTION") for page in text) == int(
+        parent_parts == "heading_and_introduction"
+    )
+    if parent_parts != "none":
+        assert "PARENT-TITLE" in text[1]
+    if parent_parts == "heading_and_introduction":
+        assert "PARENT-INTRODUCTION" in text[1]
+    for group in range(group_count):
+        assert len(reader.pages[group + 1].images) == column_count
+        for column in range(column_count):
+            for marker in (f"CHILD-{group}-{column}", f"END-{group}-{column}"):
+                assert sum(page.count(marker) for page in text) == 1
+                assert marker in text[group + 1]
+    if continuation == "none":
+        assert state["parentHeight"] <= (
+            renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX
+        )
+    else:
+        assert state["parentBreak"] == "auto"
+        for column in range(column_count):
+            difference = (
+                state["heights"][f"image-1-{column}"] - state["heights"][f"image-0-{column}"]
+            )
+            assert difference == pytest.approx(state["prefixHeight"], abs=1)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_kind", ["nested", "nested_without_heading", "wrapped"])
+def test_playwright_pdf_keeps_parent_heading_with_nested_and_wrapped_columns(
+    tmp_path, product_playwright_context, layout_kind
+):
+    """Include nested first rows, without treating wrapped columns as the first row."""
+    for index, color in enumerate(["red", "green", "blue", "yellow"]):
+        height = 180 if layout_kind == "wrapped" and index < 3 else 900
+        Image.new("RGB", (120, height), color).save(tmp_path / f"column-{index}.png")
+
+    def layout_html(guid: str, heading: str, content: str) -> str:
+        heading_html = f"<h2>{heading}</h2>" if heading else ""
+        return (
+            f'<div data-layout-type="basic" nexus_template="{guid}">{heading_html}'
+            f'<section class="adr-container" id="{guid}">{content}</section></div>'
+        )
+
+    def row_html(cells: list[tuple[int, str]]) -> str:
+        columns = "".join(
+            f'<section class="adr-col-{width}" '
+            f'style="flex:0 0 auto;width:{100 * width / 12:.8f}%;height:fit-content">'
+            f"{content}</section>"
+            for width, content in cells
+        )
+        return (
+            '<section class="adr-row"></section>'
+            f'<section class="adr-row" style="display:flex;flex-wrap:wrap">{columns}</section>'
+        )
+
+    leaves = [
+        layout_html(
+            f"child-{index}",
+            f"CHILD-{index}",
+            f'<adr-data-item><img src="column-{index}.png" '
+            f'style="width:120px;height:{180 if layout_kind == "wrapped" and index < 3 else 900}px">'
+            f"<p>END-{index}</p></adr-data-item>",
+        )
+        for index in range(4)
+    ]
+    if layout_kind == "wrapped":
+        content = row_html([(3 if index < 3 else 4, leaf) for index, leaf in enumerate(leaves)])
+    else:
+        content = row_html(
+            [
+                (
+                    6,
+                    layout_html(
+                        f"branch-{branch}",
+                        f"BRANCH-{branch}" if layout_kind == "nested" else "",
+                        row_html([(6, leaf) for leaf in leaves[2 * branch : 2 * branch + 2]]),
+                    ),
+                )
+                for branch in range(2)
+            ]
+        )
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<p style="break-after:page">PREVIOUS-SECTION</p>'
+            '<div data-layout-type="basic" nexus_template="parent">'
+            "<h2>PARENT-TITLE</h2><p>PARENT-INTRODUCTION</p>"
+            f'<section class="adr-container" id="parent">{content}</section></div>'
+        ),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == (3 if layout_kind == "wrapped" else 2)
+    assert all(page.strip() for page in text)
+    assert text[0].strip() == "PREVIOUS-SECTION"
+    assert len(reader.pages[0].images) == 0
+    for marker in ("PARENT-TITLE", "PARENT-INTRODUCTION"):
+        assert sum(page.count(marker) for page in text) == 1
+        assert marker in text[1]
+    for index in range(4):
+        page_index = 2 if layout_kind == "wrapped" and index == 3 else 1
+        for marker in (f"CHILD-{index}", f"END-{index}"):
+            assert sum(page.count(marker) for page in text) == 1
+            assert marker in text[page_index]
+    assert len(reader.pages[1].images) == (3 if layout_kind == "wrapped" else 4)
+    if layout_kind == "wrapped":
+        assert len(reader.pages[2].images) == 1
+    elif layout_kind == "nested":
+        for branch in range(2):
+            assert sum(page.count(f"BRANCH-{branch}") for page in text) == 1
+            assert f"BRANCH-{branch}" in text[1]
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops", "footer"])
 @pytest.mark.parametrize("with_introduction", [False, True], ids=["adjacent", "with_intro"])
 @pytest.mark.parametrize("content_kind", ["table", "oversized_table", "oversized_visual"])

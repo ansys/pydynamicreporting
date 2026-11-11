@@ -25,11 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Browser-PDF export now keeps a section heading and any introductory text on
   the same page as the section's content when they fit. This applies to basic,
   box, header, tagprops, and footer layouts.
-- Browser-PDF export now starts the browser in the ADR installation directly.
-  It no longer leaves empty temporary folders behind after a failed start, and
-  no longer logs a warning when the ADR installation ships a different browser
-  build than this release expects. A failed start, for example because of
-  missing system libraries, is reported once with its original cause.
+- Browser-PDF export now starts the browser in the ADR installation directly,
+  avoiding an unnecessary failed first attempt and the empty temporary folders
+  that attempt can leave behind. It no longer logs a warning when the ADR
+  installation ships a different browser build than this release expects.
+  A failed start, for example because of missing system libraries, is reported
+  once with its original cause.
 - Browser-PDF export no longer fails when the ADR installation's browser folder
   contains extra browser builds, for example after copying a newer ADR package
   over an older installation.

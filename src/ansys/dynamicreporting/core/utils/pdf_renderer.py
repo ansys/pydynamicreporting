@@ -1315,7 +1315,7 @@ class _BasePlaywrightPDFRenderer(ABC):
 __FIND_LAYOUT_CONTAINER__
                 // These layouts can own headings and content containers, so fitting
                 // against that group keeps a title with its resized visual.
-                // Include introductory content in the first visual's page-height budget.
+                // Include introductory content in the first row's page-height budget.
                 const headingLayouts = [];          // document order: parents before children
                 const layoutContainers = new Set(); // every container owned by such a layout
                 for (const layout of document.querySelectorAll(layoutSelector)) {
@@ -1343,22 +1343,50 @@ __FIND_LAYOUT_CONTAINER__
                     }
 
                     const layoutRect = layout.getBoundingClientRect();
-                    const firstOwner = visuals[0].closest(
-                        'adr-data-item, adr-slider-template'
-                    ) || visuals[0];
+                    const firstOwners = new Set();
+                    const firstRows = new Map();
                     for (const visual of visuals) {
                         const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
-                        const includesHeading = owner === firstOwner;
+                        let includesHeading = !firstOwners.size || firstOwners.has(owner);
+                        const rowColumns = [];
+                        // Follow the first content fragment through parallel columns,
+                        // including nested rows, but not later rows or wrapped columns.
+                        for (let column = visual; column && column !== container;
+                                column = column.parentElement) {
+                            const row = column.parentElement;
+                            if (!row?.matches('section.adr-row')) {
+                                continue;
+                            }
+                            rowColumns.push({ row, column });
+                            const firstRow = firstRows.get(row);
+                            if (firstRow && !firstRow.columns.has(column)) {
+                                firstRow.columns.add(column);
+                                includesHeading ||= column.getBoundingClientRect().top
+                                    <= firstRow.firstColumn.getBoundingClientRect().top;
+                            }
+                        }
+                        if (includesHeading) {
+                            firstOwners.add(owner);
+                            for (const { row, column } of rowColumns) {
+                                if (!firstRows.has(row)) {
+                                    firstRows.set(row, {
+                                        firstColumn: column,
+                                        columns: new Set()
+                                    });
+                                }
+                                firstRows.get(row).columns.add(column);
+                            }
+                        }
                         // A nested layout with its own heading fits its own visuals in a
                         // later iteration, so that heading stays in their page budget. Only
-                        // the first owner is fitted here even when it is nested, because it
-                        // shares a page with this layout's heading and introduction.
+                        // the first owners in the first row are fitted here even when nested,
+                        // because they share this layout's heading and introduction.
                         if (!includesHeading && owningContainer(visual) !== container) {
                             continue;
                         }
                         const ownerRect = owner.getBoundingClientRect();
                         // "groupStart" is the top of everything sharing this visual's page. The
-                        // first owner's visuals also carry the heading and introduction, so
+                        // first owners' visuals also carry the heading and introduction, so
                         // their group starts at the layout top; later visuals start at their
                         // own top. "fitVisual" adds an enclosing panel's header and spacing.
                         const groupStart = includesHeading ? layoutRect.top : ownerRect.top;
