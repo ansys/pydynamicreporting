@@ -142,6 +142,11 @@ sizing and pagination. Empty content containers are allowed.
 Footer layouts retain their intentional page break.
 Positioned box children and sidebar table-of-contents wrappers are not flattened.
 
+Visual sizing includes the enclosing panel's title and spacing, even when layout
+wrappers such as tabs sit between the panel and its content. A panel title is
+included only with the first content fragment, not every image. Panels with
+several sections can still span multiple pages.
+
 Custom asynchronous JavaScript in raw HTML items or layout HTML does not have
 its own readiness signal. If that code finishes outside the built-in signals,
 the PDF can capture the page before the custom update completes.

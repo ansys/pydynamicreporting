@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Browser-PDF visual sizing now includes panel titles and spacing through nested
+  layout wrappers, such as tabs. This avoids blank pages and separated panel
+  titles in shorter page formats, including A4 landscape, without forcing a
+  multi-section panel onto one page.
 - Browser-PDF export now launches the browser packaged in the ADR installation
   directly by its executable path, instead of first trying a launch and retrying
   after it fails. This avoids the empty temporary folders that a failed browser

@@ -165,6 +165,11 @@ or a matching content container skip only this grouping step; their content stil
 receives normal sizing and pagination. Empty content containers are allowed.
 Footer layouts retain their intentional page break.
 Positioned box children and sidebar table-of-contents wrappers are not flattened.
+
+Visual sizing includes the enclosing panel's title and spacing, even when layout
+wrappers such as tabs sit between the panel and its content. A panel title is
+included only with the first content fragment, not every image. Panels with
+several sections can still span multiple pages.
 The report canvas used by responsive charts is preserved. Browser layout and
 pagination use the selected printable page dimensions.
 

@@ -1055,6 +1055,39 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return visuals;
                 };
 
+                const panelContent = new Map();
+                const includePanelBounds = (visual, groupStart, groupEnd) => {
+                    // A panel can contain intermediate wrappers or several sections. Include
+                    // its header only with the first content item, and its bottom spacing only
+                    // with the last. Measure current bounds after any earlier visual resizes.
+                    for (let panel = visual.closest('adr-panel'); panel;
+                            panel = panel.parentElement?.closest('adr-panel')) {
+                        const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                        if (!panelLayout) {
+                            continue;
+                        }
+                        if (!panelContent.has(panel)) {
+                            panelContent.set(panel, {
+                                visuals: findRenderedVisuals(panel),
+                                items: [...panel.querySelectorAll(
+                                    'adr-data-item, adr-slider-template, table'
+                                )].filter(isVisible)
+                            });
+                        }
+                        const { visuals, items } = panelContent.get(panel);
+                        const panelRect = panelLayout.getBoundingClientRect();
+                        if (visual === visuals[0] && (!items.length
+                                || items[0].contains(visual))) {
+                            groupStart = Math.min(groupStart, panelRect.top);
+                        }
+                        if (visual === visuals[visuals.length - 1] && (!items.length
+                                || items[items.length - 1].contains(visual))) {
+                            groupEnd = Math.max(groupEnd, panelRect.bottom);
+                        }
+                    }
+                    return { groupStart, groupEnd };
+                };
+
                 // Build a short human-readable name like "img#plot3" for log messages.
                 const visualLabel = visual => {
                     const id = visual.id ? `#${visual.id}` : '';
@@ -1133,6 +1166,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     if (preparedVisuals.has(visual)) {
                         return true;   // already handled by an earlier pass
                     }
+                    ({ groupStart, groupEnd } = includePanelBounds(visual, groupStart, groupEnd));
                     const isSceneViewer = visual.matches(sceneViewerSelector);
                     // For a 3D viewer we resize its wrapper; for anything else, the visual itself.
                     const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
@@ -1269,20 +1303,10 @@ class _BasePlaywrightPDFRenderer(ABC):
                         continue;
                     }
 
-                    const panel = layout.closest('adr-panel');
-                    const panelHeader = panel?.shadowRoot?.querySelector('header.adr-panel-header');
-                    const panelBody = panel?.shadowRoot?.querySelector('section.adr-panel-body');
                     const layoutRect = layout.getBoundingClientRect();
-                    const panelLayout = panel?.closest('div[data-layout-type="panel"]');
-                    const firstVisiblePanelChild = panel
-                        ? [...panel.children].find(isVisible)
-                        : null;
                     const firstOwner = visuals[0].closest(
                         'adr-data-item, adr-slider-template'
                     ) || visuals[0];
-                    const fragmentPaddingPx = panelBody
-                        ? Number.parseFloat(window.getComputedStyle(panelBody).paddingBottom) || 0
-                        : 0;
                     for (const visual of visuals) {
                         const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
                         const ownerRect = owner.getBoundingClientRect();
@@ -1290,16 +1314,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                         // "groupStart" is the top of everything sharing this visual's page. The
                         // first visual also carries the heading (and the panel header, if any),
                         // so its group starts higher; later visuals start at their own top.
-                        const groupStart = includesHeading && panelHeader
-                                && firstVisiblePanelChild === layout && panelLayout
-                            ? panelLayout.getBoundingClientRect().top
-                            : includesHeading
-                                ? layoutRect.top
-                                : ownerRect.top;
+                        const groupStart = includesHeading ? layoutRect.top : ownerRect.top;
                         fitVisual(
                             visual,
                             groupStart,
-                            ownerRect.bottom + fragmentPaddingPx,
+                            ownerRect.bottom,
                             heading.textContent.trim()
                         );
                     }
@@ -1309,20 +1328,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                 // shadow-DOM header included in the available-height budget.
                 for (const panel of document.querySelectorAll('adr-panel')) {
                     const panelLayout = panel.closest('div[data-layout-type="panel"]');
-                    const visibleChildren = [...panel.children].filter(
-                        child => child.getClientRects().length > 0
-                    );
-                    if (!panelLayout || visibleChildren.length !== 1) {
+                    if (!panelLayout) {
                         continue;
                     }
 
-                    const panelRect = panelLayout.getBoundingClientRect();
                     const panelHeader = panel.shadowRoot?.querySelector('header.adr-panel-header');
-                    for (const visual of findRenderedVisuals(visibleChildren[0])) {
+                    for (const visual of findRenderedVisuals(panel)) {
+                        const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
+                        const ownerRect = owner.getBoundingClientRect();
                         fitVisual(
                             visual,
-                            panelRect.top,
-                            panelRect.bottom,
+                            ownerRect.top,
+                            ownerRect.bottom,
                             panelHeader?.textContent.trim() || 'Untitled panel'
                         );
                     }

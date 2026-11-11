@@ -29,6 +29,7 @@ from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import call
 
+from PIL import Image
 import pytest
 from playwright.sync_api import Browser, Playwright
 from playwright.sync_api import Error as PlaywrightError
@@ -1738,6 +1739,199 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
     assert state["panelPaginationStyle"] is True
     assert state["panelHeaderBreakAfter"] == "avoid"
     assert state["plotlyResizeCount"] == 1
+
+
+def _panel_pagination_html(content: str) -> str:
+    """Build generator-shaped panels with shadow headers and slotted content."""
+    return (
+        """
+    <html><head>
+        <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; font: 16px/24px sans-serif; }
+            h2 { margin: 0 0 8px; font-size: 28px; line-height: 36px; }
+            p { margin: 0; }
+            adr-panel, adr-data-item, img { display: block; }
+            img { width: 480px; height: 600px; }
+            .padded { padding: 12px; border: 1px solid; }
+        </style>
+        <script>
+            customElements.define('adr-panel', class extends HTMLElement {
+                connectedCallback() {
+                    if (this.shadowRoot) return;
+                    this.attachShadow({mode: 'open'}).innerHTML = `
+                        <style>
+                            * { box-sizing: border-box; }
+                            :host, section { display: block; }
+                            section.adr-panel { border: 1px solid; }
+                            header { height: 70px; padding: 20px; }
+                            section.adr-panel-body { padding: 20px; }
+                        </style>
+                        <section class="adr-panel">
+                            <header class="adr-panel-header">${this.dataset.title}</header>
+                            <section class="adr-panel-body"><slot></slot></section>
+                        </section>`;
+                }
+            });
+        </script>
+    </head><body class="loaded"><main id="report_root">
+    """
+        + content
+        + "</main></body></html>"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrapper", ["direct", "tabs", "padded", "nested_panel"])
+@pytest.mark.parametrize("with_heading", [False, True], ids=["content_only", "heading"])
+@pytest.mark.parametrize("page_size", [PDFPageSize.A4, PDFPageSize.A3], ids=["a4", "a3"])
+@pytest.mark.parametrize("landscape", [False, True], ids=["portrait", "landscape"])
+def test_playwright_pdf_fits_panel_visual_through_layout_wrappers(
+    tmp_path, product_playwright_context, monkeypatch, wrapper, with_heading, page_size, landscape
+):
+    """Fit the complete panel, not just its inner heading/image section."""
+    Image.new("RGB", (480, 600), "blue").save(tmp_path / "panel.png")
+    heading = "<h2>VISUAL-TITLE</h2>" if with_heading else ""
+    content = f"""
+        <div data-layout-type="basic" nexus_template="visual-section">
+            <a id="TOC_item_tgt_visual"></a><br>{heading}
+            <section class="adr-container" id="visual-section">
+                <adr-data-item><img id="panel-image" src="panel.png">
+                    <p>VISUAL-END</p></adr-data-item>
+            </section>
+        </div>
+    """
+    if wrapper == "tabs":
+        content = f'<div data-layout-type="tabs">{content}</div>'
+    elif wrapper == "padded":
+        content = f'<div data-layout-type="tabs"><section class="padded">{content}</section></div>'
+    elif wrapper == "nested_panel":
+        content = (
+            '<div data-layout-type="panel"><br><adr-panel data-title="INNER-PANEL">'
+            f'<div data-layout-type="tabs">{content}</div></adr-panel></div>'
+        )
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<p style="break-after:page;">PREVIOUS-SECTION</p>'
+            '<div id="outer-panel" data-layout-type="panel"><br>'
+            f'<adr-panel data-title="OUTER-PANEL">{content}</adr-panel></div>'
+        ),
+        page_size=page_size,
+        landscape=landscape,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => ({
+            imageHeight: document.getElementById('panel-image').getBoundingClientRect().height,
+            panelHeight: document.getElementById('outer-panel').getBoundingClientRect().height
+        })""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == 2
+    assert "PREVIOUS-SECTION" in text[0]
+    markers = ["OUTER-PANEL", "VISUAL-END"]
+    if with_heading:
+        markers.append("VISUAL-TITLE")
+    if wrapper == "nested_panel":
+        markers.append("INNER-PANEL")
+    for marker in markers:
+        assert sum(page.count(marker) for page in text) == 1
+        assert marker in text[1]
+    assert len(reader.pages[0].images) == 0
+    assert len(reader.pages[1].images) == 1
+    assert state["panelHeight"] <= (
+        renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX
+    )
+    if page_size == PDFPageSize.A4 and landscape:
+        assert 0 < state["imageHeight"] < 600
+    else:
+        assert state["imageHeight"] == 600
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrapper", ["direct", "tabs"])
+@pytest.mark.parametrize("preceding_table", [False, True], ids=["image_first", "table_first"])
+def test_playwright_pdf_does_not_repeat_panel_header_budget(
+    tmp_path, product_playwright_context, monkeypatch, wrapper, preceding_table
+):
+    """Let a multi-section panel paginate, counting its header only at the start."""
+    Image.new("RGB", (480, 900), "blue").save(tmp_path / "chart.png")
+    sections = []
+    if preceding_table:
+        sections.append(
+            '<adr-data-item style="height:160px"><table><tbody><tr>'
+            "<td>TABLE-FIRST</td></tr></tbody></table></adr-data-item>"
+        )
+    for index in range(3):
+        sections.append(f"""
+            <div data-layout-type="basic" nexus_template="chart-{index}">
+                <h2>CHART-{index}</h2>
+                <section class="adr-container" id="chart-{index}">
+                    <adr-data-item>
+                        <img id="image-{index}" src="chart.png" style="height:900px">
+                        <p>END-{index}</p>
+                    </adr-data-item>
+                </section>
+            </div>
+        """)
+    content = "".join(sections)
+    if wrapper == "tabs":
+        content = f'<div data-layout-type="tabs">{content}</div>'
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<div id="outer-panel" data-layout-type="panel">'
+            f'<adr-panel data-title="PANEL-TITLE">{content}</adr-panel></div>'
+        ),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => ({
+            heights: [...document.querySelectorAll('img')].map(
+                image => image.getBoundingClientRect().height),
+            panelBreak: getComputedStyle(document.getElementById('outer-panel')).breakInside
+        })""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == (4 if preceding_table else 3)
+    assert all(page.strip() for page in text)
+    assert sum(page.count("PANEL-TITLE") for page in text) == 1
+    assert "PANEL-TITLE" in text[0]
+    assert state["panelBreak"] == "auto"
+    for index in range(3):
+        page_index = index + int(preceding_table)
+        assert f"CHART-{index}" in text[page_index]
+        assert f"END-{index}" in text[page_index]
+        assert len(reader.pages[page_index].images) == 1
+    if preceding_table:
+        assert "TABLE-FIRST" in text[0]
+        assert state["heights"][0] == state["heights"][1]
+    else:
+        assert state["heights"][1] > state["heights"][0] + 50
+        assert state["heights"][2] > state["heights"][0] + 50
 
 
 @pytest.mark.unit
