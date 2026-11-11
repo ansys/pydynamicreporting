@@ -157,9 +157,18 @@ Offline rendering behavior
 --------------------------
 
 The renderer waits for ADR web components, fonts, MathJax, Plotly, images, and
-videos. Print styling keeps headings with the following content and preserves
-the report canvas used by responsive charts. Browser layout and pagination use
-the selected printable page dimensions.
+videos. Browser layout and pagination use the selected printable page
+dimensions, and the report canvas used by responsive charts is preserved.
+
+The export keeps related content on the same page when it fits:
+
+- A section heading and any introductory text stay with the section's content.
+- A panel title stays with the first content in the panel, including panels
+  that contain tabs.
+- Images, plots, and 3D scenes that are taller than a page are scaled down to
+  fit, with room left for the heading or panel title above them.
+
+Sections and panels that are too long for one page continue on the next page.
 
 The staged report blocks external network requests. All content needed by the
 PDF must therefore be present in the offline bundle. Custom asynchronous
@@ -173,17 +182,36 @@ PyDynamicReporting uses the browser from the configured ADR 27.1 installation.
 You don't need to install a browser separately. A missing or incomplete
 product browser package raises an ADR-owned error.
 
-An export changes process-wide settings while it runs, so run one browser-PDF
-export at a time in each Python process.
+On Windows, nothing else is needed. On Linux, the browser needs some standard
+system libraries. Most Linux machines already have them, but a minimal server
+or container might not. If one is missing, the export fails when the browser
+starts.
 
-If the ADR installation ships a different browser build than this
-PyDynamicReporting release expects, the export still uses the browser from the
-ADR installation and logs a warning.
+To see which library is missing, turn on debug logging and run the export
+again (see :ref:`serverless_logging`):
 
-The export uses the browser build named in the ADR installation's browser
-metadata. Other browser builds in the same folder, for example from copying a
-newer ADR package over an older installation, are ignored and reported in a
-warning.
+.. code-block:: python
+
+   adr = ADR(
+       ansys_installation="/ansys_inc/v271",
+       db_directory="/reports/database",
+       media_directory="/reports/media",
+       static_directory="/reports/static",
+       log_output="stdout",
+       log_level="DEBUG",
+   )
+
+Look in the output for a line such as
+``error while loading shared libraries: libgbm.so.1``. Install the system
+package that provides that library, or ask your system administrator to, and
+export again. Playwright's `system dependency documentation
+<https://playwright.dev/python/docs/browsers#install-system-dependencies>`__
+describes a command that installs all of the libraries at once on supported
+Linux distributions.
+
+If the ADR installation contains more than one browser build, for example
+after copying a newer ADR package over an older installation, the export uses
+the build that belongs to the installation and ignores the others.
 
 Temporary offline bundles are removed after the operation. Cleanup failures
 are retained for debug logging and do not mask a successful PDF or the primary

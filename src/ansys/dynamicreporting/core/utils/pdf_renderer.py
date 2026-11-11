@@ -67,19 +67,17 @@ size is definitive and content cannot expand it.
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from contextlib import contextmanager
 from dataclasses import dataclass, fields
 import json
-import os
 import platform
 import re
 from math import ceil, floor, isfinite
+from logging import Logger
 from pathlib import Path
 from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
-import playwright as playwright_package
 from playwright.sync_api import Browser
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -95,20 +93,47 @@ from ..exceptions import ADRException
 # Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 # Headless-shell executable inside a packaged ``chromium_headless_shell-<build>`` directory,
-# keyed by the ADR ``machines/<arch>`` name. Launched by path when the product ships a different
-# build than the one Playwright expects.
+# keyed by the ADR ``machines/<arch>`` name. Browser-PDF export launches it by path.
+# Playwright's installer writes this inner layout and Playwright does not document it. The
+# layout is fixed by the Playwright release that built the ADR browser
+# (``chromium_headless_shell-1248`` for Playwright 1.64.1), not by the Playwright version
+# installed here. A product build with a different inner layout makes every export fail,
+# reporting the browser build as incomplete. The keys must match the values
+# ``_playwright_machine_arch`` returns.
 _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
     "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
     "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
 }
-# Folder name of a packaged headless-shell build, ``chromium_headless_shell-<revision>``.
-_HEADLESS_SHELL_BUILD_PATTERN = re.compile(r"chromium_headless_shell-\d+")
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
 _PAGINATION_FIT_GUARD_PX = 8.0
-# Direct-child headings that own the content container in an ADR basic layout.
+# Layout types whose direct heading and content container can be grouped when present.
+_PAGINATION_LAYOUT_SELECTOR = (
+    'div[data-layout-type="basic"], div[data-layout-type="box"], '
+    'div[data-layout-type="header"], div[data-layout-type="tagprops"], '
+    'div[data-layout-type="footer"]'
+)
+# Direct-child headings that own the content container in these layouts.
 _PAGINATION_HEADING_SELECTOR = (
     ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
 )
+# JavaScript helper substituted for ``__FIND_LAYOUT_CONTAINER__`` in the pagination page
+# scripts, so the visual-fitting and cohesion passes agree on which container a layout owns.
+_PAGINATION_FIND_LAYOUT_CONTAINER_JS = """
+                // Return the content container that follows a layout's heading, or a falsy
+                // value when the layout has no heading or no such container. The generated
+                // body carries the layout GUID as its id; custom header HTML may add other
+                // sections before it. Standalone HTML may omit the GUID, and then the first
+                // following section is used.
+                const findLayoutContainer = (layout, heading) => {
+                    const templateGuid = layout.getAttribute('nexus_template');
+                    let container = heading?.nextElementSibling;
+                    while (container && (!container.matches('section.adr-container')
+                            || (templateGuid && container.id !== templateGuid))) {
+                        container = container.nextElementSibling;
+                    }
+                    return container;
+                };
+"""
 # Joining the registered tags produces ``:is(ansys-adr-viewer, ansys-nexus-viewer)``.
 _SCENE_VIEWER_SELECTOR = f":is({', '.join(ANSYS_VIEWER_TAGS)})"
 # Visual elements treated as indivisible and resized instead of split across PDF pages.
@@ -144,10 +169,6 @@ class _PlaywrightBrowserBinaryInfo:
             },
         )
 
-    def to_metadata_dict(self) -> dict[str, str]:
-        """Serialize the metadata fields using the dataclass schema."""
-        return {field_name: getattr(self, field_name) for field_name in self.metadata_field_names()}
-
 
 def _playwright_machine_arch() -> str | None:
     """Map the current platform to the ADR ``machines/<arch>`` directory name.
@@ -170,11 +191,12 @@ def _playwright_machine_arch() -> str | None:
 def _validate_playwright_browsers_path(
     browser_dir: Path,
     machine_arch: str,
+    logger: Logger,
 ) -> _PlaywrightBrowserBinaryInfo | None:
     """Validate the product-shipped Playwright binary layout before advertising it.
 
-    Browser-PDF export should only point Playwright at a product-managed binary
-    when the stripped package layout is complete and self-consistent. This keeps
+    Browser-PDF export should only launch a product-managed binary when the
+    stripped package layout is complete and self-consistent. This keeps
     the runtime honest to the product packaging contract instead of silently
     accepting stale or partially copied browser directories. The metadata file
     lives inside ``playwright-browsers`` itself and names the packaged browser
@@ -186,7 +208,7 @@ def _validate_playwright_browsers_path(
 
     metadata_path = browser_dir / _PLAYWRIGHT_BROWSER_METADATA_NAME
     if not metadata_path.is_file():
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is missing ",
             browser_dir,
             _PLAYWRIGHT_BROWSER_METADATA_NAME,
@@ -195,8 +217,8 @@ def _validate_playwright_browsers_path(
 
     try:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        get_logger().warning(
+    except (OSError, ValueError) as exc:
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is unreadable: %s",
             browser_dir,
             metadata_path,
@@ -205,7 +227,7 @@ def _validate_playwright_browsers_path(
         return None
 
     if not isinstance(metadata, dict):
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s does not contain "
             "a JSON object.",
             browser_dir,
@@ -221,7 +243,7 @@ def _validate_playwright_browsers_path(
         or metadata_info.browser_name != _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
         or metadata_info.machine_arch != machine_arch
     ):
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is incomplete or "
             "does not describe a %s binary for machine arch %r.",
             browser_dir,
@@ -235,7 +257,7 @@ def _validate_playwright_browsers_path(
     # The metadata entry must name a direct child folder so it cannot point outside
     # ``playwright-browsers``.
     if Path(packaged_name).name != packaged_name or packaged_name in {".", ".."}:
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because metadata entry %s is not a "
             "packaged directory name.",
             browser_dir,
@@ -243,31 +265,10 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    packaged_dir = browser_dir / packaged_name
-    if not packaged_dir.is_dir():
-        get_logger().warning(
-            "Ignoring product Playwright binary at %s because packaged directory %s named in "
-            "the metadata is missing.",
-            browser_dir,
-            packaged_name,
-        )
-        return None
-
-    leftover_dirs = sorted(
-        path.name for path in browser_dir.iterdir() if path.is_dir() and path != packaged_dir
-    )
-    if leftover_dirs:
-        get_logger().warning(
-            "Ignoring browser directories %s at %s that the metadata does not name; using %s. "
-            "A clean Ansys installation removes them.",
-            ", ".join(leftover_dirs),
-            browser_dir,
-            packaged_name,
-        )
-
-    marker_path = packaged_dir / "INSTALLATION_COMPLETE"
+    # A missing named folder also fails this check.
+    marker_path = browser_dir / packaged_name / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():
-        get_logger().warning(
+        logger.warning(
             "Ignoring product Playwright binary at %s because installation marker %s is missing.",
             browser_dir,
             marker_path,
@@ -278,122 +279,87 @@ def _validate_playwright_browsers_path(
 
 
 def resolve_playwright_browser_binary_info(
-    ansys_installation: str | None = None,
-    ansys_version: int | None = None,
+    ansys_installation: Path | str,
+    ansys_version: int,
+    *,
+    logger: Logger,
 ) -> _PlaywrightBrowserBinaryInfo | None:
-    """Return the validated browser binary path and metadata when the product ships one."""
+    """Return the validated browser binary path and metadata when the product ships one.
+
+    Warnings about an unusable or partly stale browser package go to ``logger``.
+    """
     machine_arch = _playwright_machine_arch()
-    # The install directory and version are both required to build the machine-scoped
-    # binary path, so bail out when either is missing or the current platform has no
-    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
-    # resolved and validated it through resolve_install_info, so re-validating it here
-    # would only duplicate that frontloaded work.
-    if machine_arch is None or ansys_installation is None or ansys_version is None:
+    # Platforms without an ADR browser package have no layout to resolve. The version is used
+    # as-is: ADR.__init__ already resolved and validated it through resolve_install_info, so
+    # re-validating it here would only duplicate that frontloaded work.
+    if machine_arch is None:
         return None
 
     browser_dir = (
-        Path(ansys_installation).expanduser()
+        Path(ansys_installation)
         / f"apex{ansys_version}"
         / "machines"
         / machine_arch
         / "playwright-browsers"
     )
-    return _validate_playwright_browsers_path(browser_dir, machine_arch)
+    return _validate_playwright_browsers_path(browser_dir, machine_arch, logger)
 
 
-def _expected_headless_shell_build(registry_path: Path | None = None) -> str | None:
-    """Return the packaged folder name of the headless-shell build Playwright expects.
-
-    Playwright lists the browser revisions it expects in the ``browsers.json`` file shipped with
-    its driver. Return ``None`` whenever that cannot be read with certainty, for example when the
-    file is missing or malformed, or when the revision is platform specific, so that callers keep
-    Playwright's own browser lookup instead of guessing.
-    """
-    if registry_path is None:
-        registry_path = (
-            Path(playwright_package.__file__).parent / "driver" / "package" / "browsers.json"
-        )
-    try:
-        browsers = json.loads(registry_path.read_text(encoding="utf-8"))["browsers"]
-        entry = next(item for item in browsers if item["name"] == "chromium-headless-shell")
-        revision = str(entry["revision"])
-    except (OSError, ValueError, KeyError, TypeError, StopIteration):
-        return None
-    if "revisionOverrides" in entry or not revision.isdigit():
-        return None
-    return f"chromium_headless_shell-{revision}"
-
-
-def _packaged_headless_shell_executable(binary_info: _PlaywrightBrowserBinaryInfo) -> Path | None:
+def _packaged_headless_shell_executable(
+    binary_info: _PlaywrightBrowserBinaryInfo, logger: Logger
+) -> Path | None:
     """Return the headless-shell executable packaged in the Ansys installation, if present."""
-    executable_relpath = _PACKAGED_HEADLESS_SHELL_EXECUTABLES.get(binary_info.machine_arch)
-    if executable_relpath is None:
-        return None
-    executable = binary_info.path / binary_info.packaged_binary_dir / executable_relpath
-    return executable if executable.is_file() else None
-
-
-def _launch_packaged_browser(
-    launch: Callable[..., Browser],
-    binary_info: _PlaywrightBrowserBinaryInfo,
-    executable: Path,
-    logger: Any,
-) -> Browser:
-    """Launch the headless shell packaged in the Ansys installation by its executable path."""
-    logger.warning(
-        "The Ansys installation does not ship the browser build this PyDynamicReporting "
-        "release expects. Using the browser build %s from the Ansys installation.",
-        binary_info.packaged_binary_dir,
+    # The table lookup cannot miss: ``_validate_playwright_browsers_path`` rejects metadata
+    # whose machine arch differs from this machine's ``_playwright_machine_arch`` value.
+    executable = (
+        binary_info.path
+        / binary_info.packaged_binary_dir
+        / _PACKAGED_HEADLESS_SHELL_EXECUTABLES[binary_info.machine_arch]
     )
-    browser = launch(executable_path=str(executable))
-    logger.info("Using Ansys installation browser %s.", browser.version)
-    return browser
+    if executable.is_file():
+        return executable
+    logger.debug(
+        "Cannot launch browser build %s: executable %s is missing.",
+        binary_info.packaged_binary_dir,
+        executable,
+    )
+    return None
 
 
 def _launch_product_browser(
     launch: Callable[..., Browser],
     binary_info: _PlaywrightBrowserBinaryInfo,
-    logger: Any,
-    expected_build: str | None = None,
+    logger: Logger,
 ) -> Browser:
-    """Launch the product-shipped browser.
+    """Launch the product-shipped browser by its executable path.
 
     When the packaged executable is missing, raise an ``ADRException`` naming the incomplete
     build before any launch: no launch can succeed, and a failed launch leaves temporary folders
     behind.
 
-    ``launch`` runs Playwright's normal lookup in the product browser folder. That lookup can
-    only succeed when the product ships the build this Playwright version expects. When
-    ``expected_build`` is known and differs from the packaged build, launch the packaged
-    headless shell's executable by path instead and log a warning. This is decided by comparing
-    the two build names, not by interpreting a failed launch, and it also avoids the temporary
-    folders Playwright leaves behind after a launch that fails.
+    Launching by path works whichever build the product ships, but it skips Playwright's
+    host-dependency check. Launch failures propagate unchanged.
 
-    Otherwise, including when ``expected_build`` is unknown, launch normally and let any failure
-    propagate unchanged: a launch that fails for another reason, such as missing system
-    libraries, would fail the same way for the packaged build and hide the original error.
+    Known limitation: on Linux the browser loads operating-system libraries that ADR does not
+    ship, such as NSS, GLib, GBM, ALSA, ATK, and X11. Desktop and typical ADR hosts have them,
+    but a minimal server or container may not. The browser then fails to start, and the
+    Playwright error chained to the ``ADRException`` contains the loader's message, for example
+    ``error while loading shared libraries: libgbm.so.1``, which names the package to install.
+    Windows needs nothing extra: the browser uses only DLLs that every Windows installation
+    has, and carries its other libraries in its own folder.
     """
     packaged_build = binary_info.packaged_binary_dir
-    executable = _packaged_headless_shell_executable(binary_info)
+    executable = _packaged_headless_shell_executable(binary_info, logger)
     if executable is None:
         # Name only the build: the folder path would expose Playwright internals to users.
         raise ADRException(
             "Browser PDF rendering failed: the browser build "
             f"{packaged_build} in the Ansys installation is incomplete."
         )
-    if (
-        expected_build is not None
-        and _HEADLESS_SHELL_BUILD_PATTERN.fullmatch(packaged_build)
-        and packaged_build != expected_build
-    ):
-        logger.debug(
-            "Skipping the default browser launch: the Ansys installation ships %s but %s is "
-            "expected.",
-            packaged_build,
-            expected_build,
-        )
-        return _launch_packaged_browser(launch, binary_info, executable, logger)
-    return launch()
+    logger.info("Launching Ansys installation browser build %s.", packaged_build)
+    browser = launch(executable_path=str(executable))
+    logger.info("Using Ansys installation browser %s.", browser.version)
+    return browser
 
 
 class _BasePlaywrightPDFRenderer(ABC):
@@ -478,13 +444,6 @@ class _BasePlaywrightPDFRenderer(ABC):
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
-    # This override changes Playwright's platform-specific browser lookup, while
-    # the ADR resolver has already selected the product machine directory.
-    # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
-    # it with the product-shipped browser cache for the duration of a render.
-    _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
-        "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
-    )
     # Browser-PDF depends on a product-shipped Chromium binary introduced with
     # product line 27. Older supported lines can still use other export formats.
     _MIN_BROWSER_PDF_PRODUCT_LINE: int = 27
@@ -531,48 +490,35 @@ class _BasePlaywrightPDFRenderer(ABC):
         self._ansys_version = ansys_version
         self._logger = logger or get_logger()
 
-    def _browser_pdf_product_line(self) -> int | None:
-        """Return the annual product line for the resolved install version."""
-        product_release = self._browser_pdf_product_release()
-        if product_release is None:
-            return None
-
-        return int(product_release_to_product_line(product_release))
-
-    def _browser_pdf_product_release(self) -> str | None:
-        """Return the public product release for the resolved install version."""
-        if self._ansys_version is None:
-            return None
-
-        try:
-            return install_version_to_product_release(self._ansys_version)
-        except ValueError:
-            return None
-
     def _raise_if_product_line_unsupported(self) -> None:
         """Reject product lines that predate the shipped browser-PDF binary."""
-        product_line = self._browser_pdf_product_line()
-        if product_line is not None and product_line < self._MIN_BROWSER_PDF_PRODUCT_LINE:
-            product_release = self._browser_pdf_product_release()
-            if product_release is None:
-                raise ValueError("Product release information could not be determined.")
-            product_name = product_release_to_display_string(product_release)
-            min_product_name = product_release_to_display_string(
-                f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
-            )
-            raise ADRException(
-                f"Browser PDF export is not supported for Ansys {product_name}. "
-                f"Use Ansys {min_product_name} or newer, which ships the required "
-                "browser binary."
-            )
+        try:
+            product_release = install_version_to_product_release(self._ansys_version)
+        except ValueError:
+            return
+        if (
+            int(product_release_to_product_line(product_release))
+            >= self._MIN_BROWSER_PDF_PRODUCT_LINE
+        ):
+            return
+        product_name = product_release_to_display_string(product_release)
+        min_product_name = product_release_to_display_string(
+            f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
+        )
+        raise ADRException(
+            f"Browser PDF export is not supported for Ansys {product_name}. "
+            f"Use Ansys {min_product_name} or newer, which ships the required "
+            "browser binary."
+        )
 
     def _resolve_playwright_browser_binary(self) -> _PlaywrightBrowserBinaryInfo:
         """Return the shipped Playwright browser binary path under the resolved install."""
         self._raise_if_product_line_unsupported()
 
         binary_info = resolve_playwright_browser_binary_info(
-            ansys_installation=str(self._ansys_installation),
+            ansys_installation=self._ansys_installation,
             ansys_version=self._ansys_version,
+            logger=self._logger,
         )
         if binary_info is None:
             raise ADRException(
@@ -581,50 +527,6 @@ class _BasePlaywrightPDFRenderer(ABC):
             )
 
         return binary_info
-
-    @contextmanager
-    def _playwright_browser_binary_env(self):
-        """Temporarily point Playwright at the product-shipped browser binary path.
-
-        Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
-        share browser binaries across environments. Product-coupled browser-PDF
-        renders must use the browser shipped inside the resolved Ansys install
-        rather than any ambient machine-level Playwright browser cache, but the
-        caller's original environment must still be restored afterward. The
-        host-platform override is cleared because it can make Playwright look for
-        a different platform layout than the ADR package resolver selected.
-
-        This mutates ``os.environ`` for the duration of the render and restores it on
-        exit, so two browser-PDF renders must not run concurrently in the same process.
-        The synchronous Playwright driver renders one report at a time, which keeps that
-        constraint satisfied on this export path.
-
-        Yields the validated product browser metadata so the caller can decide how to
-        launch it.
-        """
-        restored_override_envs = {
-            env_var: os.environ.pop(env_var)
-            for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
-            if env_var in os.environ
-        }
-        restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-        try:
-            browser_binary_dir = self._resolve_playwright_browser_binary()
-            self._logger.info(
-                "Using product-shipped Playwright browser binary path: %s",
-                browser_binary_dir.path,
-            )
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-            yield browser_binary_dir
-        finally:
-            # Restore the caller's original browser-path override after the
-            # render so the product-specific choice stays scoped to this
-            # browser-PDF operation.
-            if restored_browser_binaries_path is None:
-                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-            else:
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
-            os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
         """Render the configured browser-PDF source to PDF bytes.
@@ -644,25 +546,25 @@ class _BasePlaywrightPDFRenderer(ABC):
         current_timeout_phase = "browser launch"
 
         try:
-            # Point Playwright at the product-shipped browser binary before the
-            # driver resolves browser binaries so browser-PDF never falls back
-            # to an unrelated machine-level Chromium cache.
-            with (
-                self._playwright_browser_binary_env() as browser_binary,
-                sync_playwright() as playwright,
-            ):
-                self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = _launch_product_browser(
-                    lambda **launch_options: playwright.chromium.launch(
+            browser_binary = self._resolve_playwright_browser_binary()
+            self._logger.info(
+                "Using product-shipped Playwright browser binary path: %s", browser_binary.path
+            )
+            with sync_playwright() as playwright:
+
+                def launch_chromium(*, executable_path: str) -> Browser:
+                    return playwright.chromium.launch(
                         headless=True,
                         timeout=self._remaining_browser_phase_timeout_ms(
                             browser_phase_deadline, "browser launch"
                         ),
-                        **launch_options,
-                    ),
+                        executable_path=executable_path,
+                    )
+
+                browser = _launch_product_browser(
+                    launch_chromium,
                     browser_binary,
                     self._logger,
-                    expected_build=_expected_headless_shell_build(),
                 )
                 context = None
 
@@ -986,16 +888,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                     print-color-adjust: exact !important;
                 }
 
-                /* Keep a section heading glued to the content right after it. ":has(+ ...)"
-                   means "a heading immediately followed by a report section". "break-after:
-                   avoid" stops a page break landing between them, so a title is never stranded
-                   alone at the bottom of a page with its table or plot on the next. */
-                h1:has(+ section.adr-container),
-                h2:has(+ section.adr-container),
-                h3:has(+ section.adr-container),
-                h4:has(+ section.adr-container),
-                h5:has(+ section.adr-container),
-                h6:has(+ section.adr-container),
+                /* Keep a section heading glued to its following content. ":has(~ ...)"
+                   means "a heading followed by a report section", allowing introductory
+                   elements between them. "break-after: avoid" asks the browser not to
+                   break immediately after the heading, rather than stranding the title
+                   at the bottom of a page with its table or plot on the next.
+                   The pagination pass also protects those intermediate boundaries. */
+                h1:has(~ section.adr-container),
+                h2:has(~ section.adr-container),
+                h3:has(~ section.adr-container),
+                h4:has(~ section.adr-container),
+                h5:has(~ section.adr-container),
+                h6:has(~ section.adr-container),
                 header:has(+ section.adr-panel-body) {
                     break-after: avoid !important;
                     page-break-after: avoid !important;
@@ -1131,6 +1035,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 const {
                     printableHeightPx,   // usable page height (page minus top/bottom margins)
                     fitGuardPx,          // small safety margin so rounding never overflows a page
+                    layoutSelector,      // layouts owning a heading and content container
                     headingSelector,     // matches a section's heading (h1..h6)
                     visualSelector,      // matches the visuals we may need to resize
                     sceneViewerSelector, // matches the 3D viewer tags
@@ -1174,6 +1079,45 @@ class _BasePlaywrightPDFRenderer(ABC):
                         visuals.push(visual);
                     }
                     return visuals;
+                };
+
+                const panelItems = new Map();   // visible content items of each panel, cached
+                const includePanelBounds = (visual, groupStart, groupEnd) => {
+                    // A panel can contain intermediate wrappers or several sections. Its
+                    // header shares a page with the panel's first content, and its bottom
+                    // spacing with the last. So widen the caller's group to the panel top
+                    // when no item in the panel starts above the group, and to the panel
+                    // bottom when none ends below it. Every visual of that first or last
+                    // group gets the same budget, for example two images in one row.
+                    // Measure current bounds after any earlier visual resizes.
+                    let start = groupStart;
+                    let end = groupEnd;
+                    for (let panel = visual.closest('adr-panel'); panel;
+                            panel = panel.parentElement?.closest('adr-panel')) {
+                        const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                        if (!panelLayout) {
+                            continue;
+                        }
+                        if (!panelItems.has(panel)) {
+                            panelItems.set(panel, [...panel.querySelectorAll(
+                                'adr-data-item, adr-slider-template, table'
+                            )].filter(isVisible));
+                        }
+                        const items = panelItems.get(panel);
+                        const panelRect = panelLayout.getBoundingClientRect();
+                        // Items are in document order, so an earlier item is found at the
+                        // front and a later one at the back. Each search scans the whole
+                        // list only for visuals in the panel's first or last group.
+                        if (!items.some(
+                                item => item.getBoundingClientRect().top < groupStart)) {
+                            start = Math.min(start, panelRect.top);
+                        }
+                        if (!items.findLast(
+                                item => item.getBoundingClientRect().bottom > groupEnd)) {
+                            end = Math.max(end, panelRect.bottom);
+                        }
+                    }
+                    return { groupStart: start, groupEnd: end };
                 };
 
                 // Build a short human-readable name like "img#plot3" for log messages.
@@ -1254,6 +1198,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     if (preparedVisuals.has(visual)) {
                         return true;   // already handled by an earlier pass
                     }
+                    ({ groupStart, groupEnd } = includePanelBounds(visual, groupStart, groupEnd));
                     const isSceneViewer = visual.matches(sceneViewerSelector);
                     // For a 3D viewer we resize its wrapper; for anything else, the visual itself.
                     const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
@@ -1367,77 +1312,109 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
                     return true;
                 };
-
-                // Basic layouts own headings and content containers, so fitting
+__FIND_LAYOUT_CONTAINER__
+                // These layouts can own headings and content containers, so fitting
                 // against that group keeps a title with its resized visual.
-                for (const layout of document.querySelectorAll(
-                    'div[data-layout-type="basic"]'
-                )) {
+                // Include introductory content in the first row's page-height budget.
+                const headingLayouts = [];          // document order: parents before children
+                const layoutContainers = new Set(); // every container owned by such a layout
+                for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
-                    const container = heading?.nextElementSibling;
-                    if (!container?.matches('section.adr-container')) {
-                        continue;
+                    const container = findLayoutContainer(layout, heading);
+                    if (container) {
+                        headingLayouts.push({ layout, heading, container });
+                        layoutContainers.add(container);
                     }
+                }
+                // The nearest layout-owned container around a visual. Sections added by
+                // custom header HTML are not owned by a layout and are passed over.
+                const owningContainer = visual => {
+                    let section = visual.closest('section.adr-container');
+                    while (section && !layoutContainers.has(section)) {
+                        section = section.parentElement?.closest('section.adr-container');
+                    }
+                    return section;
+                };
 
+                for (const { layout, heading, container } of headingLayouts) {
                     const visuals = findRenderedVisuals(container);
                     if (!visuals.length) {
                         continue;
                     }
 
-                    const panel = layout.closest('adr-panel');
-                    const panelHeader = panel?.shadowRoot?.querySelector('header.adr-panel-header');
-                    const panelBody = panel?.shadowRoot?.querySelector('section.adr-panel-body');
                     const layoutRect = layout.getBoundingClientRect();
-                    const panelLayout = panel?.closest('div[data-layout-type="panel"]');
-                    const firstVisiblePanelChild = panel
-                        ? [...panel.children].find(isVisible)
-                        : null;
-                    const firstOwner = visuals[0].closest(
-                        'adr-data-item, adr-slider-template'
-                    ) || visuals[0];
-                    const fragmentPaddingPx = panelBody
-                        ? Number.parseFloat(window.getComputedStyle(panelBody).paddingBottom) || 0
-                        : 0;
+                    const firstOwners = new Set();
+                    const firstRows = new Map();
                     for (const visual of visuals) {
                         const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
+                        let includesHeading = !firstOwners.size || firstOwners.has(owner);
+                        const rowColumns = [];
+                        // Follow the first content fragment through parallel columns,
+                        // including nested rows, but not later rows or wrapped columns.
+                        for (let column = visual; column && column !== container;
+                                column = column.parentElement) {
+                            const row = column.parentElement;
+                            if (!row?.matches('section.adr-row')) {
+                                continue;
+                            }
+                            rowColumns.push({ row, column });
+                            const firstRow = firstRows.get(row);
+                            if (firstRow && !firstRow.columns.has(column)) {
+                                firstRow.columns.add(column);
+                                includesHeading ||= column.getBoundingClientRect().top
+                                    <= firstRow.firstColumn.getBoundingClientRect().top;
+                            }
+                        }
+                        if (includesHeading) {
+                            firstOwners.add(owner);
+                            for (const { row, column } of rowColumns) {
+                                if (!firstRows.has(row)) {
+                                    firstRows.set(row, {
+                                        firstColumn: column,
+                                        columns: new Set()
+                                    });
+                                }
+                                firstRows.get(row).columns.add(column);
+                            }
+                        }
+                        // A nested layout with its own heading fits its own visuals in a
+                        // later iteration, so that heading stays in their page budget. Only
+                        // the first owners in the first row are fitted here even when nested,
+                        // because they share this layout's heading and introduction.
+                        if (!includesHeading && owningContainer(visual) !== container) {
+                            continue;
+                        }
                         const ownerRect = owner.getBoundingClientRect();
-                        const includesHeading = owner === firstOwner;
                         // "groupStart" is the top of everything sharing this visual's page. The
-                        // first visual also carries the heading (and the panel header, if any),
-                        // so its group starts higher; later visuals start at their own top.
-                        const groupStart = includesHeading && panelHeader
-                                && firstVisiblePanelChild === layout && panelLayout
-                            ? panelLayout.getBoundingClientRect().top
-                            : includesHeading
-                                ? layoutRect.top
-                                : ownerRect.top;
+                        // first owners' visuals also carry the heading and introduction, so
+                        // their group starts at the layout top; later visuals start at their
+                        // own top. "fitVisual" adds an enclosing panel's header and spacing.
+                        const groupStart = includesHeading ? layoutRect.top : ownerRect.top;
                         fitVisual(
                             visual,
                             groupStart,
-                            ownerRect.bottom + fragmentPaddingPx,
+                            ownerRect.bottom,
                             heading.textContent.trim()
                         );
                     }
                 }
 
-                // Panels without the basic-layout wrapper still need their
+                // Panels without a heading-layout wrapper still need their
                 // shadow-DOM header included in the available-height budget.
                 for (const panel of document.querySelectorAll('adr-panel')) {
                     const panelLayout = panel.closest('div[data-layout-type="panel"]');
-                    const visibleChildren = [...panel.children].filter(
-                        child => child.getClientRects().length > 0
-                    );
-                    if (!panelLayout || visibleChildren.length !== 1) {
+                    if (!panelLayout) {
                         continue;
                     }
 
-                    const panelRect = panelLayout.getBoundingClientRect();
                     const panelHeader = panel.shadowRoot?.querySelector('header.adr-panel-header');
-                    for (const visual of findRenderedVisuals(visibleChildren[0])) {
+                    for (const visual of findRenderedVisuals(panel)) {
+                        const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
+                        const ownerRect = owner.getBoundingClientRect();
                         fitVisual(
                             visual,
-                            panelRect.top,
-                            panelRect.bottom,
+                            ownerRect.top,
+                            ownerRect.bottom,
                             panelHeader?.textContent.trim() || 'Untitled panel'
                         );
                     }
@@ -1486,10 +1463,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                     window.clearTimeout(timeoutHandle);
                 }
                 return result;
-            }""",
+            }""".replace("__FIND_LAYOUT_CONTAINER__", _PAGINATION_FIND_LAYOUT_CONTAINER_JS),
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
                 "visualSelector": _PAGINATION_VISUAL_SELECTOR,
                 "sceneViewerSelector": _SCENE_VIEWER_SELECTOR,
@@ -1498,14 +1476,14 @@ class _BasePlaywrightPDFRenderer(ABC):
         )
 
     def _set_pagination_cohesion(self, page: Any, printable_height_px: float) -> dict[str, Any]:
-        """Keep basic layouts and panels together when they fit on one page."""
+        """Keep heading-content layouts and panels together when they fit on one page."""
         return page.evaluate(
             """(options) => {
                 // This runs in the page. For each report section and panel, decide whether it
                 // fits on one page. If it fits, ask the PDF engine to keep it whole ("avoid" a
                 // break); if not, allow it to split ("auto"), because forcing a too-tall block
                 // onto one page would clip it.
-                const { printableHeightPx, fitGuardPx, headingSelector } = options;
+                const { printableHeightPx, fitGuardPx, layoutSelector, headingSelector } = options;
                 const isVisible = element => {
                     const style = window.getComputedStyle(element);
                     return element.getClientRects().length > 0
@@ -1516,17 +1494,22 @@ class _BasePlaywrightPDFRenderer(ABC):
                 // so a block sitting exactly at the edge is not forced to stay whole.
                 const fitsOnPage = element =>
                     element.getBoundingClientRect().height <= printableHeightPx - fitGuardPx;
-
+__FIND_LAYOUT_CONTAINER__
                 const keptLayouts = [];
                 // Avoid a split only when the complete heading-plus-content
                 // group fits; forcing it on taller content can create clipping.
-                for (const layout of document.querySelectorAll(
-                    'div[data-layout-type="basic"]'
-                )) {
+                for (const layout of document.querySelectorAll(layoutSelector)) {
                     const heading = layout.querySelector(headingSelector);
-                    const container = heading?.nextElementSibling;
-                    if (!container?.matches('section.adr-container') || !isVisible(layout)) {
+                    const container = findLayoutContainer(layout, heading);
+                    if (!container || !isVisible(layout)) {
                         continue;
+                    }
+                    // Keep the heading and introductions with the first content fragment,
+                    // even when a taller table must split over subsequent pages.
+                    for (let element = heading; element && element !== container;
+                            element = element.nextElementSibling) {
+                        element.style.setProperty('break-after', 'avoid', 'important');
+                        element.style.setProperty('page-break-after', 'avoid', 'important');
                     }
                     // "avoid" keeps the section whole on one page; "auto" lets it split. Both the
                     // modern and legacy property names are set for wider browser support.
@@ -1568,10 +1551,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
 
                 return { keptLayouts, keptPanels };
-            }""",
+            }""".replace("__FIND_LAYOUT_CONTAINER__", _PAGINATION_FIND_LAYOUT_CONTAINER_JS),
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
             },
         )
@@ -1581,7 +1565,7 @@ class _BasePlaywrightPDFRenderer(ABC):
     ) -> dict[str, Any]:
         """Allow over-height sliders, items, and tables to split between pages."""
         return page.evaluate(
-            """(printableHeightPx) => {
+            """({ printableHeightPx, layoutSelector }) => {
                 // This runs in the page. The capture CSS earlier asked the PDF engine to keep
                 // sliders and data-items whole. But some are simply taller than a page and must
                 // be allowed to split, or they would overflow. Here we find those over-height
@@ -1619,7 +1603,7 @@ class _BasePlaywrightPDFRenderer(ABC):
 
                     item.style.setProperty('break-inside', 'auto', 'important');
                     item.style.setProperty('page-break-inside', 'auto', 'important');
-                    const layout = item.closest('div[data-layout-type="basic"]');
+                    const layout = item.closest(layoutSelector);
                     if (layout) {
                         layout.style.setProperty('break-inside', 'auto', 'important');
                         layout.style.setProperty('page-break-inside', 'auto', 'important');
@@ -1640,7 +1624,10 @@ class _BasePlaywrightPDFRenderer(ABC):
                     breakableItems
                 };
             }""",
-            printable_height_px,
+            {
+                "printableHeightPx": printable_height_px,
+                "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
+            },
         )
 
     def _log_pagination_preparation(

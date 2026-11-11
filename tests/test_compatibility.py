@@ -52,6 +52,7 @@ from ansys.dynamicreporting.core.compatibility import (
     validate_supported_server_install_version,
 )
 from ansys.dynamicreporting.core.common_utils import InstallResolution
+from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import UnsupportedServerVersionError
 from ansys.dynamicreporting.core.serverless import ADR
 
@@ -324,7 +325,7 @@ def test_service_warns_for_unsupported_docker_product_release(monkeypatch, tmp_p
         warnings.simplefilter("always")
         service = Service(
             ansys_installation="docker",
-            docker_image="ghcr.io/ansys/adr_dev:latest",
+            docker_image=DOCKER_DEV_REPO_URL,
             db_directory=str(tmp_path / "db"),
         )
 
@@ -340,7 +341,7 @@ def test_service_does_not_warn_for_supported_docker_product_release(monkeypatch,
         warnings.simplefilter("always")
         service = Service(
             ansys_installation="docker",
-            docker_image="ghcr.io/ansys/adr_dev:latest",
+            docker_image=DOCKER_DEV_REPO_URL,
             db_directory=str(tmp_path / "db"),
         )
 

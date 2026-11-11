@@ -20,16 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import json
 import os
-import re
 from dataclasses import dataclass
 from io import BytesIO
+from logging import Logger
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
+from unittest.mock import call
 
+from PIL import Image
 import pytest
+from playwright.sync_api import Browser, Playwright
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from pypdf import PdfReader
@@ -41,9 +43,7 @@ from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
-_EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
 _PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
-_STUBBED_BROWSER_DIR = Path("mock-product-browser")
 
 
 def _fake_ansys_installation(version: int) -> str:
@@ -170,12 +170,13 @@ class _ProductPlaywrightContext:
 
     ansys_installation: str
     ansys_version: int
-    playwright_browsers_path: str
     binary_info: pdf_renderer_module._PlaywrightBrowserBinaryInfo
 
 
 @pytest.fixture(scope="module")
-def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightContext:
+def product_playwright_context(
+    request: pytest.FixtureRequest, pytestconfig: pytest.Config
+) -> _ProductPlaywrightContext:
     """Return a product browser path that matches the host platform running this test module."""
 
     # Priority 1: explicit install path when --use-local-launcher is active.
@@ -187,12 +188,12 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
             binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
                 ansys_installation=explicit_resolution.install_dir,
                 ansys_version=explicit_resolution.version,
+                logger=Mock(),
             )
             if binary_info is not None:
                 return _ProductPlaywrightContext(
                     ansys_installation=explicit_resolution.install_dir,
                     ansys_version=explicit_resolution.version,
-                    playwright_browsers_path=str(binary_info.path),
                     binary_info=binary_info,
                 )
 
@@ -201,12 +202,12 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
     binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
         ansys_installation=adr_init.ansys_installation,
         ansys_version=adr_init.ansys_version,
+        logger=Mock(),
     )
     if binary_info is not None:
         return _ProductPlaywrightContext(
             ansys_installation=adr_init.ansys_installation,
             ansys_version=adr_init.ansys_version,
-            playwright_browsers_path=str(binary_info.path),
             binary_info=binary_info,
         )
 
@@ -216,12 +217,12 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
         binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
             ansys_installation=local_resolution.install_dir,
             ansys_version=local_resolution.version,
+            logger=Mock(),
         )
         if binary_info is not None:
             return _ProductPlaywrightContext(
                 ansys_installation=local_resolution.install_dir,
                 ansys_version=local_resolution.version,
-                playwright_browsers_path=str(binary_info.path),
                 binary_info=binary_info,
             )
 
@@ -231,59 +232,47 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
     )
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _use_product_playwright_browser(product_playwright_context: _ProductPlaywrightContext):
-    """Run this module's real-browser paths against the product-shipped Playwright browser."""
-    restored_browser_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = product_playwright_context.playwright_browsers_path
-    try:
-        yield
-    finally:
-        if restored_browser_path is None:
-            os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-        else:
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_path
-
-
-def _launch_product_chromium(playwright, product_playwright_context: _ProductPlaywrightContext):
-    """Launch the product-shipped Chromium the same way ``render_pdf()`` does.
-
-    Also check that the launch took the path the installed Playwright calls for. The installed
-    Playwright's own full-Chromium revision is the oracle: when it differs from the packaged
-    build, the product build is launched by path with a warning.
-    """
+def _launch_product_chromium(
+    playwright: Playwright, product_playwright_context: _ProductPlaywrightContext
+) -> Browser:
+    """Launch the real product browser and assert its metadata-selected executable path."""
     binary_info = product_playwright_context.binary_info
     logger = Mock()
+    expected_executable = _expected_headless_shell_executable(
+        binary_info.path, binary_info.packaged_binary_dir, binary_info.machine_arch
+    )
+
+    def launch_chromium(*, executable_path: str) -> Browser:
+        assert Path(executable_path) == expected_executable
+        return playwright.chromium.launch(headless=True, executable_path=executable_path)
+
     browser = pdf_renderer_module._launch_product_browser(
-        playwright.chromium.launch,
+        launch_chromium,
         binary_info,
         logger,
-        expected_build=pdf_renderer_module._expected_headless_shell_build(),
     )
-    expected = re.search(r"[\\/]chromium-(\d+)[\\/]", playwright.chromium.executable_path)
-    packaged = re.fullmatch(r"chromium_headless_shell-(\d+)", binary_info.packaged_binary_dir)
-    if expected is not None and packaged is not None:
-        assert logger.warning.called == (expected.group(1) != packaged.group(1))
     return browser
 
 
-def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDFFlow:
-    """Build a fake Chromium stack and route ``sync_playwright`` to it without launching a browser."""
+def _stub_playwright_stack(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> MockPlaywrightPDFFlow:
+    """Stub Playwright and browser discovery around a temporary packaged executable."""
     flow = _mock_playwright_pdf_flow()
-    # Most mocked unit tests do not exercise the product-browser discovery path directly, so
-    # keep their setup focused on downstream render behavior by stubbing the resolver as well.
+    browser_binary_dir = tmp_path / "playwright-browsers"
+    _create_packaged_headless_shell(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME)
+
+    def resolve_browser_binary_info(
+        ansys_installation: str | None = None,
+        ansys_version: int | None = None,
+        logger: Logger | None = None,
+    ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
+        return _browser_binary_info(browser_binary_dir)
+
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
-            _STUBBED_BROWSER_DIR
-        ),
-    )
-    # The browser launch is mocked, so any path stands in for the packaged executable.
-    monkeypatch.setattr(
-        pdf_renderer_module,
-        "_packaged_headless_shell_executable",
-        lambda binary_info: _STUBBED_BROWSER_DIR / "headless-shell",
+        resolve_browser_binary_info,
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     return flow
@@ -310,7 +299,11 @@ def _arrange_product_browser_renderer(
     )
     flow = _mock_playwright_pdf_flow(launch_side_effect=launch_side_effect)
 
-    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None):
+    def resolve_browser_binary_info(
+        ansys_installation: str | None = None,
+        ansys_version: int | None = None,
+        logger: Logger | None = None,
+    ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
         """Return the fake product browser metadata needed by most product-browser tests."""
         return _browser_binary_info(browser_binary_dir)
 
@@ -325,28 +318,13 @@ def _arrange_product_browser_renderer(
     return renderer, flow, browser_binary_dir
 
 
-def _capture_render_start_env(flow: MockPlaywrightPDFFlow, env_seen: dict[str, object]) -> None:
-    """Capture the effective render-scope environment at Playwright startup time."""
-
-    def fake_enter():
-        """Snapshot render-scope env vars when the mocked Playwright context starts."""
-        # Playwright resolves its browser registry on context-manager entry, so capture env state here.
-        env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-        env_seen["transient_override_envs"] = {
-            env_var: os.environ.get(env_var)
-            for env_var in _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
-        }
-        return flow.playwright
-
-    flow.manager.__enter__.side_effect = fake_enter
-
-
 def _stub_playwright_render(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    renderer: _OfflinePlaywrightPDFRenderer,
+    renderer: _OfflinePlaywrightPDFRenderer | _ReportURLPlaywrightPDFRenderer,
 ) -> tuple[Mock, Mock, Mock]:
     """Stub browser preparation and return the rendered page."""
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(
         renderer,
@@ -358,13 +336,15 @@ def _stub_playwright_render(
 
 def _browser_binary_info(
     browser_binary_dir: Path,
+    packaged_binary_dir: str = _PACKAGED_BROWSER_DIR_NAME,
+    machine_arch: str = "win64",
 ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
-    """Create validated product-binary metadata for renderer tests."""
+    """Create validated product-binary metadata for one packaged headless-shell build."""
     return pdf_renderer_module._PlaywrightBrowserBinaryInfo(
         path=browser_binary_dir,
         browser_name=pdf_renderer_module._PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-        machine_arch="win64",
-        packaged_binary_dir=_PACKAGED_BROWSER_DIR_NAME,
+        machine_arch=machine_arch,
+        packaged_binary_dir=packaged_binary_dir,
     )
 
 
@@ -469,22 +449,30 @@ def test_offline_renderer_adds_offline_context_delta(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         render_timeout=12.5,
         **_browser_metadata_kwargs(),
     )
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     monotonic_values = iter([100.0] * 10)
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
+    stack.playwright.chromium.launch.assert_called_once_with(
+        headless=True,
+        timeout=12500,
+        executable_path=str(
+            _expected_headless_shell_executable(
+                tmp_path / "playwright-browsers", _PACKAGED_BROWSER_DIR_NAME, "win64"
+            )
+        ),
+    )
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
@@ -493,14 +481,16 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_path, monkeypatch):
+def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         render_timeout=0.0001,
         **_browser_metadata_kwargs(),
     )
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     monotonic_values = iter([100.0] * 10)
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
@@ -510,7 +500,15 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
 
     # Playwright treats timeout=0 as "no timeout", so tiny positive ADR budgets round up to 1 ms
     # under the shared browser-phase deadline helper instead of truncating to 0.
-    stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=1)
+    stack.playwright.chromium.launch.assert_called_once_with(
+        headless=True,
+        timeout=1,
+        executable_path=str(
+            _expected_headless_shell_executable(
+                tmp_path / "playwright-browsers", _PACKAGED_BROWSER_DIR_NAME, "win64"
+            )
+        ),
+    )
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
@@ -519,14 +517,16 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
 
 
 @pytest.mark.unit
-def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
+def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         render_timeout=10.0,
         **_browser_metadata_kwargs(),
     )
-    _stub_playwright_stack(monkeypatch)
+    _stub_playwright_stack(tmp_path, monkeypatch)
     captured_deadline: dict[str, float] = {}
     monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0])
 
@@ -545,14 +545,16 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 
 
 @pytest.mark.unit
-def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
+def test_playwright_pdf_normalizes_playwright_navigation_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         render_timeout=12.5,
         **_browser_metadata_kwargs(),
     )
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     stack.page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
@@ -572,10 +574,12 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
 
 
 @pytest.mark.unit
-def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
+def test_playwright_pdf_closes_browser_when_new_context_creation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
     renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, **_browser_metadata_kwargs())
-    stack = _stub_playwright_stack(monkeypatch)
+    stack = _stub_playwright_stack(tmp_path, monkeypatch)
     stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
     # The caller-facing message stays generic while preserving the underlying browser failure.
@@ -588,7 +592,9 @@ def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path,
 
 
 @pytest.mark.unit
-def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
+def test_live_report_url_renderer_navigates_to_report_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _ReportURLPlaywrightPDFRenderer(
         url="http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
         auth_cookies=[
@@ -604,7 +610,7 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
         render_timeout=12.5,
         **_browser_metadata_kwargs(),
     )
-    page, context, browser = _stub_playwright_render(monkeypatch, renderer)
+    page, context, browser = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     page.goto.assert_called_once()
@@ -677,9 +683,11 @@ def test_pdf_page_size_is_exported_from_common_utils():
 # Fixed formats and custom dimensions are mutually exclusive Playwright option
 # shapes. These tests pin the public precedence rules as well as their values.
 @pytest.mark.unit
-def test_playwright_pdf_uses_a3_format_when_content_fits(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_a3_format_when_content_fits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -706,7 +714,9 @@ def test_playwright_pdf_uses_a3_format_when_content_fits(tmp_path, monkeypatch):
         PDFPageSize.A6,
     ],
 )
-def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, page_size):
+def test_playwright_pdf_uses_selected_fixed_page_size(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, page_size: PDFPageSize
+) -> None:
     # Deliberately wide content must not replace the caller-selected format with
     # a content-derived width; capture CSS owns overflow handling.
     renderer = _simple_renderer(
@@ -714,7 +724,7 @@ def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, pag
         '<html><body><table style="width: 12000px"><tr><td>Wide</td></tr></table></body></html>',
         page_size=page_size,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -726,14 +736,16 @@ def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, pag
 
 
 @pytest.mark.unit
-def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypatch):
+def test_playwright_landscape_pdf_rotates_selected_fixed_page(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Landscape A3</p></body></html>",
         landscape=True,
         page_size=PDFPageSize.A3,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -745,7 +757,9 @@ def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypa
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Custom dimensions</p></body></html>",
@@ -753,7 +767,7 @@ def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, 
         width="12in",
         height=1728.0,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -765,7 +779,9 @@ def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, 
 
 
 @pytest.mark.unit
-def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monkeypatch):
+def test_playwright_pdf_fixed_format_overrides_custom_dimensions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Fixed format wins</p></body></html>",
@@ -773,7 +789,7 @@ def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monke
         width="1px",
         height="1px",
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -784,7 +800,9 @@ def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monke
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # ``page_size=None`` is also the custom-size switch. With no complete custom
     # pair, it falls back to A3 instead of producing no size.
     renderer = _simple_renderer(
@@ -792,7 +810,7 @@ def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(tmp_path, monkeypatch
         "<html><body><p>Default dimensions</p></body></html>",
         page_size=None,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -862,9 +880,11 @@ def test_browser_context_uses_custom_printable_width(tmp_path, landscape, expect
 
 
 @pytest.mark.unit
-def test_playwright_pdf_prepares_pagination_before_generation(tmp_path, monkeypatch):
+def test_playwright_pdf_prepares_pagination_before_generation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(tmp_path, monkeypatch, renderer)
     call_order: list[str] = []
 
     # Styles establish print geometry, readiness settles the styled DOM, and
@@ -1044,7 +1064,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
     assert ".ansys-nexus-proxy" in css
-    assert "h2:has(+ section.adr-container)" in css
+    assert "h2:has(~ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "--adr-border-color: #adb5bd !important;" in css
@@ -1059,8 +1079,8 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
 @pytest.mark.unit
 def test_apply_pdf_capture_styles_take_effect_under_screen_media(
-    tmp_path, product_playwright_context
-):
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
+) -> None:
     html = """
     <html>
     <head>
@@ -1323,8 +1343,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(
 @pytest.mark.unit
 @pytest.mark.parametrize("landscape", [False, True])
 def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
-    tmp_path, landscape, product_playwright_context
-):
+    tmp_path: Path, landscape: bool, product_playwright_context: _ProductPlaywrightContext
+) -> None:
     """Exercise visual fitting, layout cohesion, and oversized fragmentation together."""
     html = """
     <html>
@@ -1721,6 +1741,886 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
     assert state["plotlyResizeCount"] == 1
 
 
+def _panel_pagination_html(content: str) -> str:
+    """Build generator-shaped panels with shadow headers and slotted content."""
+    return (
+        """
+    <html><head>
+        <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; font: 16px/24px sans-serif; }
+            h2 { margin: 0 0 8px; font-size: 28px; line-height: 36px; }
+            p { margin: 0; }
+            adr-panel, adr-data-item, img { display: block; }
+            img { width: 480px; height: 600px; }
+            .padded { padding: 12px; border: 1px solid; }
+        </style>
+        <script>
+            customElements.define('adr-panel', class extends HTMLElement {
+                connectedCallback() {
+                    if (this.shadowRoot) return;
+                    this.attachShadow({mode: 'open'}).innerHTML = `
+                        <style>
+                            * { box-sizing: border-box; }
+                            :host, section { display: block; }
+                            section.adr-panel { border: 1px solid; }
+                            header { height: 70px; padding: 20px; }
+                            section.adr-panel-body { padding: 20px; }
+                        </style>
+                        <section class="adr-panel">
+                            <header class="adr-panel-header">${this.dataset.title}</header>
+                            <section class="adr-panel-body"><slot></slot></section>
+                        </section>`;
+                }
+            });
+        </script>
+    </head><body class="loaded"><main id="report_root">
+    """
+        + content
+        + "</main></body></html>"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrapper", ["direct", "tabs", "padded", "nested_panel"])
+@pytest.mark.parametrize("with_heading", [False, True], ids=["content_only", "heading"])
+@pytest.mark.parametrize("page_size", [PDFPageSize.A4, PDFPageSize.A3], ids=["a4", "a3"])
+@pytest.mark.parametrize("landscape", [False, True], ids=["portrait", "landscape"])
+def test_playwright_pdf_fits_panel_visual_through_layout_wrappers(
+    tmp_path, product_playwright_context, monkeypatch, wrapper, with_heading, page_size, landscape
+):
+    """Fit the complete panel, not just its inner heading/image section."""
+    Image.new("RGB", (480, 600), "blue").save(tmp_path / "panel.png")
+    heading = "<h2>VISUAL-TITLE</h2>" if with_heading else ""
+    content = f"""
+        <div data-layout-type="basic" nexus_template="visual-section">
+            <a id="TOC_item_tgt_visual"></a><br>{heading}
+            <section class="adr-container" id="visual-section">
+                <adr-data-item><img id="panel-image" src="panel.png">
+                    <p>VISUAL-END</p></adr-data-item>
+            </section>
+        </div>
+    """
+    if wrapper == "tabs":
+        content = f'<div data-layout-type="tabs">{content}</div>'
+    elif wrapper == "padded":
+        content = f'<div data-layout-type="tabs"><section class="padded">{content}</section></div>'
+    elif wrapper == "nested_panel":
+        content = (
+            '<div data-layout-type="panel"><br><adr-panel data-title="INNER-PANEL">'
+            f'<div data-layout-type="tabs">{content}</div></adr-panel></div>'
+        )
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<p style="break-after:page;">PREVIOUS-SECTION</p>'
+            '<div id="outer-panel" data-layout-type="panel"><br>'
+            f'<adr-panel data-title="OUTER-PANEL">{content}</adr-panel></div>'
+        ),
+        page_size=page_size,
+        landscape=landscape,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => ({
+            imageHeight: document.getElementById('panel-image').getBoundingClientRect().height,
+            panelHeight: document.getElementById('outer-panel').getBoundingClientRect().height
+        })""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == 2
+    assert "PREVIOUS-SECTION" in text[0]
+    markers = ["OUTER-PANEL", "VISUAL-END"]
+    if with_heading:
+        markers.append("VISUAL-TITLE")
+    if wrapper == "nested_panel":
+        markers.append("INNER-PANEL")
+    for marker in markers:
+        assert sum(page.count(marker) for page in text) == 1
+        assert marker in text[1]
+    assert len(reader.pages[0].images) == 0
+    assert len(reader.pages[1].images) == 1
+    assert state["panelHeight"] <= (
+        renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX
+    )
+    if page_size == PDFPageSize.A4 and landscape:
+        assert 0 < state["imageHeight"] < 600
+    else:
+        assert state["imageHeight"] == 600
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrapper", ["direct", "tabs"])
+@pytest.mark.parametrize("preceding_table", [False, True], ids=["image_first", "table_first"])
+def test_playwright_pdf_does_not_repeat_panel_header_budget(
+    tmp_path, product_playwright_context, monkeypatch, wrapper, preceding_table
+):
+    """Let a multi-section panel paginate, counting its header only at the start."""
+    Image.new("RGB", (480, 900), "blue").save(tmp_path / "chart.png")
+    sections = []
+    if preceding_table:
+        sections.append(
+            '<adr-data-item style="height:160px"><table><tbody><tr>'
+            "<td>TABLE-FIRST</td></tr></tbody></table></adr-data-item>"
+        )
+    for index in range(3):
+        sections.append(f"""
+            <div data-layout-type="basic" nexus_template="chart-{index}">
+                <h2>CHART-{index}</h2>
+                <section class="adr-container" id="chart-{index}">
+                    <adr-data-item>
+                        <img id="image-{index}" src="chart.png" style="height:900px">
+                        <p>END-{index}</p>
+                    </adr-data-item>
+                </section>
+            </div>
+        """)
+    content = "".join(sections)
+    if wrapper == "tabs":
+        content = f'<div data-layout-type="tabs">{content}</div>'
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<div id="outer-panel" data-layout-type="panel">'
+            f'<adr-panel data-title="PANEL-TITLE">{content}</adr-panel></div>'
+        ),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => ({
+            heights: [...document.querySelectorAll('img')].map(
+                image => image.getBoundingClientRect().height),
+            panelBreak: getComputedStyle(document.getElementById('outer-panel')).breakInside
+        })""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == (4 if preceding_table else 3)
+    assert all(page.strip() for page in text)
+    assert sum(page.count("PANEL-TITLE") for page in text) == 1
+    assert "PANEL-TITLE" in text[0]
+    assert state["panelBreak"] == "auto"
+    for index in range(3):
+        page_index = index + int(preceding_table)
+        assert f"CHART-{index}" in text[page_index]
+        assert f"END-{index}" in text[page_index]
+        assert len(reader.pages[page_index].images) == 1
+    if preceding_table:
+        assert "TABLE-FIRST" in text[0]
+        assert state["heights"][0] == state["heights"][1]
+    else:
+        assert state["heights"][1] > state["heights"][0] + 50
+        assert state["heights"][2] > state["heights"][0] + 50
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("column_count", [1, 2, 3])
+@pytest.mark.parametrize("parent_parts", ["none", "heading", "heading_and_introduction"])
+@pytest.mark.parametrize("continuation", ["none", "row", "column"])
+def test_playwright_pdf_keeps_parent_heading_with_first_column_fragments(
+    tmp_path, product_playwright_context, monkeypatch, column_count, parent_parts, continuation
+):
+    """Share the parent's heading space across columns, but not later fragments."""
+    for column, color in enumerate(["red", "green", "blue"][:column_count]):
+        Image.new("RGB", (240, 900), color).save(tmp_path / f"column-{column}.png")
+
+    def section_html(group: int, column: int) -> str:
+        guid = f"group-{group}-column-{column}"
+        return f"""
+            <div data-layout-type="basic" nexus_template="{guid}">
+                <h2>CHILD-{group}-{column}</h2>
+                <section class="adr-container" id="{guid}">
+                    <adr-data-item>
+                        <img id="image-{group}-{column}" src="column-{column}.png"
+                             style="width:240px;height:900px">
+                        <p>END-{group}-{column}</p>
+                    </adr-data-item>
+                </section>
+            </div>
+        """
+
+    def row_html(columns: list[str]) -> str:
+        if column_count == 1:
+            return "".join(columns)
+        cells = "".join(
+            f'<section class="adr-col-{12 // column_count}" '
+            f'style="flex:0 0 auto;width:{100 / column_count:.8f}%;height:fit-content">'
+            f"{content}</section>"
+            for content in columns
+        )
+        return f'<section class="adr-row" style="display:flex;flex-wrap:wrap">{cells}</section>'
+
+    first_columns = []
+    for column in range(column_count):
+        content = section_html(0, column)
+        if continuation == "column":
+            content += section_html(1, column)
+            content = (
+                f'<div data-layout-type="basic" nexus_template="branch-{column}">'
+                f'<section class="adr-container" id="branch-{column}">{content}</section></div>'
+            )
+        first_columns.append(content)
+    content = row_html(first_columns)
+    if column_count > 1:
+        # The generator emits an empty row before the first populated row.
+        content = '<section class="adr-row"></section>' + content
+    if continuation == "row":
+        content += row_html([section_html(1, column) for column in range(column_count)])
+
+    parent_html = "<h2>PARENT-TITLE</h2>" if parent_parts != "none" else ""
+    if parent_parts == "heading_and_introduction":
+        parent_html += "<p>PARENT-INTRODUCTION</p>"
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<p style="break-after:page">PREVIOUS-SECTION</p>'
+            '<div id="parent-layout" data-layout-type="basic" nexus_template="parent">'
+            f'{parent_html}<section class="adr-container" id="parent">{content}</section></div>'
+        ),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => {
+                const parent = document.getElementById('parent-layout');
+                return {
+                    parentHeight: parent.getBoundingClientRect().height,
+                    prefixHeight: document.getElementById('parent').getBoundingClientRect().top
+                        - parent.getBoundingClientRect().top,
+                    parentBreak: getComputedStyle(parent).breakInside,
+                    heights: Object.fromEntries([...document.querySelectorAll('img')].map(
+                        image => [image.id, image.getBoundingClientRect().height]))
+                };
+            }""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    group_count = 1 if continuation == "none" else 2
+    assert len(reader.pages) == group_count + 1
+    assert all(page.strip() for page in text)
+    assert text[0].strip() == "PREVIOUS-SECTION"
+    assert len(reader.pages[0].images) == 0
+    assert sum(page.count("PARENT-TITLE") for page in text) == int(parent_parts != "none")
+    assert sum(page.count("PARENT-INTRODUCTION") for page in text) == int(
+        parent_parts == "heading_and_introduction"
+    )
+    if parent_parts != "none":
+        assert "PARENT-TITLE" in text[1]
+    if parent_parts == "heading_and_introduction":
+        assert "PARENT-INTRODUCTION" in text[1]
+    for group in range(group_count):
+        assert len(reader.pages[group + 1].images) == column_count
+        for column in range(column_count):
+            for marker in (f"CHILD-{group}-{column}", f"END-{group}-{column}"):
+                assert sum(page.count(marker) for page in text) == 1
+                assert marker in text[group + 1]
+    if continuation == "none":
+        assert state["parentHeight"] <= (
+            renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX
+        )
+    else:
+        assert state["parentBreak"] == "auto"
+        for column in range(column_count):
+            difference = (
+                state["heights"][f"image-1-{column}"] - state["heights"][f"image-0-{column}"]
+            )
+            assert difference == pytest.approx(state["prefixHeight"], abs=1)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_kind", ["nested", "nested_without_heading", "wrapped"])
+def test_playwright_pdf_keeps_parent_heading_with_nested_and_wrapped_columns(
+    tmp_path, product_playwright_context, layout_kind
+):
+    """Include nested first rows, without treating wrapped columns as the first row."""
+    for index, color in enumerate(["red", "green", "blue", "yellow"]):
+        height = 180 if layout_kind == "wrapped" and index < 3 else 900
+        Image.new("RGB", (120, height), color).save(tmp_path / f"column-{index}.png")
+
+    def layout_html(guid: str, heading: str, content: str) -> str:
+        heading_html = f"<h2>{heading}</h2>" if heading else ""
+        return (
+            f'<div data-layout-type="basic" nexus_template="{guid}">{heading_html}'
+            f'<section class="adr-container" id="{guid}">{content}</section></div>'
+        )
+
+    def row_html(cells: list[tuple[int, str]]) -> str:
+        columns = "".join(
+            f'<section class="adr-col-{width}" '
+            f'style="flex:0 0 auto;width:{100 * width / 12:.8f}%;height:fit-content">'
+            f"{content}</section>"
+            for width, content in cells
+        )
+        return (
+            '<section class="adr-row"></section>'
+            f'<section class="adr-row" style="display:flex;flex-wrap:wrap">{columns}</section>'
+        )
+
+    leaves = [
+        layout_html(
+            f"child-{index}",
+            f"CHILD-{index}",
+            f'<adr-data-item><img src="column-{index}.png" '
+            f'style="width:120px;height:{180 if layout_kind == "wrapped" and index < 3 else 900}px">'
+            f"<p>END-{index}</p></adr-data-item>",
+        )
+        for index in range(4)
+    ]
+    if layout_kind == "wrapped":
+        content = row_html([(3 if index < 3 else 4, leaf) for index, leaf in enumerate(leaves)])
+    else:
+        content = row_html(
+            [
+                (
+                    6,
+                    layout_html(
+                        f"branch-{branch}",
+                        f"BRANCH-{branch}" if layout_kind == "nested" else "",
+                        row_html([(6, leaf) for leaf in leaves[2 * branch : 2 * branch + 2]]),
+                    ),
+                )
+                for branch in range(2)
+            ]
+        )
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(
+            '<p style="break-after:page">PREVIOUS-SECTION</p>'
+            '<div data-layout-type="basic" nexus_template="parent">'
+            "<h2>PARENT-TITLE</h2><p>PARENT-INTRODUCTION</p>"
+            f'<section class="adr-container" id="parent">{content}</section></div>'
+        ),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == (3 if layout_kind == "wrapped" else 2)
+    assert all(page.strip() for page in text)
+    assert text[0].strip() == "PREVIOUS-SECTION"
+    assert len(reader.pages[0].images) == 0
+    for marker in ("PARENT-TITLE", "PARENT-INTRODUCTION"):
+        assert sum(page.count(marker) for page in text) == 1
+        assert marker in text[1]
+    for index in range(4):
+        page_index = 2 if layout_kind == "wrapped" and index == 3 else 1
+        for marker in (f"CHILD-{index}", f"END-{index}"):
+            assert sum(page.count(marker) for page in text) == 1
+            assert marker in text[page_index]
+    assert len(reader.pages[1].images) == (3 if layout_kind == "wrapped" else 4)
+    if layout_kind == "wrapped":
+        assert len(reader.pages[2].images) == 1
+    elif layout_kind == "nested":
+        for branch in range(2):
+            assert sum(page.count(f"BRANCH-{branch}") for page in text) == 1
+            assert f"BRANCH-{branch}" in text[1]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops", "footer"])
+@pytest.mark.parametrize("with_introduction", [False, True], ids=["adjacent", "with_intro"])
+@pytest.mark.parametrize("content_kind", ["table", "oversized_table", "oversized_visual"])
+@pytest.mark.parametrize("custom_header_sections", [False, True], ids=["plain", "custom_sections"])
+def test_playwright_pdf_keeps_heading_and_introduction_with_content(
+    tmp_path,
+    product_playwright_context,
+    layout_type,
+    with_introduction,
+    content_kind,
+    custom_header_sections,
+):
+    """Keep headings with the first content fragment without clipping oversized content."""
+    template_guid = "11111111-2222-4333-8444-555555555555"
+    heading = "MATERIAL-HEADING"
+    item_type = "image" if content_kind == "oversized_visual" else "table"
+    introductions = ["INTRODUCTION-ONE", "INTRODUCTION-TWO"] if with_introduction else []
+    introduction_html = "".join(f"<p>{text}</p>" for text in introductions)
+    header_before = (
+        '<section class="adr-container" id="custom-before">CUSTOM-BEFORE</section>'
+        if custom_header_sections
+        else ""
+    )
+    header_after = (
+        '<section class="adr-container" id="custom-after">CUSTOM-AFTER</section>'
+        if custom_header_sections
+        else ""
+    )
+    footer_break = '<div style="break-after:page;"></div>' if layout_type == "footer" else ""
+    following_section = "<p>AFTER-FOOTER</p>" if layout_type == "footer" else ""
+    if content_kind == "oversized_visual":
+        (tmp_path / "tall.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="1200">'
+            '<rect width="300" height="1200" fill="blue"/></svg>',
+            encoding="utf-8",
+        )
+        content_markers = ["VISUAL-END"]
+        content = '<img src="tall.svg" width="300" height="1200"><p>VISUAL-END</p>'
+    else:
+        row_count = 20 if content_kind == "oversized_table" else 3
+        content_markers = [f"ROW-{index:02d}" for index in range(row_count)]
+        rows = "".join(f"<tr><td>{marker}</td></tr>" for marker in content_markers)
+        content = f'<div class="table-responsive"><table><tbody>{rows}</tbody></table></div>'
+
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head>
+            <style>
+                body {{ margin: 0; }}
+                h3, p {{ margin: 0; font-size: 16px; line-height: 20px; }}
+                table {{ border-collapse: collapse; width: 100%; }}
+                tr {{ height: 40px; }}
+                td {{ padding: 0; }}
+                .adr-row {{ display: flex; }}
+                .adr-col-6 {{ width: 50%; }}
+            </style>
+        </head>
+        <body class="loaded">
+            <main id="report_root">
+                <div style="height: 430px">PREVIOUS-SECTION</div>
+                <div nexus_template="{template_guid}" data-layout-type="{layout_type}"
+                     aria-label="report layout container">
+                    <a id="TOC_item_tgt_test"></a>
+                    <div style="display: none" aria-label="debug info container"></div>
+                    <br>
+                    {header_before}
+                    <h3>{heading}</h3>
+                    {introduction_html}
+                    {header_after}
+                    <section class="adr-container" id="{template_guid}">
+                        <section class="adr-row">
+                            <section class="adr-col-6 text-center mx-auto">
+                                <adr-data-item id="data_item_test"
+                                    data-item-type="{item_type}">
+                                    <template shadowrootmode="open">
+                                        <section class="adr-data-item-container"><slot></slot></section>
+                                    </template>
+                                    {content}
+                                </adr-data-item>
+                            </section>
+                        </section>
+                    </section>
+                    {footer_break}
+                </div>
+                {following_section}
+            </main>
+        </body>
+        </html>
+        """,
+        page_size=None,
+        width="600px",
+        height="500px",
+        margins={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+    marker_pages = {}
+    custom_markers = ["CUSTOM-BEFORE", "CUSTOM-AFTER"] if custom_header_sections else []
+    following_markers = ["AFTER-FOOTER"] if layout_type == "footer" else []
+    for marker in [heading, *introductions, *content_markers, *custom_markers, *following_markers]:
+        assert sum(text.count(marker) for text in page_text) == 1, (
+            f"Missing or duplicated PDF content: {marker}"
+        )
+        marker_pages[marker] = next(index for index, text in enumerate(page_text) if marker in text)
+
+    for marker in [*introductions, content_markers[0]]:
+        assert marker_pages[marker] == marker_pages[heading]
+    if custom_header_sections:
+        assert marker_pages["CUSTOM-AFTER"] == marker_pages[heading]
+    if content_kind == "oversized_table":
+        assert marker_pages[content_markers[-1]] > marker_pages[content_markers[0]]
+    else:
+        assert len(reader.pages) == (3 if layout_type == "footer" else 2)
+        assert marker_pages[heading] == 1
+        assert marker_pages[content_markers[-1]] == marker_pages[heading]
+    if layout_type == "footer":
+        assert marker_pages["AFTER-FOOTER"] == marker_pages[content_markers[-1]] + 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("footer_kind", ["empty", "html_only", "content_only"])
+def test_playwright_pdf_preserves_footer_page_break_with_optional_parts(
+    tmp_path, product_playwright_context, footer_kind
+):
+    """Preserve the generator's forced page break even when footer parts are absent."""
+    template_guid = "11111111-2222-4333-8444-555555555555"
+    footer_markers = []
+    if footer_kind == "empty":
+        footer_html = f'<div nexus_template="{template_guid}" style="break-after:page;"></div>'
+    else:
+        if footer_kind == "html_only":
+            footer_markers = ["FOOTER-TITLE", "FOOTER-INTRO"]
+            header_html = "<h3>FOOTER-TITLE</h3><p>FOOTER-INTRO</p>"
+            content_html = ""
+        else:
+            footer_markers = [f"FOOTER-ROW-{index:02d}" for index in range(3)]
+            header_html = ""
+            rows = "".join(f"<tr><td>{marker}</td></tr>" for marker in footer_markers)
+            content_html = f"<adr-data-item><table><tbody>{rows}</tbody></table></adr-data-item>"
+        footer_html = (
+            f"<br>{header_html}"
+            f'<section class="adr-container" id="{template_guid}">{content_html}</section>'
+            '<div style="break-after:page;"></div>'
+        )
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head><style>
+            body, h3, p {{ margin: 0; }}
+            h3, p {{ font-size: 16px; line-height: 20px; }}
+            table {{ border-collapse: collapse; }}
+            tr {{ height: 40px; }}
+            td {{ padding: 0; }}
+        </style></head>
+        <body class="loaded"><main id="report_root">
+            <p>BEFORE-FOOTER</p>
+            <div nexus_template="{template_guid}" data-layout-type="footer">
+                {footer_html}
+            </div>
+            <p>AFTER-FOOTER</p>
+        </main></body></html>
+        """,
+        page_size=None,
+        width="600px",
+        height="500px",
+        margins={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+
+    assert len(reader.pages) == 2
+    for marker in ["BEFORE-FOOTER", *footer_markers]:
+        assert page_text[0].count(marker) == 1
+        assert marker not in page_text[1]
+    assert "AFTER-FOOTER" not in page_text[0]
+    assert page_text[1].count("AFTER-FOOTER") == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
+def test_pagination_finds_following_container_without_template_metadata(
+    tmp_path, product_playwright_context, layout_type
+):
+    """Preserve standalone HTML with a custom content section before its heading."""
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head><style>
+            body, h3, p {{ margin: 0; }}
+            h3, p {{ line-height: 20px; }}
+        </style></head>
+        <body><main id="report_root">
+            <div id="standalone" data-layout-type="{layout_type}">
+                <section class="adr-container">Earlier custom HTML</section>
+                <h3>Standalone heading</h3>
+                <p>Introduction</p>
+                <section class="adr-container">
+                    <adr-data-item>
+                        <div class="nexus-plot" style="height: 2000px; width: 300px">Plot</div>
+                    </adr-data-item>
+                </section>
+            </div>
+        </main></body>
+        </html>
+        """,
+        page_size=PDFPageSize.A4,
+    )
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = _launch_product_chromium(playwright, product_playwright_context)
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        renderer._apply_pdf_capture_styles(page)
+        renderer._prepare_content_for_pagination(page)
+        state = page.evaluate(
+            """() => {
+                const layout = document.getElementById('standalone');
+                return {
+                    height: layout.getBoundingClientRect().height,
+                    breakInside: layout.style.getPropertyValue('break-inside')
+                };
+            }"""
+        )
+        browser.close()
+
+    assert state["breakInside"] == "avoid"
+    assert state["height"] <= (
+        renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX + 0.5
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
+@pytest.mark.parametrize(
+    "with_heading, with_introduction, content_kind",
+    [
+        pytest.param(False, False, "visual", id="content_only_visual"),
+        pytest.param(False, False, "table", id="content_only_table"),
+        pytest.param(False, True, "visual", id="introduction_and_content"),
+        pytest.param(True, False, "missing", id="heading_only"),
+        pytest.param(True, True, "missing", id="heading_and_introduction"),
+        pytest.param(True, True, "empty", id="heading_and_introduction_empty_body"),
+        pytest.param(False, False, "missing", id="empty"),
+    ],
+)
+def test_pagination_preserves_optional_report_parts(
+    tmp_path,
+    product_playwright_context,
+    monkeypatch,
+    layout_type,
+    with_heading,
+    with_introduction,
+    content_kind,
+):
+    """Missing report parts must not prevent export or disable standalone media fitting."""
+    heading_html = "<h3>OPTIONAL-TITLE</h3>" if with_heading else ""
+    introduction_html = "<p>OPTIONAL-INTRO</p>" if with_introduction else ""
+    content_markers = []
+    if content_kind == "visual":
+        (tmp_path / "optional.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="1200">'
+            '<rect width="300" height="1200" fill="blue"/></svg>',
+            encoding="utf-8",
+        )
+        content = (
+            '<adr-data-item><img id="optional-visual" src="optional.svg" '
+            'width="300" height="1200"><p>OPTIONAL-VISUAL</p></adr-data-item>'
+        )
+        content_markers = ["OPTIONAL-VISUAL"]
+    elif content_kind == "table":
+        content_markers = [f"OPTIONAL-ROW-{index:02d}" for index in range(20)]
+        rows = "".join(f"<tr><td>{marker}</td></tr>" for marker in content_markers)
+        content = f"<adr-data-item><table><tbody>{rows}</tbody></table></adr-data-item>"
+    else:
+        content = ""
+    container_html = (
+        f'<section class="adr-container" id="optional">{content}</section>'
+        if content_kind != "missing"
+        else ""
+    )
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head><style>
+            body, h3, p {{ margin: 0; }}
+            h3, p {{ font-size: 16px; line-height: 20px; }}
+            table {{ border-collapse: collapse; }}
+            tr {{ height: 40px; }}
+            td {{ padding: 0; }}
+        </style></head>
+        <body class="loaded"><main id="report_root">
+            <p>BEFORE-SECTION</p>
+            <div id="optional-layout" nexus_template="optional" data-layout-type="{layout_type}">
+                {heading_html}
+                {introduction_html}
+                {container_html}
+            </div>
+            <p>AFTER-SECTION</p>
+        </main></body></html>
+        """,
+        page_size=None,
+        width="600px",
+        height="500px",
+        margins={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate(
+                """() => ({
+                    breakInside: document.getElementById('optional-layout')
+                        .style.getPropertyValue('break-inside'),
+                    visualHeight: document.getElementById('optional-visual')
+                        ?.getBoundingClientRect().height
+                })"""
+            )
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+    all_text = "\n".join(page_text)
+
+    assert all_text.count("OPTIONAL-TITLE") == int(with_heading)
+    assert all_text.count("OPTIONAL-INTRO") == int(with_introduction)
+    for marker in ["BEFORE-SECTION", "AFTER-SECTION", *content_markers]:
+        assert all_text.count(marker) == 1
+    expected_grouping = with_heading and content_kind != "missing"
+    assert state["breakInside"] == ("avoid" if expected_grouping else "")
+    if content_kind == "visual":
+        assert (
+            0
+            < state["visualHeight"]
+            <= (renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX)
+        )
+    elif content_kind == "table":
+        first_page = next(
+            index for index, text in enumerate(page_text) if content_markers[0] in text
+        )
+        last_page = next(
+            index for index, text in enumerate(page_text) if content_markers[-1] in text
+        )
+        assert last_page > first_page
+    else:
+        assert len(reader.pages) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
+def test_pagination_does_not_borrow_a_nested_layout_heading(
+    tmp_path, product_playwright_context, layout_type
+):
+    """A heading-free parent must not be grouped using a child's heading and content."""
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html><body><main id="report_root">
+            <div id="parent" nexus_template="parent-content" data-layout-type="{layout_type}">
+                <section class="adr-container" id="parent-content">
+                    <div id="child" nexus_template="child-content" data-layout-type="{layout_type}">
+                        <h3>CHILD-TITLE</h3>
+                        <section class="adr-container" id="child-content">CHILD-CONTENT</section>
+                    </div>
+                </section>
+            </div>
+        </main></body></html>
+        """,
+    )
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = _launch_product_chromium(playwright, product_playwright_context)
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        renderer._apply_pdf_capture_styles(page)
+        result = renderer._set_pagination_cohesion(page, renderer._printable_page_height_px())
+        state = page.evaluate(
+            """() => ({
+                parentBreakInside: document.getElementById('parent')
+                    .style.getPropertyValue('break-inside'),
+                childBreakInside: document.getElementById('child')
+                    .style.getPropertyValue('break-inside')
+            })"""
+        )
+        browser.close()
+
+    assert result["keptLayouts"] == ["CHILD-TITLE"]
+    assert state == {"parentBreakInside": "", "childBreakInside": "avoid"}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrapper_kind", ["positioned_box", "sidebar_toc"])
+def test_pagination_does_not_treat_wrapped_layouts_as_standard_containers(
+    tmp_path, product_playwright_context, wrapper_kind
+):
+    """Respect positioned box children and sidebar wrappers emitted by the generator."""
+    inner = """
+        <div nexus_template="inner" data-layout-type="basic">
+            <br><h3>Inner heading</h3>
+            <section class="adr-container" id="inner">Inner content</section>
+        </div>
+    """
+    if wrapper_kind == "positioned_box":
+        layout_type = "box"
+        content = f"""
+            <h3>Outer heading</h3>
+            <section class="adr-container" id="custom-header">Custom header HTML</section>
+            <div id="box_template_0" style="width: 320px; height: 240px">
+                <div style="position: relative; width: 320px; height: 240px; overflow: hidden">
+                    {inner}
+                </div>
+            </div>
+        """
+    else:
+        layout_type = "basic"
+        content = f"""
+            <section id="toc_container">
+                <br><h3>Outer heading</h3>
+                <section class="adr-container" id="outer">{inner}</section>
+            </section>
+        """
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html><body><main id="report_root">
+            <div id="outer-layout" nexus_template="outer" data-layout-type="{layout_type}">
+                {content}
+            </div>
+        </main></body></html>
+        """,
+    )
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = _launch_product_chromium(playwright, product_playwright_context)
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        renderer._apply_pdf_capture_styles(page)
+        result = renderer._set_pagination_cohesion(page, renderer._printable_page_height_px())
+        state = page.evaluate(
+            """() => ({
+                outerBreakInside: document.getElementById('outer-layout')
+                    .style.getPropertyValue('break-inside'),
+                positionedBox: document.getElementById('box_template_0')?.getAttribute('style')
+            })"""
+        )
+        browser.close()
+
+    assert result["keptLayouts"] == ["Inner heading"]
+    assert state["outerBreakInside"] == ""
+    if wrapper_kind == "positioned_box":
+        assert state["positionedBox"] == "width: 320px; height: 240px"
+
+
 @pytest.mark.unit
 def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
@@ -1906,8 +2806,10 @@ def _start_wait_script(page, wait_script: str) -> None:
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-no-root-report"
@@ -1930,8 +2832,10 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC gate</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-loaded-report"
@@ -1960,8 +2864,10 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-transition-report"
@@ -1998,8 +2904,10 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loader(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "plotly-ready-report"
@@ -2035,8 +2943,10 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 @pytest.mark.unit
 def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2073,8 +2983,10 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2122,8 +3034,10 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "video-ready-report"
@@ -2166,8 +3080,10 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_double_request_animation_frame_resolves(
-    tmp_path, monkeypatch, product_playwright_context
-):
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product_playwright_context: _ProductPlaywrightContext,
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Animation frame</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "double-raf-report"
@@ -2466,83 +3382,56 @@ def test_renderer_constructor_chains_render_timeout_conversion_errors(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_transient_override_env_vars_are_explicit_contract():
-    """Lock in the exact transient override env vars that browser-PDF render scope clears."""
-    # The render scope clears only host-platform overrides because browser-PDF handles
-    # PLAYWRIGHT_BROWSERS_PATH separately.
-    assert (
-        _OfflinePlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
-        == _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
-    )
+@pytest.mark.parametrize("user_env_set", [False, True], ids=["unset", "set"])
+def test_playwright_pdf_leaves_the_playwright_environment_untouched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, user_env_set: bool
+) -> None:
+    """The browser is launched by path, so a render needs no Playwright environment overrides."""
+    renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    user_env = {
+        "PLAYWRIGHT_BROWSERS_PATH": str(tmp_path / "user-browser-path"),
+        "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE": "user-platform",
+    }
+    for env_var, value in user_env.items():
+        if user_env_set:
+            monkeypatch.setenv(env_var, value)
+        else:
+            monkeypatch.delenv(env_var, raising=False)
+    expected_env = {
+        env_var: (value if user_env_set else None) for env_var, value in user_env.items()
+    }
+    env_at_startup: dict[str, str | None] = {}
 
+    def enter_playwright() -> Mock:
+        env_at_startup.update({env_var: os.environ.get(env_var) for env_var in user_env})
+        return flow.playwright
 
-@pytest.mark.unit
-def test_playwright_pdf_sets_product_browser_path_during_startup_when_user_env_is_unset(
-    tmp_path, monkeypatch
-):
-    """Set ``PLAYWRIGHT_BROWSERS_PATH`` to the product browser directory during startup."""
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    env_seen: dict[str, str | None] = {}
-
-    _capture_render_start_env(flow, env_seen)
-    monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
+    flow.manager.__enter__.side_effect = enter_playwright
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
+    assert env_at_startup == expected_env
+    assert {env_var: os.environ.get(env_var) for env_var in user_env} == expected_env
 
 
 @pytest.mark.unit
-def test_playwright_pdf_removes_product_browser_path_after_render_when_user_env_is_unset(
-    tmp_path, monkeypatch
-):
-    """Remove the temporary product browser path after render when no user path existed."""
-    renderer, _flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
-
-    renderer.render_pdf()
-
-    assert "PLAYWRIGHT_BROWSERS_PATH" not in os.environ
-
-
-@pytest.mark.unit
-def test_playwright_pdf_scrubs_transient_override_env_vars_during_startup_and_restores_after_render(
-    tmp_path, monkeypatch
-):
-    """Clear transient Playwright override env vars during startup and restore them afterward."""
-    renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    runtime_override_envs = {
-        env_var: f"{env_var.lower()}-value"
-        for env_var in _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
-    }
-    env_seen: dict[str, object] = {}
-
-    _capture_render_start_env(flow, env_seen)
-    monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
-    for env_var, env_value in runtime_override_envs.items():
-        monkeypatch.setenv(env_var, env_value)
-
-    renderer.render_pdf()
-
-    assert all(value is None for value in env_seen["transient_override_envs"].values())
-    for env_var, env_value in runtime_override_envs.items():
-        assert os.environ[env_var] == env_value
-
-
-@pytest.mark.unit
-def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_path, monkeypatch):
-    """Override a user-supplied browser path during render but restore it afterward."""
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    user_browser_path = str(tmp_path / "user-browser-path")
+def test_playwright_pdf_forwards_install_and_logger_to_the_browser_resolver(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Browser-package warnings reach the renderer's logger instead of the package logger."""
+    renderer, _flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     resolver_args: dict[str, object] = {}
-    env_seen: dict[str, str | None] = {}
 
-    def resolve_browser_binary_info(ansys_installation=None, ansys_version=None):
+    def resolve_browser_binary_info(
+        ansys_installation: str | None = None,
+        ansys_version: int | None = None,
+        logger: Logger | None = None,
+    ) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
         """Capture forwarded product inputs while returning fake browser metadata."""
-        # This is the only product-browser env test that asserts resolver forwarding.
         resolver_args.update(
             {
                 "ansys_installation": ansys_installation,
                 "ansys_version": ansys_version,
+                "logger": logger,
             }
         )
         return _browser_binary_info(browser_binary_dir)
@@ -2552,16 +3441,13 @@ def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_
         "resolve_playwright_browser_binary_info",
         resolve_browser_binary_info,
     )
-    _capture_render_start_env(flow, env_seen)
-    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert resolver_args == {
-        "ansys_installation": str(renderer._ansys_installation),
+        "ansys_installation": renderer._ansys_installation,
         "ansys_version": renderer._ansys_version,
+        "logger": renderer._logger,
     }
-    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
 
 
 @pytest.mark.unit
@@ -2588,14 +3474,36 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
 
 
 @pytest.mark.unit
+def test_playwright_pdf_skips_the_product_line_check_for_a_malformed_install_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An install version without a known product release is not rejected as too old."""
+    html_dir = _write_html(tmp_path, "<html><body><p>Unknown release</p></body></html>")
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=_fake_ansys_installation(12),
+        ansys_version=12,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None, logger=None: None,
+    )
+
+    # The product-line check passes, so the export reaches the browser lookup instead.
+    with pytest.raises(ADRException, match="requires a valid product-shipped browser binary"):
+        renderer.render_pdf()
+
+
+@pytest.mark.unit
 def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_start(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer, _flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: None,
+        lambda ansys_installation=None, ansys_version=None, logger=None: None,
     )
     monkeypatch.setattr(
         pdf_renderer_module,
@@ -2611,18 +3519,13 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 
 @pytest.mark.unit
-def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwright(
-    tmp_path, monkeypatch
-):
-    """A missing packaged browser surfaces a clean ADR error and still restores env."""
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(
+def test_playwright_pdf_reports_an_incomplete_browser_build_without_launching(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A missing packaged browser surfaces a clean ADR error without launching."""
+    renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(
         tmp_path, monkeypatch, create_executable=False
     )
-    user_browser_path = str(tmp_path / "user-browser-path")
-    env_seen: dict[str, str | None] = {}
-
-    _capture_render_start_env(flow, env_seen)
-    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
 
     with pytest.raises(
         ADRException,
@@ -2637,31 +3540,25 @@ def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwr
     assert exc_info.value.__cause__ is None
     assert "playwright" not in str(exc_info.value).lower()
     flow.playwright.chromium.launch.assert_not_called()
-    # The product browser path is still selected for the render and the env restored afterward.
-    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
-    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
 
 
-def _headless_shell_binary_info(
-    browser_binary_dir: Path, packaged_binary_dir: str, machine_arch: str = "win64"
-) -> pdf_renderer_module._PlaywrightBrowserBinaryInfo:
-    """Create product-browser metadata for one packaged headless-shell build."""
-    return pdf_renderer_module._PlaywrightBrowserBinaryInfo(
-        path=browser_binary_dir,
-        browser_name=pdf_renderer_module._PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-        machine_arch=machine_arch,
-        packaged_binary_dir=packaged_binary_dir,
-    )
+def _expected_headless_shell_executable(
+    browser_binary_dir: Path, packaged_binary_dir: str, machine_arch: str
+) -> Path:
+    """Return the expected product layout independently of the production executable table."""
+    executable_relpath = {
+        "win64": Path("chrome-headless-shell-win64") / "chrome-headless-shell.exe",
+        "linux_2.6_64": Path("chrome-headless-shell-linux64") / "chrome-headless-shell",
+    }[machine_arch]
+    return browser_binary_dir / packaged_binary_dir / executable_relpath
 
 
 def _create_packaged_headless_shell(
     browser_binary_dir: Path, packaged_binary_dir: str, machine_arch: str = "win64"
 ) -> Path:
     """Create the packaged headless-shell executable for one build and return its path."""
-    executable = (
-        browser_binary_dir
-        / packaged_binary_dir
-        / pdf_renderer_module._PACKAGED_HEADLESS_SHELL_EXECUTABLES[machine_arch]
+    executable = _expected_headless_shell_executable(
+        browser_binary_dir, packaged_binary_dir, machine_arch
     )
     executable.parent.mkdir(parents=True, exist_ok=True)
     executable.write_bytes(b"")
@@ -2669,32 +3566,47 @@ def _create_packaged_headless_shell(
 
 
 @pytest.mark.unit
-def test_launch_product_browser_keeps_the_normal_launch_when_it_succeeds(tmp_path):
-    _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+@pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
+def test_launch_product_browser_always_launches_metadata_selected_executable(
+    tmp_path: Path, machine_arch: str
+) -> None:
+    packaged_dir = "chromium_headless_shell-1248"
+    executable = _create_packaged_headless_shell(tmp_path, packaged_dir, machine_arch)
+    binary_info = _browser_binary_info(tmp_path, packaged_dir, machine_arch)
     launch = Mock()
+    launch.return_value.version = "156.0.8078.4"
     logger = Mock()
 
     browser = pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
     assert browser is launch.return_value
-    launch.assert_called_once_with()
-    logger.warning.assert_not_called()
+    launch.assert_called_once_with(executable_path=str(executable))
+    assert logger.info.call_args_list == [
+        call("Launching Ansys installation browser build %s.", packaged_dir),
+        call("Using Ansys installation browser %s.", "156.0.8078.4"),
+    ]
 
 
 @pytest.mark.unit
-@pytest.mark.unit
-def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_missing(tmp_path):
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+@pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
+def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_missing(
+    tmp_path: Path, machine_arch: str
+) -> None:
+    binary_info = _browser_binary_info(tmp_path, "chromium_headless_shell-1223", machine_arch)
     launch = Mock()
+    logger = Mock()
 
     with pytest.raises(
         ADRException, match="browser build chromium_headless_shell-1223 .* is incomplete"
     ) as exc_info:
-        pdf_renderer_module._launch_product_browser(launch, binary_info, Mock())
+        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
     launch.assert_not_called()
     assert exc_info.value.__cause__ is None
+    logger.debug.assert_called_once()
+    assert logger.debug.call_args.args[-1] == _expected_headless_shell_executable(
+        tmp_path, binary_info.packaged_binary_dir, machine_arch
+    )
 
 
 @pytest.mark.unit
@@ -2704,74 +3616,35 @@ def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_
         PlaywrightError("Executable doesn't exist"),
         PlaywrightError("Host system is missing dependencies to run browsers."),
         PlaywrightTimeoutError("Timeout 30000ms exceeded"),
+        PlaywrightError("Target crashed"),
     ],
-    ids=["missing-executable", "missing-system-libraries", "timeout"],
+    ids=["missing-executable", "missing-system-libraries", "timeout", "crashed"],
 )
-@pytest.mark.parametrize("expected_build", [None, "chromium_headless_shell-1223"])
-def test_launch_product_browser_does_not_retry_a_failed_launch(tmp_path, error, expected_build):
+def test_launch_product_browser_does_not_retry_a_failed_launch(
+    tmp_path: Path, error: PlaywrightError
+) -> None:
     """A failed launch is never interpreted: whatever its message, the error propagates as is."""
-    _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
+    executable = _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
+    binary_info = _browser_binary_info(tmp_path, "chromium_headless_shell-1223")
     launch = Mock(side_effect=error)
     logger = Mock()
 
     with pytest.raises(type(error)) as exc_info:
-        pdf_renderer_module._launch_product_browser(
-            launch, binary_info, logger, expected_build=expected_build
-        )
+        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
 
     assert exc_info.value is error
-    launch.assert_called_once_with()
-    logger.warning.assert_not_called()
-
-
-@pytest.mark.unit
-def test_launch_product_browser_does_not_launch_the_expected_build_without_its_executable(
-    tmp_path,
-):
-    """A launch that cannot find its executable leaves Playwright temp folders behind."""
-    packaged_dir = "chromium_headless_shell-1248"
-    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
-    launch = Mock()
-    logger = Mock()
-
-    with pytest.raises(ADRException, match=f"browser build {packaged_dir} .* is incomplete"):
-        pdf_renderer_module._launch_product_browser(
-            launch, binary_info, logger, expected_build=packaged_dir
-        )
-
-    launch.assert_not_called()
-    logger.warning.assert_not_called()
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "launch_error",
-    [PlaywrightError("Target crashed"), PlaywrightTimeoutError("Timeout 1000ms exceeded")],
-)
-def test_launch_product_browser_propagates_a_failure_of_the_direct_launch(tmp_path, launch_error):
-    packaged_dir = "chromium_headless_shell-1223"
-    executable = _create_packaged_headless_shell(tmp_path, packaged_dir)
-    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
-    launch = Mock(side_effect=launch_error)
-    logger = Mock()
-
-    with pytest.raises(type(launch_error)) as exc_info:
-        pdf_renderer_module._launch_product_browser(
-            launch, binary_info, logger, expected_build="chromium_headless_shell-1248"
-        )
-
-    assert exc_info.value is launch_error
     launch.assert_called_once_with(executable_path=str(executable))
-    logger.warning.assert_called_once()
+    logger.info.assert_called_once_with(
+        "Launching Ansys installation browser build %s.", binary_info.packaged_binary_dir
+    )
 
 
 @pytest.mark.unit
 def test_playwright_pdf_does_not_retry_a_failed_launch_and_keeps_its_original_cause(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     error = PlaywrightError("Executable doesn't exist")
-    renderer, flow, _ = _arrange_product_browser_renderer(
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(
         tmp_path, monkeypatch, launch_side_effect=error
     )
 
@@ -2782,198 +3655,25 @@ def test_playwright_pdf_does_not_retry_a_failed_launch_and_keeps_its_original_ca
     # browser is not launched a second time even though a packaged executable is available.
     assert exc_info.value.__cause__ is error
     flow.playwright.chromium.launch.assert_called_once()
-
-
-def _arrange_mismatched_build_renderer(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[_OfflinePlaywrightPDFRenderer, MockPlaywrightPDFFlow, Path, Path]:
-    """Wire a renderer to a product browser whose build differs from the one Playwright expects."""
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    packaged_dir = "chromium_headless_shell-1223"
-    executable = _create_packaged_headless_shell(browser_binary_dir, packaged_dir)
-    binary_info = _headless_shell_binary_info(browser_binary_dir, packaged_dir)
-    monkeypatch.setattr(
-        pdf_renderer_module,
-        "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: binary_info,
+    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(
+        _expected_headless_shell_executable(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME, "win64")
     )
-    monkeypatch.setattr(
-        pdf_renderer_module,
-        "_expected_headless_shell_build",
-        lambda: "chromium_headless_shell-1248",
-    )
-    return renderer, flow, browser_binary_dir, executable
 
 
 @pytest.mark.unit
-def test_playwright_pdf_direct_launch_warns_and_restores_the_browser_path_env(
-    tmp_path, monkeypatch
-):
-    renderer, flow, browser_binary_dir, _ = _arrange_mismatched_build_renderer(
-        tmp_path, monkeypatch
-    )
+def test_playwright_pdf_logs_the_browser_launch_through_its_logger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     logger = Mock()
     monkeypatch.setattr(renderer, "_logger", logger)
-    user_browser_path = str(tmp_path / "user-browser-path")
-    env_seen: dict[str, str | None] = {}
-
-    _capture_render_start_env(flow, env_seen)
-    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
 
     assert renderer.render_pdf() == b"%PDF-mock"
 
-    assert any(
-        "chromium_headless_shell-1223" in warning.args for warning in logger.warning.call_args_list
+    logger.info.assert_any_call(
+        "Launching Ansys installation browser build %s.", _PACKAGED_BROWSER_DIR_NAME
     )
-    # The launch runs inside the product-browser scope, which is undone after the render.
-    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
-    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
-
-
-def _write_browsers_registry(path: Path, browsers: list[dict[str, object]]) -> Path:
-    """Write a Playwright ``browsers.json`` registry and return its path."""
-    registry = path / "browsers.json"
-    registry.write_text(json.dumps({"browsers": browsers}), encoding="utf-8")
-    return registry
-
-
-@pytest.mark.unit
-def test_expected_headless_shell_build_names_the_registry_revision(tmp_path):
-    registry = _write_browsers_registry(
-        tmp_path,
-        [
-            {"name": "chromium", "revision": "1248"},
-            {"name": "chromium-headless-shell", "revision": "1249", "installByDefault": True},
-        ],
-    )
-
-    build = pdf_renderer_module._expected_headless_shell_build(registry)
-
-    assert build == "chromium_headless_shell-1249"
-
-
-@pytest.mark.unit
-def test_expected_headless_shell_build_reads_the_installed_playwright_registry():
-    build = pdf_renderer_module._expected_headless_shell_build()
-
-    # The installed Playwright lists a plain revision for the headless shell.
-    assert build is not None
-    assert re.fullmatch(r"chromium_headless_shell-\d+", build)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "browsers",
-    [
-        [{"name": "chromium", "revision": "1248"}],
-        [{"name": "chromium-headless-shell", "revision": "not-a-number"}],
-        [{"name": "chromium-headless-shell"}],
-        [{"name": "chromium-headless-shell", "revision": "1248", "revisionOverrides": {"x": "1"}}],
-        ["not-a-browser-entry"],
-    ],
-    ids=["no-entry", "non-digit-revision", "no-revision", "revision-overrides", "malformed-entry"],
-)
-def test_expected_headless_shell_build_is_unknown_when_the_registry_is_not_certain(
-    tmp_path, browsers
-):
-    registry = _write_browsers_registry(tmp_path, browsers)
-
-    assert pdf_renderer_module._expected_headless_shell_build(registry) is None
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("content", [None, "{not json", '{"browsers": "text"}', "[]"])
-def test_expected_headless_shell_build_is_unknown_when_the_registry_is_unreadable(
-    tmp_path, content
-):
-    registry = tmp_path / "browsers.json"
-    if content is not None:
-        registry.write_text(content, encoding="utf-8")
-
-    assert pdf_renderer_module._expected_headless_shell_build(registry) is None
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("machine_arch", ["win64", "linux_2.6_64"])
-def test_launch_product_browser_skips_the_failing_launch_when_the_builds_differ(
-    tmp_path, machine_arch
-):
-    packaged_dir = "chromium_headless_shell-1223"
-    executable = _create_packaged_headless_shell(tmp_path, packaged_dir, machine_arch)
-    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir, machine_arch)
-    launch = Mock()
-    logger = Mock()
-
-    browser = pdf_renderer_module._launch_product_browser(
-        launch, binary_info, logger, expected_build="chromium_headless_shell-1248"
-    )
-
-    # A single launch by path: the default launch cannot succeed, and leaves temp folders behind.
-    assert browser is launch.return_value
-    launch.assert_called_once_with(executable_path=str(executable))
-    logger.warning.assert_called_once()
-    assert packaged_dir in logger.warning.call_args.args
-
-
-@pytest.mark.unit
-def test_launch_product_browser_launches_normally_when_the_builds_match(tmp_path):
-    packaged_dir = "chromium_headless_shell-1248"
-    _create_packaged_headless_shell(tmp_path, packaged_dir)
-    binary_info = _headless_shell_binary_info(tmp_path, packaged_dir)
-    launch = Mock()
-    logger = Mock()
-
-    browser = pdf_renderer_module._launch_product_browser(
-        launch, binary_info, logger, expected_build=packaged_dir
-    )
-
-    assert browser is launch.return_value
-    launch.assert_called_once_with()
-    logger.warning.assert_not_called()
-
-
-@pytest.mark.unit
-def test_launch_product_browser_names_the_incomplete_build_without_launching(tmp_path):
-    binary_info = _headless_shell_binary_info(tmp_path, "chromium_headless_shell-1223")
-    launch = Mock()
-
-    with pytest.raises(
-        ADRException, match="browser build chromium_headless_shell-1223 .* is incomplete"
-    ) as exc_info:
-        pdf_renderer_module._launch_product_browser(
-            launch, binary_info, Mock(), expected_build="chromium_headless_shell-1248"
-        )
-
-    launch.assert_not_called()
-    assert exc_info.value.__cause__ is None
-
-
-@pytest.mark.unit
-def test_launch_product_browser_launches_normally_when_the_packaged_folder_is_not_a_revision(
-    tmp_path,
-):
-    """Without a revision in its name the packaged build cannot be compared, so the launch is tried."""
-    _create_packaged_headless_shell(tmp_path, _PACKAGED_BROWSER_DIR_NAME)
-    binary_info = _headless_shell_binary_info(tmp_path, _PACKAGED_BROWSER_DIR_NAME)
-    launch = Mock()
-
-    pdf_renderer_module._launch_product_browser(
-        launch, binary_info, Mock(), expected_build="chromium_headless_shell-1248"
-    )
-
-    launch.assert_called_once_with()
-
-
-@pytest.mark.unit
-def test_playwright_pdf_skips_the_failing_launch_when_the_product_ships_another_build(
-    tmp_path, monkeypatch
-):
-    renderer, flow, _, executable = _arrange_mismatched_build_renderer(tmp_path, monkeypatch)
-
-    assert renderer.render_pdf() == b"%PDF-mock"
-
-    flow.playwright.chromium.launch.assert_called_once()
-    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(executable)
+    logger.info.assert_any_call("Using Ansys installation browser %s.", flow.browser.version)
 
 
 @pytest.mark.unit

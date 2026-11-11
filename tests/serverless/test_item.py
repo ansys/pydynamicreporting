@@ -28,6 +28,7 @@ from PIL import Image as PILImage
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.serverless import ADR
 
 
 @pytest.mark.ado_test
@@ -1196,6 +1197,35 @@ def test_image_conversion_to_png(adr_serverless):
         )
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_image_save_converts_32_bit_integer_image_to_clamped_16_bit_png(
+    adr_serverless: ADR, tmp_path: Path
+) -> None:
+    """The public item API persists signed 32-bit input as a clamped 16-bit PNG."""
+    from ansys.dynamicreporting.core.serverless import Image
+
+    source = tmp_path / "integer-image.jpg"
+    with PILImage.new("I", (3, 1)) as image:
+        image.putdata([0, 70000, -5])
+        image.save(source, format="TIFF")
+
+    image_obj = adr_serverless.create_item(
+        Image,
+        name="test_image_save_converts_32_bit_integer_image_to_clamped_16_bit_png",
+        content=str(source),
+    )
+    try:
+        assert isinstance(image_obj, Image)
+        assert image_obj.file_ext == "png"
+        with PILImage.open(image_obj.file_path) as stored:
+            assert stored.format == "PNG"
+            assert stored.mode == "I;16"
+            assert stored.size == (3, 1)
+            assert [stored.getpixel((x, 0)) for x in range(3)] == [0, 65535, 0]
+    finally:
+        image_obj.delete()
 
 
 @pytest.mark.ado_test
