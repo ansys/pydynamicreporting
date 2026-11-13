@@ -9,6 +9,8 @@ This section describes concepts that you need to know to use PyDynamicReporting.
 
    browser_pdf
    logging
+   json_import_item
+   json_import_item_schema
 
 API overview
 ------------

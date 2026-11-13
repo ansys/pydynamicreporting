@@ -22,6 +22,8 @@
 
 """DynamicReporting custom exceptions."""
 
+from collections.abc import Iterable
+
 
 class ADRException(Exception):
     """
@@ -177,3 +179,38 @@ class InvalidFieldError(ADRException):
     """Exception raised if a field is not valid."""
 
     detail = "Field is invalid."
+
+
+class ADRItemImportError(ADRException):
+    """Base class for every failure raised by the JSON item import."""
+
+    detail = "ADR JSON import item failed"
+
+
+class ImportItemVersionError(ADRItemImportError):
+    """Raised when a document declares an unsupported or malformed schema version."""
+
+    detail = "Unsupported ADR import item schema version"
+
+
+class ImportItemValidationError(ADRItemImportError):
+    """Raised when a document violates the item import contract.
+
+    Carries **every** problem found in one validation pass, so a producer can
+    fix a whole JSON document in one edit.
+
+    Parameters
+    ----------
+    problems : iterable of tuple of (str, str)
+        Pairs of ``(location, message)``, where ``location`` is a path into the
+        JSON document such as ``"items[3].path"``.
+    """
+
+    detail = "The ADR import item json document is not valid"
+
+    def __init__(self, problems: Iterable[tuple[str, str]]) -> None:
+        self.problems: tuple[tuple[str, str], ...] = tuple(problems)
+        count = len(self.problems)
+        lines = [f"{count} problem{'' if count == 1 else 's'} found"]
+        lines += [f"  {location}: {message}" for location, message in self.problems]
+        super().__init__("\n".join(lines))
