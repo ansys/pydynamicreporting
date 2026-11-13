@@ -1,0 +1,6 @@
+item\_animation
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.item_animation

@@ -1,0 +1,6 @@
+set\_tags
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Item.set_tags

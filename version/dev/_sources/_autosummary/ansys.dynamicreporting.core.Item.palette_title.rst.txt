@@ -1,0 +1,6 @@
+palette\_title
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.palette_title

@@ -1,0 +1,6 @@
+type
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoproperty:: BoxLayout.type

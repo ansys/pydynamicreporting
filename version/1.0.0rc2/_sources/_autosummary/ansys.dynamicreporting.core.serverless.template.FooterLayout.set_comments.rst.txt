@@ -1,0 +1,6 @@
+set\_comments
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: FooterLayout.set_comments

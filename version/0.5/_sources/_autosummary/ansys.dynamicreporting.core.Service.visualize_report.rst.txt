@@ -1,0 +1,6 @@
+visualize\_report
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Service.visualize_report

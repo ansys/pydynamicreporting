@@ -1,0 +1,6 @@
+get\_transpose
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: FooterLayout.get_transpose

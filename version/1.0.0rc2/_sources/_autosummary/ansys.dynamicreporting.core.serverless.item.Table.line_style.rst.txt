@@ -1,0 +1,6 @@
+line\_style
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.line_style

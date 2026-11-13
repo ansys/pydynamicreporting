@@ -1,0 +1,153 @@
+﻿Template
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: Template
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Template.add_filter
+      
+      
+      Template.add_params
+      
+      
+      Template.add_properties
+      
+      
+      Template.add_property
+      
+      
+      Template.add_sort_fields
+      
+      
+      Template.add_tag
+      
+      
+      Template.as_dict
+      
+      
+      Template.create
+      
+      
+      Template.delete
+      
+      
+      Template.filter
+      
+      
+      Template.find
+      
+      
+      Template.get
+      
+      
+      Template.get_filter
+      
+      
+      Template.get_filter_mode
+      
+      
+      Template.get_params
+      
+      
+      Template.get_property
+      
+      
+      Template.get_sort_fields
+      
+      
+      Template.get_sort_selection
+      
+      
+      Template.get_tags
+      
+      
+      Template.reinit
+      
+      
+      Template.rem_tag
+      
+      
+      Template.remove_tag
+      
+      
+      Template.render
+      
+      
+      Template.render_pdf
+      
+      
+      Template.reorder_child
+      
+      
+      Template.reorder_children
+      
+      
+      Template.save
+      
+      
+      Template.set_filter
+      
+      
+      Template.set_filter_mode
+      
+      
+      Template.set_params
+      
+      
+      Template.set_property
+      
+      
+      Template.set_sort_fields
+      
+      
+      Template.set_sort_selection
+      
+      
+      Template.set_tags
+      
+      
+      Template.to_dict
+      
+      
+      Template.to_json
+      
+      
+      Template.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Template.children_order
+      Template.db
+      Template.item_filter
+      Template.master
+      Template.name
+      Template.params
+      Template.parent
+      Template.report_type
+      Template.saved
+      Template.tags
+      Template.type
+      Template.date
+      Template.children
+      Template.guid
+   
+   

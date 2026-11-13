@@ -1,0 +1,6 @@
+update\_children\_order
+=======================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMergeRCFilterGenerator.update_children_order

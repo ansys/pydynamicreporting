@@ -1,0 +1,6 @@
+get\_map\_to\_slider
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.get_map_to_slider

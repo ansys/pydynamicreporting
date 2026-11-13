@@ -1,0 +1,6 @@
+get\_report
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.get_report

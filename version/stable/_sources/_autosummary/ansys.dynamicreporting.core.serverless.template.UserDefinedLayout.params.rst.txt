@@ -1,0 +1,6 @@
+params
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: UserDefinedLayout.params

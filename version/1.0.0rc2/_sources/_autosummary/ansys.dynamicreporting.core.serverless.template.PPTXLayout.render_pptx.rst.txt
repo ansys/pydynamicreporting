@@ -1,0 +1,6 @@
+render\_pptx
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PPTXLayout.render_pptx

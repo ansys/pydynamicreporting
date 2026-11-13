@@ -1,0 +1,6 @@
+set\_append\_tags
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMergeGenerator.set_append_tags

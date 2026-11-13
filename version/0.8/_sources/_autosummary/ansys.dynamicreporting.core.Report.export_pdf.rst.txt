@@ -1,0 +1,6 @@
+export\_pdf
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.export_pdf

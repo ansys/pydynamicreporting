@@ -1,0 +1,6 @@
+get\_sort\_selection
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMergeValueFilterGenerator.get_sort_selection
