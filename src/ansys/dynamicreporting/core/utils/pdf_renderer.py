@@ -106,6 +106,8 @@ _PACKAGED_HEADLESS_SHELL_EXECUTABLES: dict[str, Path] = {
 }
 # Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
 _PAGINATION_FIT_GUARD_PX = 8.0
+# Prefer another page over losing more than half the per-item visual height to a heading group.
+_PAGINATION_MIN_GROUP_SCALE = 0.5
 # Layout types whose direct heading and content container can be grouped when present.
 _PAGINATION_LAYOUT_SELECTOR = (
     'div[data-layout-type="basic"], div[data-layout-type="box"], '
@@ -1035,6 +1037,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 const {
                     printableHeightPx,   // usable page height (page minus top/bottom margins)
                     fitGuardPx,          // small safety margin so rounding never overflows a page
+                    minGroupScale,       // smallest fraction of a per-item fit to keep in a group
                     layoutSelector,      // layouts owning a heading and content container
                     headingSelector,     // matches a section's heading (h1..h6)
                     visualSelector,      // matches the visuals we may need to resize
@@ -1194,7 +1197,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 // Core routine: shrink one visual so it, plus the fixed things sharing its page
                 // (such as a heading), fits within one printable page. "groupStart"/"groupEnd"
                 // mark the top and bottom of that shared group; "title" is only for logging.
-                const fitVisual = (visual, groupStart, groupEnd, title) => {
+                const fitVisual = (visual, groupStart, groupEnd, title, minimumScale = 0) => {
                     if (preparedVisuals.has(visual)) {
                         return true;   // already handled by an earlier pass
                     }
@@ -1230,6 +1233,23 @@ class _BasePlaywrightPDFRenderer(ABC):
                             && computedMaxHeight > 0
                         ? computedMaxHeight
                         : Number.POSITIVE_INFINITY;
+                    if (minimumScale > 0) {
+                        const owner = visual.closest('adr-data-item, adr-slider-template')
+                            || fittedVisual;
+                        const ownerRect = owner.getBoundingClientRect();
+                        const ownerChrome = Math.max(0, visualRect.top - ownerRect.top)
+                            + Math.max(0, ownerRect.bottom - visualRect.bottom);
+                        const ownFittedHeight = Math.floor(Math.min(
+                            visualRect.height,
+                            existingMaxHeight,
+                            printableHeightPx - ownerChrome - fitGuardPx
+                        ));
+                        // Preceding text may use almost the entire page. Leave this visual
+                        // for its child layout or the per-item pass instead of making it tiny.
+                        if (fittedHeight < ownFittedHeight * minimumScale) {
+                            return false;
+                        }
+                    }
                     // Final height = the smallest of: its current height, the height that fits
                     // the page, and any max-height already set on it. Width starts at its current
                     // width. "wasResized" is true only if we actually made it shorter.
@@ -1394,7 +1414,8 @@ __FIND_LAYOUT_CONTAINER__
                             visual,
                             groupStart,
                             ownerRect.bottom,
-                            heading.textContent.trim()
+                            heading.textContent.trim(),
+                            includesHeading ? minGroupScale : 0
                         );
                     }
                 }
@@ -1467,6 +1488,7 @@ __FIND_LAYOUT_CONTAINER__
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "minGroupScale": _PAGINATION_MIN_GROUP_SCALE,
                 "layoutSelector": _PAGINATION_LAYOUT_SELECTOR,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
                 "visualSelector": _PAGINATION_VISUAL_SELECTOR,

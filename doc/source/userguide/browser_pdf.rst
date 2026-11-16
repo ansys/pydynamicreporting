@@ -142,6 +142,10 @@ The export keeps related content on the same page when it fits:
   fit, with room left for the heading or panel title above them.
 
 Sections and panels that are too long for one page continue on the next page.
+If keeping a visual with earlier text would reduce it below half the height
+available when fitted with its own item, the renderer instead fits it separately.
+A headed child section can then move to the next page with its visual rather
+than shrinking it excessively.
 
 Custom asynchronous JavaScript in raw HTML items or layout HTML does not have
 its own readiness signal. If that code finishes outside the built-in signals,

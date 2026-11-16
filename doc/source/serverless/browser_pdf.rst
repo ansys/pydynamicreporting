@@ -169,6 +169,10 @@ The export keeps related content on the same page when it fits:
   fit, with room left for the heading or panel title above them.
 
 Sections and panels that are too long for one page continue on the next page.
+If keeping a visual with earlier text would reduce it below half the height
+available when fitted with its own item, the renderer instead fits it separately.
+A headed child section can then move to the next page with its visual rather
+than shrinking it excessively.
 
 The staged report blocks external network requests. All content needed by the
 PDF must therefore be present in the offline bundle. Custom asynchronous

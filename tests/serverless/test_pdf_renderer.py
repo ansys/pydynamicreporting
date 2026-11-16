@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from base64 import b64encode
+import json
 import os
 from dataclasses import dataclass
 from io import BytesIO
@@ -28,6 +30,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import call
+from uuid import uuid4
 
 from PIL import Image
 import pytest
@@ -2147,6 +2150,155 @@ def test_playwright_pdf_keeps_parent_heading_with_nested_and_wrapped_columns(
         for branch in range(2):
             assert sum(page.count(f"BRANCH-{branch}") for page in text) == 1
             assert f"BRANCH-{branch}" in text[1]
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("text_column", ["single", "first", "second"])
+@pytest.mark.parametrize(
+    "page_size,text_height,keep_with_text",
+    [
+        (PDFPageSize.A4, 150, True),
+        (PDFPageSize.A4, 255, True),
+        (PDFPageSize.A4, 256, False),
+        (PDFPageSize.A4, 400, False),
+        (PDFPageSize.A4, 550, False),
+        (PDFPageSize.A4, 600, False),
+        (PDFPageSize.A3, 400, True),
+        (PDFPageSize.A3, 550, False),
+    ],
+)
+def test_playwright_pdf_preserves_visual_size_after_preceding_text(
+    tmp_path,
+    adr_serverless,
+    product_playwright_context,
+    monkeypatch,
+    text_column,
+    page_size,
+    text_height,
+    keep_with_text,
+):
+    """Render real nested templates without squeezing a later image into a sliver."""
+    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    case_tag = f"pagination_case={uuid4().hex}"
+
+    def create_layout(name, parent=None, *, heading="", columns=1, item_kind=""):
+        return adr_serverless.create_template(
+            BasicLayout,
+            name=f"{case_tag}-{name}",
+            parent=parent,
+            item_filter=f"A|i_tags|cont|kind={item_kind};" if item_kind else "",
+            params=json.dumps(
+                {
+                    "HTML": f"<h2>{heading}</h2>" if heading else "",
+                    "column_count": columns,
+                    "properties": {"margin_line": 0},
+                }
+            ),
+        )
+
+    parent = create_layout(
+        "parent", heading="PARENT-TITLE", columns=1 if text_column == "single" else 2
+    )
+    kinds = ["reference", "text-branch"]
+    if text_column == "single":
+        kinds = ["text-branch"]
+    elif text_column == "first":
+        kinds.reverse()
+    for kind in kinds:
+        if kind == "reference":
+            create_layout("reference", parent, heading="REFERENCE-TITLE", item_kind="reference")
+        else:
+            branch = create_layout("text-branch", parent)
+            create_layout("text", branch, item_kind="text")
+            target = create_layout("target", branch, heading="TARGET-TITLE", item_kind="target")
+
+    adr_serverless.create_item(
+        HTML,
+        name=f"{case_tag}-text",
+        tags=f"{case_tag} kind=text",
+        content=f'<p style="height:{text_height}px">TEXT-BEFORE-TARGET</p>',
+    )
+    for kind, color in (("reference", "blue"), ("target", "green")):
+        image = BytesIO()
+        Image.new("RGB", (240, 900), color).save(image, format="PNG")
+        image_data = b64encode(image.getvalue()).decode("ascii")
+        adr_serverless.create_item(
+            HTML,
+            name=f"{case_tag}-{kind}",
+            tags=f"{case_tag} kind={kind}",
+            content=(
+                f'<img id="{kind}-image" src="data:image/png;base64,{image_data}" '
+                f'style="width:240px;height:900px"><p>{kind.upper()}-END</p>'
+            ),
+        )
+
+    # Keep the actual core-generated template/item hierarchy; only supply a
+    # self-contained document shell and deterministic grid/font styling.
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: _panel_pagination_html(
+            "<style>.adr-row {display:flex;flex-wrap:wrap}"
+            ".adr-col-6 {flex:0 0 auto;width:50%;height:fit-content}</style>"
+            '<p style="break-after:page">PREVIOUS-SECTION</p>' + context["HTML"]
+        ),
+    )
+    renderer = _simple_renderer(
+        tmp_path,
+        parent.render(context={"print": "pdf"}, item_filter=f"A|i_tags|cont|{case_tag};"),
+        page_size=page_size,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page, printable_height_px):
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate(
+                """guid => {
+                    const image = document.getElementById('target-image');
+                    const layout = document.querySelector(`div[nexus_template="${guid}"]`);
+                    return {
+                        imageHeight: image.getBoundingClientRect().height,
+                        ownChromeHeight: layout.getBoundingClientRect().height
+                            - image.getBoundingClientRect().height
+                    };
+                }""",
+                target.guid,
+            )
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(reader.pages) == (2 if keep_with_text else 3), state
+    assert all(page.strip() for page in text)
+    assert text[0].strip() == "PREVIOUS-SECTION"
+    assert "PARENT-TITLE" in text[1]
+    assert "TEXT-BEFORE-TARGET" in text[1]
+    target_page = 1 if keep_with_text else 2
+    for marker in ("TARGET-TITLE", "TARGET-END"):
+        assert sum(page.count(marker) for page in text) == 1
+        assert marker in text[target_page]
+    normal_height = min(
+        900,
+        renderer._printable_page_height_px()
+        - pdf_renderer_module._PAGINATION_FIT_GUARD_PX
+        - state["ownChromeHeight"],
+    )
+    if keep_with_text:
+        assert normal_height / 2 <= state["imageHeight"] < normal_height
+    else:
+        assert state["imageHeight"] == pytest.approx(normal_height, abs=1)
+    assert len(reader.pages[target_page].images) == (
+        2 if keep_with_text and text_column != "single" else 1
+    )
 
 
 @pytest.mark.unit

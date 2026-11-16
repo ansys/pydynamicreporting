@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Browser-PDF export no longer squeezes a visual into the space left by a long
+  preceding text block. If grouping would reduce it below half its per-item
+  page-fitted height, it is fitted separately instead. This applies to single
+  columns and to each first-row column in nested layouts.
 - Browser-PDF export now keeps a panel title on the same page as the panel's
   first content, including panels that contain tabs. This removes blank pages
   and stranded panel titles on shorter pages such as A4 landscape. Long panels
