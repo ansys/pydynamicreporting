@@ -167,6 +167,8 @@ The export keeps related content on the same page when it fits:
   that contain tabs.
 - Images, plots, and 3D scenes that are taller than a page are scaled down to
   fit, with room left for the heading or panel title above them.
+- Tree labels and values wrap within their containing column without shrinking
+  the font. Long trees continue across pages; ordinary table sizing is unchanged.
 
 Sections and panels that are too long for one page continue on the next page.
 If keeping a visual with earlier text would reduce it below half the height

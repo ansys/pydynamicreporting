@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Browser-PDF export wraps tree labels and values, including long identifiers,
+  within the available column width instead of clipping them on narrow pages.
 - Browser-PDF export no longer squeezes a visual into the space left by a long
   preceding text block. If grouping would reduce it below half its per-item
   page-fitted height, it is fitted separately instead. This applies to single

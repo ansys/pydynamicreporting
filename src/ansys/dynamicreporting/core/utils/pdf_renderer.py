@@ -803,6 +803,23 @@ class _BasePlaywrightPDFRenderer(ABC):
                     padding: 0 !important;
                 }
 
+                /* Tree fit mode keeps values on one line on screen. Wrap them for PDF
+                   without shrinking fonts, stretching short trees, or changing other tables. */
+                table.tree {
+                    width: auto !important;
+                    max-width: 100% !important;
+                }
+                table.tree,
+                table.tree th,
+                table.tree td {
+                    white-space: normal !important;
+                    overflow-wrap: anywhere !important;
+                }
+                table.tree tr {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                }
+
                 /* The report HTML sometimes begins with a stray line break before the first
                    section. That blank line pushed content down far enough to leave an empty
                    first page, most visibly in landscape (a shorter page). Hide just that first

@@ -2302,6 +2302,150 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
 
 
 @pytest.mark.integration
+def test_playwright_pdf_exports_wrapped_tree_report(
+    tmp_path, adr_serverless, product_playwright_context
+):
+    """Keep complete tree values and row pagination in an actual report export."""
+    from ansys.dynamicreporting.core.serverless import BasicLayout, Tree
+
+    case_tag = f"pagination_case={uuid4().hex}"
+    report = adr_serverless.create_template(
+        BasicLayout,
+        name=f"{case_tag}-tree",
+        params=json.dumps({"HTML": "<h2>TREE-WRAPPING-REPORT</h2>"}),
+    )
+    long_token = "TOKENSTART" + "abcdef0123456789" * 12 + "TOKENEND"
+    values = [
+        ("Velocity Specification Method", "Magnitude, Normal to Boundary"),
+        ("Turbulence Specification Method", "Intensity and Viscosity Ratio"),
+        ("Long identifier", long_token),
+    ] + [
+        (f"SETTING-{index:02}", f"Value {index}: " + "complete tree value " * 7 + f"END-{index:02}")
+        for index in range(24)
+    ]
+    oversized_value = "OVERSIZED-ROW-BEGIN " + "long tree row value " * 400 + "OVERSIZED-ROW-END"
+    adr_serverless.create_item(
+        Tree,
+        name=f"{case_tag}-settings",
+        tags=case_tag,
+        content=[
+            {"key": f"setting-{index}", "name": label, "value": value}
+            for index, (label, value) in enumerate(values + [("Oversized row", oversized_value)])
+        ],
+    )
+    output = tmp_path / "tree-wrapping.pdf"
+    adr_serverless.export_report_as_browser_pdf(
+        filename=output,
+        guid=report.guid,
+        item_filter=f"A|i_tags|cont|{case_tag};",
+        page_size=PDFPageSize.A4,
+    )
+    reader = PdfReader(output)
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert len(text) > 1
+    assert all(page.strip() for page in text)
+    assert "TREE-WRAPPING-REPORT" in text[0]
+    normalized_pages = ["".join(page.split()) for page in text]
+    combined = "".join(normalized_pages)
+    for label, value in values:
+        assert any(
+            "".join(label.split()) in page and "".join(value.split()) in page
+            for page in normalized_pages
+        ), label
+    for index in range(24):
+        assert combined.count(f"SETTING-{index:02}") == 1
+        assert combined.count(f"END-{index:02}") == 1
+    assert "".join(oversized_value.split()) in combined
+    assert next(i for i, page in enumerate(text) if "OVERSIZED-ROW-BEGIN" in page) < next(
+        i for i, page in enumerate(text) if "OVERSIZED-ROW-END" in page
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("landscape", [False, True])
+@pytest.mark.parametrize("columns", [1, 2])
+def test_playwright_pdf_wraps_only_trees_within_their_container(
+    tmp_path, product_playwright_context, monkeypatch, landscape, columns
+):
+    """Fit tree text without shrinking fonts, indentation, or unrelated tables."""
+    token = "TOKENSTART" + "abcdef0123456789" * 12 + "TOKENEND"
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html><head><style>
+            body {{font:16px/24px sans-serif}}
+            #report_root table.tree-fit {{width:1px;white-space:nowrap}}
+            td {{padding:4px}}
+            .treegrid-indent {{display:inline-block;width:16px;height:16px}}
+            #container {{box-sizing:border-box;width:{100 / columns}%;padding:20px}}
+            #ordinary {{white-space:nowrap;width:1200px}}
+        </style></head>
+        <body class="loaded"><main id="report_root"><div id="container">
+            <table id="compact" class="tree tree-fit">
+                <tr><td>Short</td><td>Value</td></tr>
+            </table>
+            <table id="wide" class="tree tree-fit">
+                <tr><td><span class="treegrid-indent"></span>Velocity Specification Method</td>
+                    <td>Magnitude, Normal to Boundary</td></tr>
+                <tr><td>Turbulence Specification Method</td>
+                    <td>Intensity and Viscosity Ratio</td></tr>
+                <tr><td>Identifier</td><td>{token}</td></tr>
+            </table>
+        </div><table id="ordinary"><tr><td>Ordinary table</td></tr></table>
+        </main></body></html>
+        """,
+        page_size=PDFPageSize.A4,
+        landscape=landscape,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    apply_styles = renderer._apply_pdf_capture_styles
+
+    def capture_styles(page):
+        before = page.evaluate(
+            """() => ({
+                compactWidth: document.querySelector('#compact').getBoundingClientRect().width,
+                ordinaryWidth: document.querySelector('#ordinary').getBoundingClientRect().width
+            })"""
+        )
+        apply_styles(page)
+        state.update(
+            page.evaluate(
+                """() => {
+                    const tree = document.querySelector('#wide');
+                    const container = document.querySelector('#container');
+                    const style = getComputedStyle(container);
+                    return {
+                        treeWidth: tree.getBoundingClientRect().width,
+                        availableWidth: container.clientWidth
+                            - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+                        compactWidth: document.querySelector('#compact').getBoundingClientRect().width,
+                        ordinaryWidth: document.querySelector('#ordinary').getBoundingClientRect().width,
+                        ordinaryWhitespace: getComputedStyle(document.querySelector('#ordinary')).whiteSpace,
+                        fontSize: getComputedStyle(tree.querySelector('td')).fontSize,
+                        indentWidth: tree.querySelector('.treegrid-indent').getBoundingClientRect().width
+                    };
+                }"""
+            )
+        )
+        state["before"] = before
+
+    monkeypatch.setattr(renderer, "_apply_pdf_capture_styles", capture_styles)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    assert state["treeWidth"] <= state["availableWidth"] + 1, state
+    assert state["compactWidth"] == pytest.approx(state["before"]["compactWidth"], abs=1)
+    assert state["ordinaryWidth"] == state["before"]["ordinaryWidth"]
+    assert state["ordinaryWhitespace"] == "nowrap"
+    assert state["fontSize"] == "16px"
+    assert state["indentWidth"] == 16
+    text = "".join("".join(page.extract_text() or "" for page in reader.pages).split())
+    assert "Magnitude,NormaltoBoundary" in text
+    assert "IntensityandViscosityRatio" in text
+    assert token in text
+
+
+@pytest.mark.integration
 def test_playwright_pdf_exports_two_column_regression_report(
     tmp_path, adr_serverless, product_playwright_context
 ):
