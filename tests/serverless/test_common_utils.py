@@ -605,3 +605,53 @@ def test_get_install_info_with_ceidev(monkeypatch, tmp_path):
     install, ver = get_install_info()
     assert install == str(ceidev_dir)
     assert ver == CURRENT_VERSION
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("guid", ["5c2b1a3e-0000-4000-8000-000000000000", None])
+def test_check_template_accepts_guid_written_by_to_json(guid):
+    """Template.to_json writes "guid", so loading the file must not warn about it."""
+    from unittest.mock import Mock
+
+    from ansys.dynamicreporting.core.common_utils import _check_template
+
+    logger = Mock()
+    template_attr = {
+        "name": "A",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "guid": guid,
+        "parent": None,
+        "children": [],
+    }
+
+    _check_template("Template_0", template_attr, logger)
+
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.unit
+def test_check_template_still_warns_about_unknown_keys():
+    """Keys that to_json never writes keep producing the extra-keys warning."""
+    from unittest.mock import Mock
+
+    from ansys.dynamicreporting.core.common_utils import _check_template
+
+    logger = Mock()
+    template_attr = {
+        "name": "A",
+        "report_type": "Layout:basic",
+        "item_filter": "",
+        "parent": None,
+        "children": [],
+        "extra_key": "",
+    }
+
+    _check_template("Template_0", template_attr, logger)
+
+    logger.warning.assert_called_once_with(
+        "There are some extra keys under 'Template_0': ['extra_key']"
+    )
