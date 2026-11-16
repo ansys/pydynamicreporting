@@ -2301,6 +2301,116 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
     )
 
 
+@pytest.mark.integration
+def test_playwright_pdf_exports_two_column_regression_report(
+    tmp_path, adr_serverless, product_playwright_context
+):
+    """Export a complete report exercising both two-column pagination fixes."""
+    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
+
+    case_tag = f"pagination_case={uuid4().hex}"
+
+    def layout(name, parent=None, *, html="", columns=1, kind=""):
+        return adr_serverless.create_template(
+            BasicLayout,
+            name=f"{case_tag}-{name}",
+            parent=parent,
+            item_filter=f"A|i_tags|cont|kind={kind};" if kind else "",
+            params=json.dumps(
+                {"HTML": html, "column_count": columns, "properties": {"margin_line": 0}}
+            ),
+        )
+
+    report = layout("report")
+    shared = layout(
+        "shared-heading",
+        report,
+        columns=2,
+        html=(
+            "<h2>CASE-1-SHARED-HEADING</h2>"
+            '<p style="height:140px">Both child headings and images must stay together.</p>'
+        ),
+    )
+    for column in ("LEFT", "RIGHT"):
+        layout(
+            f"shared-{column}",
+            shared,
+            html=f"<h3>CASE-1-{column}</h3>",
+            kind=f"case-1-{column}",
+        )
+    preceding_text = layout(
+        "preceding-text",
+        report,
+        columns=2,
+        html='<h2 style="break-before:page">CASE-2-TEXT-BEFORE-IMAGE</h2>',
+    )
+    layout("reference", preceding_text, html="<h3>CASE-2-LEFT</h3>", kind="case-2-LEFT")
+    branch = layout("right-branch", preceding_text)
+    layout("text", branch, kind="text")
+    layout("target", branch, html="<h3>CASE-2-RIGHT</h3>", kind="case-2-RIGHT")
+    adr_serverless.create_item(
+        HTML,
+        name=f"{case_tag}-text",
+        tags=f"{case_tag} kind=text",
+        content='<p style="height:550px">LONG-TEXT-BEFORE-RIGHT-IMAGE</p>',
+    )
+    for case in (1, 2):
+        for column, color in (("LEFT", "blue"), ("RIGHT", "green")):
+            image = BytesIO()
+            Image.new("RGB", (240, 900), color).save(image, format="PNG")
+            image_data = b64encode(image.getvalue()).decode("ascii")
+            adr_serverless.create_item(
+                HTML,
+                name=f"{case_tag}-{case}-{column}",
+                tags=f"{case_tag} kind=case-{case}-{column}",
+                content=(
+                    f'<img src="data:image/png;base64,{image_data}" '
+                    'style="display:block;width:240px;height:900px">'
+                    f"<p>CASE-{case}-{column}-END</p>"
+                ),
+            )
+
+    output = tmp_path / "two-column-pagination.pdf"
+    adr_serverless.export_report_as_browser_pdf(
+        filename=output,
+        guid=report.guid,
+        item_filter=f"A|i_tags|cont|{case_tag};",
+        page_size=PDFPageSize.A4,
+        landscape=True,
+    )
+    reader = PdfReader(output)
+    text = [page.extract_text() or "" for page in reader.pages]
+    assert all(page.strip() for page in text)
+
+    def marker_page(marker):
+        matches = [index for index, content in enumerate(text) if marker in content]
+        assert len(matches) == 1, (marker, text)
+        return matches[0]
+
+    shared_page = marker_page("CASE-1-SHARED-HEADING")
+    for column in ("LEFT", "RIGHT"):
+        assert marker_page(f"CASE-1-{column}") == shared_page
+        assert marker_page(f"CASE-1-{column}-END") == shared_page
+    assert len(reader.pages[shared_page].images) == 2
+    text_page = marker_page("LONG-TEXT-BEFORE-RIGHT-IMAGE")
+    assert marker_page("CASE-2-LEFT") == text_page
+    target_page = marker_page("CASE-2-RIGHT")
+    assert marker_page("CASE-2-RIGHT-END") == target_page
+    assert target_page > text_page
+    assert len(reader.pages[target_page].images) == 1
+    image_heights = []
+
+    def capture_image_height(operator, operands, cm, tm):
+        if operator == b"Do":
+            resource = reader.pages[target_page]["/Resources"]["/XObject"][operands[0]]
+            if resource["/Subtype"] == "/Image":
+                image_heights.append(abs(float(cm[3])))
+
+    reader.pages[target_page].extract_text(visitor_operand_before=capture_image_height)
+    assert len(image_heights) == 1
+    assert image_heights[0] > 200, image_heights
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops", "footer"])
 @pytest.mark.parametrize("with_introduction", [False, True], ids=["adjacent", "with_intro"])
