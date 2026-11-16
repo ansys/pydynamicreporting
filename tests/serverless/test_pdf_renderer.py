@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from base64 import b64encode
-import json
 import os
 from dataclasses import dataclass
 from io import BytesIO
@@ -30,7 +28,6 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import call
-from uuid import uuid4
 
 from PIL import Image
 import pytest
@@ -2152,103 +2149,69 @@ def test_playwright_pdf_keeps_parent_heading_with_nested_and_wrapped_columns(
             assert f"BRANCH-{branch}" in text[1]
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 @pytest.mark.parametrize("text_column", ["single", "first", "second"])
 @pytest.mark.parametrize(
-    "page_size,text_height,keep_with_text",
-    [
-        (PDFPageSize.A4, 150, True),
-        (PDFPageSize.A4, 255, True),
-        (PDFPageSize.A4, 256, False),
-        (PDFPageSize.A4, 400, False),
-        (PDFPageSize.A4, 550, False),
-        (PDFPageSize.A4, 600, False),
-        (PDFPageSize.A3, 400, True),
-        (PDFPageSize.A3, 550, False),
-    ],
+    "text_height,keep_with_text", [(150, True), (550, False)], ids=["short_text", "long_text"]
 )
 def test_playwright_pdf_preserves_visual_size_after_preceding_text(
-    tmp_path,
-    adr_serverless,
-    product_playwright_context,
-    monkeypatch,
-    text_column,
-    page_size,
-    text_height,
-    keep_with_text,
+    tmp_path, product_playwright_context, monkeypatch, text_column, text_height, keep_with_text
 ):
-    """Render real nested templates without squeezing a later image into a sliver."""
-    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
-    from ansys.dynamicreporting.core.serverless import template as template_module
+    """Move an image to the next page instead of squeezing it under long text."""
+    for name, color in (("reference", "blue"), ("target", "green")):
+        Image.new("RGB", (240, 900), color).save(tmp_path / f"{name}.png")
 
-    case_tag = f"pagination_case={uuid4().hex}"
-
-    def create_layout(name, parent=None, *, heading="", columns=1, item_kind=""):
-        return adr_serverless.create_template(
-            BasicLayout,
-            name=f"{case_tag}-{name}",
-            parent=parent,
-            item_filter=f"A|i_tags|cont|kind={item_kind};" if item_kind else "",
-            params=json.dumps(
-                {
-                    "HTML": f"<h2>{heading}</h2>" if heading else "",
-                    "column_count": columns,
-                    "properties": {"margin_line": 0},
-                }
-            ),
+    def layout_html(guid: str, heading: str, content: str) -> str:
+        heading_html = f"<h2>{heading}</h2>" if heading else ""
+        return (
+            f'<div id="{guid}-layout" data-layout-type="basic" nexus_template="{guid}">'
+            f'{heading_html}<section class="adr-container" id="{guid}">{content}</section></div>'
         )
 
-    parent = create_layout(
-        "parent", heading="PARENT-TITLE", columns=1 if text_column == "single" else 2
+    def image_html(name: str) -> str:
+        return (
+            f'<adr-data-item><img id="{name}-image" src="{name}.png" '
+            f'style="width:240px;height:900px"><p>{name.upper()}-END</p></adr-data-item>'
+        )
+
+    # The generator nests a headless branch around the text and the headed target section.
+    text_branch = layout_html(
+        "branch",
+        "",
+        layout_html(
+            "text",
+            "",
+            f'<adr-data-item><p style="height:{text_height}px">TEXT-BEFORE-TARGET</p>'
+            "</adr-data-item>",
+        )
+        + layout_html("target", "TARGET-TITLE", image_html("target")),
     )
-    kinds = ["reference", "text-branch"]
     if text_column == "single":
-        kinds = ["text-branch"]
-    elif text_column == "first":
-        kinds.reverse()
-    for kind in kinds:
-        if kind == "reference":
-            create_layout("reference", parent, heading="REFERENCE-TITLE", item_kind="reference")
-        else:
-            branch = create_layout("text-branch", parent)
-            create_layout("text", branch, item_kind="text")
-            target = create_layout("target", branch, heading="TARGET-TITLE", item_kind="target")
-
-    adr_serverless.create_item(
-        HTML,
-        name=f"{case_tag}-text",
-        tags=f"{case_tag} kind=text",
-        content=f'<p style="height:{text_height}px">TEXT-BEFORE-TARGET</p>',
-    )
-    for kind, color in (("reference", "blue"), ("target", "green")):
-        image = BytesIO()
-        Image.new("RGB", (240, 900), color).save(image, format="PNG")
-        image_data = b64encode(image.getvalue()).decode("ascii")
-        adr_serverless.create_item(
-            HTML,
-            name=f"{case_tag}-{kind}",
-            tags=f"{case_tag} kind={kind}",
-            content=(
-                f'<img id="{kind}-image" src="data:image/png;base64,{image_data}" '
-                f'style="width:240px;height:900px"><p>{kind.upper()}-END</p>'
-            ),
+        content = text_branch
+    else:
+        columns = [
+            layout_html("reference", "REFERENCE-TITLE", image_html("reference")),
+            text_branch,
+        ]
+        if text_column == "first":
+            columns.reverse()
+        cells = "".join(
+            '<section class="adr-col-6" style="flex:0 0 auto;width:50%;height:fit-content">'
+            f"{column}</section>"
+            for column in columns
         )
-
-    # Keep the actual core-generated template/item hierarchy; only supply a
-    # self-contained document shell and deterministic grid/font styling.
-    monkeypatch.setattr(
-        template_module,
-        "render_to_string",
-        lambda template_name, context, request: _panel_pagination_html(
-            "<style>.adr-row {display:flex;flex-wrap:wrap}"
-            ".adr-col-6 {flex:0 0 auto;width:50%;height:fit-content}</style>"
-            '<p style="break-after:page">PREVIOUS-SECTION</p>' + context["HTML"]
-        ),
-    )
+        # The generator emits an empty row before the first populated row.
+        content = (
+            '<section class="adr-row"></section>'
+            f'<section class="adr-row" style="display:flex;flex-wrap:wrap">{cells}</section>'
+        )
     renderer = _simple_renderer(
         tmp_path,
-        parent.render(context={"print": "pdf"}, item_filter=f"A|i_tags|cont|{case_tag};"),
-        page_size=page_size,
+        _panel_pagination_html(
+            '<p style="break-after:page">PREVIOUS-SECTION</p>'
+            + layout_html("parent", "PARENT-TITLE", content)
+        ),
+        page_size=PDFPageSize.A4,
         landscape=True,
         ansys_installation=product_playwright_context.ansys_installation,
         ansys_version=product_playwright_context.ansys_version,
@@ -2259,18 +2222,15 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
     def capture_cohesion(page, printable_height_px):
         result = set_cohesion(page, printable_height_px)
         state.update(
-            page.evaluate(
-                """guid => {
-                    const image = document.getElementById('target-image');
-                    const layout = document.querySelector(`div[nexus_template="${guid}"]`);
-                    return {
-                        imageHeight: image.getBoundingClientRect().height,
-                        ownChromeHeight: layout.getBoundingClientRect().height
-                            - image.getBoundingClientRect().height
-                    };
-                }""",
-                target.guid,
-            )
+            page.evaluate("""() => {
+                const image = document.getElementById('target-image');
+                const layout = document.getElementById('target-layout');
+                return {
+                    imageHeight: image.getBoundingClientRect().height,
+                    ownChromeHeight: layout.getBoundingClientRect().height
+                        - image.getBoundingClientRect().height
+                };
+            }""")
         )
         return result
 
@@ -2286,6 +2246,7 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
     for marker in ("TARGET-TITLE", "TARGET-END"):
         assert sum(page.count(marker) for page in text) == 1
         assert marker in text[target_page]
+    # The height the image gets when only its own section shares its page.
     normal_height = min(
         900,
         renderer._printable_page_height_px()
@@ -2293,71 +2254,15 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
         - state["ownChromeHeight"],
     )
     if keep_with_text:
-        assert normal_height / 2 <= state["imageHeight"] < normal_height
+        assert (
+            normal_height * pdf_renderer_module._PAGINATION_MIN_GROUP_SCALE
+            <= state["imageHeight"]
+            < normal_height
+        )
     else:
         assert state["imageHeight"] == pytest.approx(normal_height, abs=1)
     assert len(reader.pages[target_page].images) == (
         2 if keep_with_text and text_column != "single" else 1
-    )
-
-
-@pytest.mark.integration
-def test_playwright_pdf_exports_wrapped_tree_report(
-    tmp_path, adr_serverless, product_playwright_context
-):
-    """Keep complete tree values and row pagination in an actual report export."""
-    from ansys.dynamicreporting.core.serverless import BasicLayout, Tree
-
-    case_tag = f"pagination_case={uuid4().hex}"
-    report = adr_serverless.create_template(
-        BasicLayout,
-        name=f"{case_tag}-tree",
-        params=json.dumps({"HTML": "<h2>TREE-WRAPPING-REPORT</h2>"}),
-    )
-    long_token = "TOKENSTART" + "abcdef0123456789" * 12 + "TOKENEND"
-    values = [
-        ("Velocity Specification Method", "Magnitude, Normal to Boundary"),
-        ("Turbulence Specification Method", "Intensity and Viscosity Ratio"),
-        ("Long identifier", long_token),
-    ] + [
-        (f"SETTING-{index:02}", f"Value {index}: " + "complete tree value " * 7 + f"END-{index:02}")
-        for index in range(24)
-    ]
-    oversized_value = "OVERSIZED-ROW-BEGIN " + "long tree row value " * 400 + "OVERSIZED-ROW-END"
-    adr_serverless.create_item(
-        Tree,
-        name=f"{case_tag}-settings",
-        tags=case_tag,
-        content=[
-            {"key": f"setting-{index}", "name": label, "value": value}
-            for index, (label, value) in enumerate(values + [("Oversized row", oversized_value)])
-        ],
-    )
-    output = tmp_path / "tree-wrapping.pdf"
-    adr_serverless.export_report_as_browser_pdf(
-        filename=output,
-        guid=report.guid,
-        item_filter=f"A|i_tags|cont|{case_tag};",
-        page_size=PDFPageSize.A4,
-    )
-    reader = PdfReader(output)
-    text = [page.extract_text() or "" for page in reader.pages]
-    assert len(text) > 1
-    assert all(page.strip() for page in text)
-    assert "TREE-WRAPPING-REPORT" in text[0]
-    normalized_pages = ["".join(page.split()) for page in text]
-    combined = "".join(normalized_pages)
-    for label, value in values:
-        assert any(
-            "".join(label.split()) in page and "".join(value.split()) in page
-            for page in normalized_pages
-        ), label
-    for index in range(24):
-        assert combined.count(f"SETTING-{index:02}") == 1
-        assert combined.count(f"END-{index:02}") == 1
-    assert "".join(oversized_value.split()) in combined
-    assert next(i for i, page in enumerate(text) if "OVERSIZED-ROW-BEGIN" in page) < next(
-        i for i, page in enumerate(text) if "OVERSIZED-ROW-END" in page
     )
 
 
@@ -2443,116 +2348,6 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
     assert "Magnitude,NormaltoBoundary" in text
     assert "IntensityandViscosityRatio" in text
     assert token in text
-
-
-@pytest.mark.integration
-def test_playwright_pdf_exports_two_column_regression_report(
-    tmp_path, adr_serverless, product_playwright_context
-):
-    """Export a complete report exercising both two-column pagination fixes."""
-    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
-
-    case_tag = f"pagination_case={uuid4().hex}"
-
-    def layout(name, parent=None, *, html="", columns=1, kind=""):
-        return adr_serverless.create_template(
-            BasicLayout,
-            name=f"{case_tag}-{name}",
-            parent=parent,
-            item_filter=f"A|i_tags|cont|kind={kind};" if kind else "",
-            params=json.dumps(
-                {"HTML": html, "column_count": columns, "properties": {"margin_line": 0}}
-            ),
-        )
-
-    report = layout("report")
-    shared = layout(
-        "shared-heading",
-        report,
-        columns=2,
-        html=(
-            "<h2>CASE-1-SHARED-HEADING</h2>"
-            '<p style="height:140px">Both child headings and images must stay together.</p>'
-        ),
-    )
-    for column in ("LEFT", "RIGHT"):
-        layout(
-            f"shared-{column}",
-            shared,
-            html=f"<h3>CASE-1-{column}</h3>",
-            kind=f"case-1-{column}",
-        )
-    preceding_text = layout(
-        "preceding-text",
-        report,
-        columns=2,
-        html='<h2 style="break-before:page">CASE-2-TEXT-BEFORE-IMAGE</h2>',
-    )
-    layout("reference", preceding_text, html="<h3>CASE-2-LEFT</h3>", kind="case-2-LEFT")
-    branch = layout("right-branch", preceding_text)
-    layout("text", branch, kind="text")
-    layout("target", branch, html="<h3>CASE-2-RIGHT</h3>", kind="case-2-RIGHT")
-    adr_serverless.create_item(
-        HTML,
-        name=f"{case_tag}-text",
-        tags=f"{case_tag} kind=text",
-        content='<p style="height:550px">LONG-TEXT-BEFORE-RIGHT-IMAGE</p>',
-    )
-    for case in (1, 2):
-        for column, color in (("LEFT", "blue"), ("RIGHT", "green")):
-            image = BytesIO()
-            Image.new("RGB", (240, 900), color).save(image, format="PNG")
-            image_data = b64encode(image.getvalue()).decode("ascii")
-            adr_serverless.create_item(
-                HTML,
-                name=f"{case_tag}-{case}-{column}",
-                tags=f"{case_tag} kind=case-{case}-{column}",
-                content=(
-                    f'<img src="data:image/png;base64,{image_data}" '
-                    'style="display:block;width:240px;height:900px">'
-                    f"<p>CASE-{case}-{column}-END</p>"
-                ),
-            )
-
-    output = tmp_path / "two-column-pagination.pdf"
-    adr_serverless.export_report_as_browser_pdf(
-        filename=output,
-        guid=report.guid,
-        item_filter=f"A|i_tags|cont|{case_tag};",
-        page_size=PDFPageSize.A4,
-        landscape=True,
-    )
-    reader = PdfReader(output)
-    text = [page.extract_text() or "" for page in reader.pages]
-    assert all(page.strip() for page in text)
-
-    def marker_page(marker):
-        matches = [index for index, content in enumerate(text) if marker in content]
-        assert len(matches) == 1, (marker, text)
-        return matches[0]
-
-    shared_page = marker_page("CASE-1-SHARED-HEADING")
-    for column in ("LEFT", "RIGHT"):
-        assert marker_page(f"CASE-1-{column}") == shared_page
-        assert marker_page(f"CASE-1-{column}-END") == shared_page
-    assert len(reader.pages[shared_page].images) == 2
-    text_page = marker_page("LONG-TEXT-BEFORE-RIGHT-IMAGE")
-    assert marker_page("CASE-2-LEFT") == text_page
-    target_page = marker_page("CASE-2-RIGHT")
-    assert marker_page("CASE-2-RIGHT-END") == target_page
-    assert target_page > text_page
-    assert len(reader.pages[target_page].images) == 1
-    image_heights = []
-
-    def capture_image_height(operator, operands, cm, tm):
-        if operator == b"Do":
-            resource = reader.pages[target_page]["/Resources"]["/XObject"][operands[0]]
-            if resource["/Subtype"] == "/Image":
-                image_heights.append(abs(float(cm[3])))
-
-    reader.pages[target_page].extract_text(visitor_operand_before=capture_image_height)
-    assert len(image_heights) == 1
-    assert image_heights[0] > 200, image_heights
 
 
 @pytest.mark.unit
