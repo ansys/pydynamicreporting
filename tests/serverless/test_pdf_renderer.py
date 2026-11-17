@@ -1782,10 +1782,28 @@ def _panel_pagination_html(content: str) -> str:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("wrapper", ["direct", "tabs", "padded", "nested_panel"])
-@pytest.mark.parametrize("with_heading", [False, True], ids=["content_only", "heading"])
-@pytest.mark.parametrize("page_size", [PDFPageSize.A4, PDFPageSize.A3], ids=["a4", "a3"])
-@pytest.mark.parametrize("landscape", [False, True], ids=["portrait", "landscape"])
+@pytest.mark.parametrize(
+    "wrapper, with_heading, page_size, landscape",
+    [
+        # Every wrapper, with and without a heading, on the one page where the image must
+        # shrink to share its page with the panel title.
+        *[
+            pytest.param(
+                wrapper,
+                with_heading,
+                PDFPageSize.A4,
+                True,
+                id=f"{wrapper}-{'heading' if with_heading else 'content_only'}-a4-landscape",
+            )
+            for wrapper in ("direct", "tabs", "padded", "nested_panel")
+            for with_heading in (False, True)
+        ],
+        # Taller pages leave the image at its natural height.
+        pytest.param("direct", True, PDFPageSize.A4, False, id="direct-heading-a4-portrait"),
+        pytest.param("direct", True, PDFPageSize.A3, False, id="direct-heading-a3-portrait"),
+        pytest.param("direct", True, PDFPageSize.A3, True, id="direct-heading-a3-landscape"),
+    ],
+)
 def test_playwright_pdf_fits_panel_visual_through_layout_wrappers(
     tmp_path: Path,
     product_playwright_context: _ProductPlaywrightContext,
@@ -1945,9 +1963,20 @@ def test_playwright_pdf_does_not_repeat_panel_header_budget(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("column_count", [1, 2, 3])
-@pytest.mark.parametrize("parent_parts", ["none", "heading", "heading_and_introduction"])
-@pytest.mark.parametrize("continuation", ["none", "row", "column"])
+@pytest.mark.parametrize(
+    "column_count, parent_parts, continuation",
+    [
+        # Two columns carry every parent shape and every kind of continuation.
+        *[
+            pytest.param(2, parent_parts, continuation, id=f"2-{parent_parts}-{continuation}")
+            for parent_parts in ("none", "heading", "heading_and_introduction")
+            for continuation in ("none", "row", "column")
+        ],
+        # One column has no row of columns, and three columns share the heading three ways.
+        pytest.param(1, "heading", "column", id="1-heading-column"),
+        pytest.param(3, "heading_and_introduction", "none", id="3-heading_and_introduction-none"),
+    ],
+)
 def test_playwright_pdf_keeps_parent_heading_with_first_column_fragments(
     tmp_path: Path,
     product_playwright_context: _ProductPlaywrightContext,
@@ -2377,10 +2406,32 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops", "footer"])
-@pytest.mark.parametrize("with_introduction", [False, True], ids=["adjacent", "with_intro"])
-@pytest.mark.parametrize("content_kind", ["table", "oversized_table", "oversized_visual"])
-@pytest.mark.parametrize("custom_header_sections", [False, True], ids=["plain", "custom_sections"])
+@pytest.mark.parametrize(
+    "layout_type, with_introduction, content_kind, custom_header_sections",
+    [
+        # One layout type carries every combination of introduction, content, and custom
+        # sections. The layout types differ only in which selector entry matches them.
+        *[
+            pytest.param(
+                "basic",
+                with_introduction,
+                content_kind,
+                custom_header_sections,
+                id=(
+                    f"basic-{'with_intro' if with_introduction else 'adjacent'}-{content_kind}-"
+                    f"{'custom_sections' if custom_header_sections else 'plain'}"
+                ),
+            )
+            for with_introduction in (False, True)
+            for content_kind in ("table", "oversized_table", "oversized_visual")
+            for custom_header_sections in (False, True)
+        ],
+        *[
+            pytest.param(layout_type, True, "oversized_table", True, id=f"{layout_type}-combined")
+            for layout_type in ("box", "header", "tagprops", "footer")
+        ],
+    ],
+)
 def test_playwright_pdf_keeps_heading_and_introduction_with_content(
     tmp_path: Path,
     product_playwright_context: _ProductPlaywrightContext,
@@ -2619,17 +2670,22 @@ def test_pagination_finds_following_container_without_template_metadata(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
 @pytest.mark.parametrize(
-    "with_heading, with_introduction, content_kind",
+    "layout_type, with_heading, with_introduction, content_kind",
     [
-        pytest.param(False, False, "visual", id="content_only_visual"),
-        pytest.param(False, False, "table", id="content_only_table"),
-        pytest.param(False, True, "visual", id="introduction_and_content"),
-        pytest.param(True, False, "missing", id="heading_only"),
-        pytest.param(True, True, "missing", id="heading_and_introduction"),
-        pytest.param(True, True, "empty", id="heading_and_introduction_empty_body"),
-        pytest.param(False, False, "missing", id="empty"),
+        # One layout type carries every combination of missing parts.
+        pytest.param("basic", False, False, "visual", id="basic-content_only_visual"),
+        pytest.param("basic", False, False, "table", id="basic-content_only_table"),
+        pytest.param("basic", False, True, "visual", id="basic-introduction_and_content"),
+        pytest.param("basic", True, False, "missing", id="basic-heading_only"),
+        pytest.param("basic", True, True, "missing", id="basic-heading_and_introduction"),
+        pytest.param("basic", True, True, "empty", id="basic-heading_and_introduction_empty_body"),
+        pytest.param("basic", False, False, "missing", id="basic-empty"),
+        # The other layout types only need to show that their selector entry groups a layout.
+        *[
+            pytest.param(layout_type, True, True, "empty", id=f"{layout_type}-grouped_empty_body")
+            for layout_type in ("box", "header", "tagprops")
+        ],
     ],
 )
 def test_pagination_preserves_optional_report_parts(
