@@ -25,13 +25,14 @@ from dataclasses import dataclass
 from io import BytesIO
 from logging import Logger
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import call
 
 from PIL import Image
 import pytest
-from playwright.sync_api import Browser, Playwright
+from playwright.sync_api import Browser, Page, Playwright
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from pypdf import PdfReader
@@ -1044,7 +1045,7 @@ def test_playwright_pdf_signal_timeout(tmp_path, product_playwright_context):
 
 
 @pytest.mark.unit
-def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
+def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path: Path) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>CSS injection</p></body></html>")
     page = Mock()
 
@@ -1787,8 +1788,14 @@ def _panel_pagination_html(content: str) -> str:
 @pytest.mark.parametrize("page_size", [PDFPageSize.A4, PDFPageSize.A3], ids=["a4", "a3"])
 @pytest.mark.parametrize("landscape", [False, True], ids=["portrait", "landscape"])
 def test_playwright_pdf_fits_panel_visual_through_layout_wrappers(
-    tmp_path, product_playwright_context, monkeypatch, wrapper, with_heading, page_size, landscape
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    wrapper: str,
+    with_heading: bool,
+    page_size: PDFPageSize,
+    landscape: bool,
+) -> None:
     """Fit the complete panel, not just its inner heading/image section."""
     Image.new("RGB", (480, 600), "blue").save(tmp_path / "panel.png")
     heading = "<h2>VISUAL-TITLE</h2>" if with_heading else ""
@@ -1825,7 +1832,7 @@ def test_playwright_pdf_fits_panel_visual_through_layout_wrappers(
     state = {}
     set_cohesion = renderer._set_pagination_cohesion
 
-    def capture_cohesion(page, printable_height_px):
+    def capture_cohesion(page: Page, printable_height_px: float) -> dict[str, Any]:
         result = set_cohesion(page, printable_height_px)
         state.update(
             page.evaluate("""() => ({
@@ -1863,8 +1870,12 @@ def test_playwright_pdf_fits_panel_visual_through_layout_wrappers(
 @pytest.mark.parametrize("wrapper", ["direct", "tabs"])
 @pytest.mark.parametrize("preceding_table", [False, True], ids=["image_first", "table_first"])
 def test_playwright_pdf_does_not_repeat_panel_header_budget(
-    tmp_path, product_playwright_context, monkeypatch, wrapper, preceding_table
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    wrapper: str,
+    preceding_table: bool,
+) -> None:
     """Let a multi-section panel paginate, counting its header only at the start."""
     Image.new("RGB", (480, 900), "blue").save(tmp_path / "chart.png")
     sections = []
@@ -1902,7 +1913,7 @@ def test_playwright_pdf_does_not_repeat_panel_header_budget(
     state = {}
     set_cohesion = renderer._set_pagination_cohesion
 
-    def capture_cohesion(page, printable_height_px):
+    def capture_cohesion(page: Page, printable_height_px: float) -> dict[str, Any]:
         result = set_cohesion(page, printable_height_px)
         state.update(
             page.evaluate("""() => ({
@@ -1939,8 +1950,13 @@ def test_playwright_pdf_does_not_repeat_panel_header_budget(
 @pytest.mark.parametrize("parent_parts", ["none", "heading", "heading_and_introduction"])
 @pytest.mark.parametrize("continuation", ["none", "row", "column"])
 def test_playwright_pdf_keeps_parent_heading_with_first_column_fragments(
-    tmp_path, product_playwright_context, monkeypatch, column_count, parent_parts, continuation
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    column_count: int,
+    parent_parts: str,
+    continuation: str,
+) -> None:
     """Share the parent's heading space across columns, but not later fragments."""
     for column, color in enumerate(["red", "green", "blue"][:column_count]):
         Image.new("RGB", (240, 900), color).save(tmp_path / f"column-{column}.png")
@@ -2006,7 +2022,7 @@ def test_playwright_pdf_keeps_parent_heading_with_first_column_fragments(
     state = {}
     set_cohesion = renderer._set_pagination_cohesion
 
-    def capture_cohesion(page, printable_height_px):
+    def capture_cohesion(page: Page, printable_height_px: float) -> dict[str, Any]:
         result = set_cohesion(page, printable_height_px)
         state.update(
             page.evaluate("""() => {
@@ -2061,8 +2077,10 @@ def test_playwright_pdf_keeps_parent_heading_with_first_column_fragments(
 @pytest.mark.unit
 @pytest.mark.parametrize("layout_kind", ["nested", "nested_without_heading", "wrapped"])
 def test_playwright_pdf_keeps_parent_heading_with_nested_and_wrapped_columns(
-    tmp_path, product_playwright_context, layout_kind
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    layout_kind: str,
+) -> None:
     """Include nested first rows, without treating wrapped columns as the first row."""
     for index, color in enumerate(["red", "green", "blue", "yellow"]):
         height = 180 if layout_kind == "wrapped" and index < 3 else 900
@@ -2155,8 +2173,13 @@ def test_playwright_pdf_keeps_parent_heading_with_nested_and_wrapped_columns(
     "text_height,keep_with_text", [(150, True), (550, False)], ids=["short_text", "long_text"]
 )
 def test_playwright_pdf_preserves_visual_size_after_preceding_text(
-    tmp_path, product_playwright_context, monkeypatch, text_column, text_height, keep_with_text
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    text_column: str,
+    text_height: int,
+    keep_with_text: bool,
+) -> None:
     """Move an image to the next page instead of squeezing it under long text."""
     for name, color in (("reference", "blue"), ("target", "green")):
         Image.new("RGB", (240, 900), color).save(tmp_path / f"{name}.png")
@@ -2219,7 +2242,7 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
     state = {}
     set_cohesion = renderer._set_pagination_cohesion
 
-    def capture_cohesion(page, printable_height_px):
+    def capture_cohesion(page: Page, printable_height_px: float) -> dict[str, Any]:
         result = set_cohesion(page, printable_height_px)
         state.update(
             page.evaluate("""() => {
@@ -2270,8 +2293,12 @@ def test_playwright_pdf_preserves_visual_size_after_preceding_text(
 @pytest.mark.parametrize("landscape", [False, True])
 @pytest.mark.parametrize("columns", [1, 2])
 def test_playwright_pdf_wraps_only_trees_within_their_container(
-    tmp_path, product_playwright_context, monkeypatch, landscape, columns
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    landscape: bool,
+    columns: int,
+) -> None:
     """Fit tree text without shrinking fonts, indentation, or unrelated tables."""
     token = "TOKENSTART" + "abcdef0123456789" * 12 + "TOKENEND"
     renderer = _simple_renderer(
@@ -2307,7 +2334,7 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
     state = {}
     apply_styles = renderer._apply_pdf_capture_styles
 
-    def capture_styles(page):
+    def capture_styles(page: Page) -> None:
         before = page.evaluate(
             """() => ({
                 compactWidth: document.querySelector('#compact').getBoundingClientRect().width,
@@ -2356,13 +2383,13 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
 @pytest.mark.parametrize("content_kind", ["table", "oversized_table", "oversized_visual"])
 @pytest.mark.parametrize("custom_header_sections", [False, True], ids=["plain", "custom_sections"])
 def test_playwright_pdf_keeps_heading_and_introduction_with_content(
-    tmp_path,
-    product_playwright_context,
-    layout_type,
-    with_introduction,
-    content_kind,
-    custom_header_sections,
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    layout_type: str,
+    with_introduction: bool,
+    content_kind: str,
+    custom_header_sections: bool,
+) -> None:
     """Keep headings with the first content fragment without clipping oversized content."""
     template_guid = "11111111-2222-4333-8444-555555555555"
     heading = "MATERIAL-HEADING"
@@ -2478,8 +2505,8 @@ def test_playwright_pdf_keeps_heading_and_introduction_with_content(
 @pytest.mark.unit
 @pytest.mark.parametrize("footer_kind", ["empty", "html_only", "content_only"])
 def test_playwright_pdf_preserves_footer_page_break_with_optional_parts(
-    tmp_path, product_playwright_context, footer_kind
-):
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext, footer_kind: str
+) -> None:
     """Preserve the generator's forced page break even when footer parts are absent."""
     template_guid = "11111111-2222-4333-8444-555555555555"
     footer_markers = []
@@ -2540,8 +2567,8 @@ def test_playwright_pdf_preserves_footer_page_break_with_optional_parts(
 @pytest.mark.unit
 @pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
 def test_pagination_finds_following_container_without_template_metadata(
-    tmp_path, product_playwright_context, layout_type
-):
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext, layout_type: str
+) -> None:
     """Preserve standalone HTML with a custom content section before its heading."""
     renderer = _simple_renderer(
         tmp_path,
@@ -2607,14 +2634,14 @@ def test_pagination_finds_following_container_without_template_metadata(
     ],
 )
 def test_pagination_preserves_optional_report_parts(
-    tmp_path,
-    product_playwright_context,
-    monkeypatch,
-    layout_type,
-    with_heading,
-    with_introduction,
-    content_kind,
-):
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    layout_type: str,
+    with_heading: bool,
+    with_introduction: bool,
+    content_kind: str,
+) -> None:
     """Missing report parts must not prevent export or disable standalone media fitting."""
     heading_html = "<h3>OPTIONAL-TITLE</h3>" if with_heading else ""
     introduction_html = "<p>OPTIONAL-INTRO</p>" if with_introduction else ""
@@ -2672,7 +2699,7 @@ def test_pagination_preserves_optional_report_parts(
     state = {}
     set_cohesion = renderer._set_pagination_cohesion
 
-    def capture_cohesion(page, printable_height_px):
+    def capture_cohesion(page: Page, printable_height_px: float) -> dict[str, Any]:
         result = set_cohesion(page, printable_height_px)
         state.update(
             page.evaluate(
@@ -2718,8 +2745,8 @@ def test_pagination_preserves_optional_report_parts(
 @pytest.mark.unit
 @pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
 def test_pagination_does_not_borrow_a_nested_layout_heading(
-    tmp_path, product_playwright_context, layout_type
-):
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext, layout_type: str
+) -> None:
     """A heading-free parent must not be grouped using a child's heading and content."""
     renderer = _simple_renderer(
         tmp_path,
@@ -2761,8 +2788,8 @@ def test_pagination_does_not_borrow_a_nested_layout_heading(
 @pytest.mark.unit
 @pytest.mark.parametrize("wrapper_kind", ["positioned_box", "sidebar_toc"])
 def test_pagination_does_not_treat_wrapped_layouts_as_standard_containers(
-    tmp_path, product_playwright_context, wrapper_kind
-):
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext, wrapper_kind: str
+) -> None:
     """Respect positioned box children and sidebar wrappers emitted by the generator."""
     inner = """
         <div nexus_template="inner" data-layout-type="basic">

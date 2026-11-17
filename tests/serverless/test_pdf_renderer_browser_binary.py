@@ -116,7 +116,9 @@ def _metadata_path(browser_binary_dir: Path) -> Path:
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_finds_full_install_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     browser_binary_dir = _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
@@ -136,7 +138,9 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     browser_binary_dir = _create_packaged_browser_binary(
         _machine_root(tmp_path, "linux_2.6_64"),
@@ -154,8 +158,8 @@ def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_pa
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_returns_none_on_unsupported_platform(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Darwin")
 
@@ -168,8 +172,8 @@ def test_resolve_playwright_browser_binary_info_returns_none_on_unsupported_plat
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # A valid install that simply does not ship a Playwright binary must resolve to None rather
     # than pointing Playwright at a non-existent browser directory. Create the machine directory
     # but no playwright-browsers child.
@@ -185,7 +189,9 @@ def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_requires_metadata_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
@@ -203,8 +209,8 @@ def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path,
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_requires_installation_complete_marker(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
@@ -221,7 +227,9 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
@@ -241,7 +249,9 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
@@ -262,8 +272,8 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
@@ -285,7 +295,9 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
@@ -308,8 +320,8 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     # Binary sits under win64 but its metadata advertises a different machine arch.
     _create_packaged_browser_binary(
@@ -408,8 +420,8 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_outside_bro
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_metadata_naming_a_missing_dir(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
