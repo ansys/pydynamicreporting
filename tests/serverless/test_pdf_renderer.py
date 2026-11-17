@@ -1962,6 +1962,137 @@ def test_playwright_pdf_does_not_repeat_panel_header_budget(
         assert state["heights"][2] > state["heights"][0] + 50
 
 
+def _panel_section_html(items: str, heading: str = "") -> str:
+    """Wrap items in a panel that holds one generator-shaped section after a page break."""
+    heading_html = f"<h2>{heading}</h2>" if heading else ""
+    return (
+        '<p style="break-after:page;">PREVIOUS-SECTION</p>'
+        '<div id="outer-panel" data-layout-type="panel"><br>'
+        '<adr-panel data-title="PANEL-TITLE">'
+        f'<div data-layout-type="basic" nexus_template="section">{heading_html}'
+        f'<section class="adr-container" id="section">{items}</section></div>'
+        "</adr-panel></div>"
+    )
+
+
+def _render_panel_page(
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    body: str,
+) -> tuple[list[str], dict[str, Any], float]:
+    """Render a panel on A4 landscape and return the page texts, its geometry, and its budget.
+
+    The geometry is read after the cohesion step, so it shows the sizes the PDF is printed with.
+    """
+    renderer = _simple_renderer(
+        tmp_path,
+        _panel_pagination_html(body),
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+    state = {}
+    set_cohesion = renderer._set_pagination_cohesion
+
+    def capture_cohesion(page: Page, printable_height_px: float) -> dict[str, Any]:
+        result = set_cohesion(page, printable_height_px)
+        state.update(
+            page.evaluate("""() => ({
+                imageHeights: [...document.querySelectorAll('img.chart')].map(
+                    image => image.getBoundingClientRect().height),
+                panelHeight: document.getElementById('outer-panel')
+                    .getBoundingClientRect().height
+            })""")
+        )
+        return result
+
+    monkeypatch.setattr(renderer, "_set_pagination_cohesion", capture_cohesion)
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+    budget = renderer._printable_page_height_px() - pdf_renderer_module._PAGINATION_FIT_GUARD_PX
+    return page_text, state, budget
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "section_kind, with_heading",
+    [
+        pytest.param("table_then_image", True, id="table_then_image"),
+        pytest.param("two_images_in_one_item", True, id="two_images_with_heading"),
+        pytest.param("two_images_in_one_item", False, id="two_images_without_heading"),
+    ],
+)
+def test_playwright_pdf_keeps_panel_title_with_the_first_content_of_a_section(
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+    section_kind: str,
+    with_heading: bool,
+) -> None:
+    """Fit every over-height visual that shares a page with the panel title."""
+    Image.new("RGB", (300, 900), "blue").save(tmp_path / "chart.png")
+    image = '<img class="chart" src="chart.png" style="width:300px;height:900px">'
+    if section_kind == "table_then_image":
+        items = (
+            '<adr-data-item style="height:100px"><table><tbody><tr><td>TABLE-CELL</td></tr>'
+            "</tbody></table></adr-data-item>"
+            f"<adr-data-item>{image}<p>VISUAL-END</p></adr-data-item>"
+        )
+    else:
+        items = (
+            f'<adr-data-item><div style="display:flex;gap:10px">{image}{image}</div>'
+            "<p>VISUAL-END</p></adr-data-item>"
+        )
+
+    page_text, state, budget = _render_panel_page(
+        tmp_path,
+        product_playwright_context,
+        monkeypatch,
+        _panel_section_html(items, "SECTION-TITLE" if with_heading else ""),
+    )
+
+    assert len(page_text) == 2
+    assert page_text[0].strip() == "PREVIOUS-SECTION"
+    markers = ["PANEL-TITLE", "VISUAL-END"]
+    if section_kind == "table_then_image":
+        markers.append("TABLE-CELL")
+    if with_heading:
+        markers.append("SECTION-TITLE")
+    for marker in markers:
+        assert page_text[1].count(marker) == 1
+    assert state["panelHeight"] <= budget
+    assert all(0 < height < 900 for height in state["imageHeights"])
+
+
+@pytest.mark.unit
+def test_playwright_pdf_fits_panel_with_unequal_items_side_by_side(
+    tmp_path: Path,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep a panel on one page when its last row holds two items of different heights."""
+    Image.new("RGB", (300, 900), "blue").save(tmp_path / "chart.png")
+    items = "".join(
+        f'<adr-data-item style="flex:1"><img class="chart" src="chart.png" '
+        f'style="width:300px;height:{height}px"><p>END-{index}</p></adr-data-item>'
+        for index, height in enumerate((800, 1000))
+    )
+
+    page_text, state, budget = _render_panel_page(
+        tmp_path,
+        product_playwright_context,
+        monkeypatch,
+        _panel_section_html(f'<section class="adr-row" style="display:flex">{items}</section>'),
+    )
+
+    assert len(page_text) == 2
+    for marker in ("PANEL-TITLE", "END-0", "END-1"):
+        assert page_text[1].count(marker) == 1
+    assert state["panelHeight"] <= budget
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "column_count, parent_parts, continuation",
@@ -2403,6 +2534,48 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
     assert "Magnitude,NormaltoBoundary" in text
     assert "IntensityandViscosityRatio" in text
     assert token in text
+
+
+@pytest.mark.unit
+def test_playwright_pdf_continues_a_tree_row_taller_than_a_page(
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
+) -> None:
+    """Split a tree row that cannot fit on one page instead of clipping or dropping its text."""
+    lines = [f"ROW-LINE-{index:02d}" for index in range(60)]
+    tall_cell = "".join(f"<p>{line}</p>" for line in lines)
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html><head><style>
+            body {{font:16px/24px sans-serif}}
+            p {{margin:0}}
+            td {{padding:4px}}
+            adr-data-item {{display:block}}
+        </style></head>
+        <body class="loaded"><main id="report_root"><adr-data-item>
+            <div class="table-responsive"><table class="tree">
+                <tr><td>FIRST-ROW</td><td>Value</td></tr>
+                <tr><td>TALL-ROW</td><td>{tall_cell}</td></tr>
+                <tr><td>LAST-ROW</td><td>Value</td></tr>
+            </table></div>
+        </adr-data-item></main></body></html>
+        """,
+        page_size=PDFPageSize.A4,
+        landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [page.extract_text() or "" for page in reader.pages]
+
+    for marker in ("FIRST-ROW", "LAST-ROW", *lines):
+        assert sum(text.count(marker) for text in page_text) == 1
+    page_of = {
+        marker: next(index for index, text in enumerate(page_text) if marker in text)
+        for marker in (lines[0], lines[-1])
+    }
+    assert page_of[lines[0]] < page_of[lines[-1]]
 
 
 @pytest.mark.unit
