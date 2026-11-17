@@ -2582,8 +2582,8 @@ def test_playwright_pdf_continues_a_tree_row_taller_than_a_page(
 @pytest.mark.parametrize(
     "layout_type, with_introduction, content_kind, custom_header_sections",
     [
-        # One layout type carries every combination of introduction, content, and custom
-        # sections. The layout types differ only in which selector entry matches them.
+        # The basic layout carries every combination of introduction, content, and custom
+        # sections, because all layout types run the same grouping loop.
         *[
             pytest.param(
                 "basic",
@@ -2599,8 +2599,11 @@ def test_playwright_pdf_continues_a_tree_row_taller_than_a_page(
             for content_kind in ("table", "oversized_table", "oversized_visual")
             for custom_header_sections in (False, True)
         ],
+        # Every other layout type must be selected on its own. An introduction between the
+        # heading and a short table is kept with them only by the grouping the selector enables,
+        # so the case fails when the layout type is missing from the selector.
         *[
-            pytest.param(layout_type, True, "oversized_table", True, id=f"{layout_type}-combined")
+            pytest.param(layout_type, True, "table", False, id=f"{layout_type}-with_intro-table")
             for layout_type in ("box", "header", "tagprops", "footer")
         ],
     ],
@@ -2788,9 +2791,8 @@ def test_playwright_pdf_preserves_footer_page_break_with_optional_parts(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
 def test_pagination_finds_following_container_without_template_metadata(
-    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext, layout_type: str
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
 ) -> None:
     """Preserve standalone HTML with a custom content section before its heading."""
     renderer = _simple_renderer(
@@ -2802,7 +2804,7 @@ def test_pagination_finds_following_container_without_template_metadata(
             h3, p {{ line-height: 20px; }}
         </style></head>
         <body><main id="report_root">
-            <div id="standalone" data-layout-type="{layout_type}">
+            <div id="standalone" data-layout-type="basic">
                 <section class="adr-container">Earlier custom HTML</section>
                 <h3>Standalone heading</h3>
                 <p>Introduction</p>
@@ -2844,28 +2846,21 @@ def test_pagination_finds_following_container_without_template_metadata(
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "layout_type, with_heading, with_introduction, content_kind",
+    "with_heading, with_introduction, content_kind",
     [
-        # One layout type carries every combination of missing parts.
-        pytest.param("basic", False, False, "visual", id="basic-content_only_visual"),
-        pytest.param("basic", False, False, "table", id="basic-content_only_table"),
-        pytest.param("basic", False, True, "visual", id="basic-introduction_and_content"),
-        pytest.param("basic", True, False, "missing", id="basic-heading_only"),
-        pytest.param("basic", True, True, "missing", id="basic-heading_and_introduction"),
-        pytest.param("basic", True, True, "empty", id="basic-heading_and_introduction_empty_body"),
-        pytest.param("basic", False, False, "missing", id="basic-empty"),
-        # The other layout types only need to show that their selector entry groups a layout.
-        *[
-            pytest.param(layout_type, True, True, "empty", id=f"{layout_type}-grouped_empty_body")
-            for layout_type in ("box", "header", "tagprops")
-        ],
+        pytest.param(False, False, "visual", id="content_only_visual"),
+        pytest.param(False, False, "table", id="content_only_table"),
+        pytest.param(False, True, "visual", id="introduction_and_content"),
+        pytest.param(True, False, "missing", id="heading_only"),
+        pytest.param(True, True, "missing", id="heading_and_introduction"),
+        pytest.param(True, True, "empty", id="heading_and_introduction_empty_body"),
+        pytest.param(False, False, "missing", id="empty"),
     ],
 )
 def test_pagination_preserves_optional_report_parts(
     tmp_path: Path,
     product_playwright_context: _ProductPlaywrightContext,
     monkeypatch: pytest.MonkeyPatch,
-    layout_type: str,
     with_heading: bool,
     with_introduction: bool,
     content_kind: str,
@@ -2909,7 +2904,7 @@ def test_pagination_preserves_optional_report_parts(
         </style></head>
         <body class="loaded"><main id="report_root">
             <p>BEFORE-SECTION</p>
-            <div id="optional-layout" nexus_template="optional" data-layout-type="{layout_type}">
+            <div id="optional-layout" nexus_template="optional" data-layout-type="basic">
                 {heading_html}
                 {introduction_html}
                 {container_html}
@@ -2971,18 +2966,17 @@ def test_pagination_preserves_optional_report_parts(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("layout_type", ["basic", "box", "header", "tagprops"])
 def test_pagination_does_not_borrow_a_nested_layout_heading(
-    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext, layout_type: str
+    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
 ) -> None:
     """A heading-free parent must not be grouped using a child's heading and content."""
     renderer = _simple_renderer(
         tmp_path,
-        f"""
+        """
         <html><body><main id="report_root">
-            <div id="parent" nexus_template="parent-content" data-layout-type="{layout_type}">
+            <div id="parent" nexus_template="parent-content" data-layout-type="basic">
                 <section class="adr-container" id="parent-content">
-                    <div id="child" nexus_template="child-content" data-layout-type="{layout_type}">
+                    <div id="child" nexus_template="child-content" data-layout-type="basic">
                         <h3>CHILD-TITLE</h3>
                         <section class="adr-container" id="child-content">CHILD-CONTENT</section>
                     </div>
