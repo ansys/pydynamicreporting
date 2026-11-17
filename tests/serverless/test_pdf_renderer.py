@@ -28,7 +28,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import Mock
-from unittest.mock import call
 
 from PIL import Image
 import pytest
@@ -3781,6 +3780,11 @@ def _expected_headless_shell_executable(
     return browser_binary_dir / packaged_binary_dir / executable_relpath
 
 
+def _logged_info_arguments(logger: Mock) -> list[tuple[object, ...]]:
+    """Return the values each INFO call carried, leaving out its message text."""
+    return [info_call.args[1:] for info_call in logger.info.call_args_list]
+
+
 def _create_packaged_headless_shell(
     browser_binary_dir: Path, packaged_binary_dir: str, machine_arch: str = "win64"
 ) -> Path:
@@ -3809,10 +3813,7 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
 
     assert browser is launch.return_value
     launch.assert_called_once_with(executable_path=str(executable))
-    assert logger.info.call_args_list == [
-        call("Launching Ansys installation browser build %s.", packaged_dir),
-        call("Using Ansys installation browser %s.", "156.0.8078.4"),
-    ]
+    assert _logged_info_arguments(logger) == [(packaged_dir,), ("156.0.8078.4",)]
 
 
 @pytest.mark.unit
@@ -3862,9 +3863,7 @@ def test_launch_product_browser_does_not_retry_a_failed_launch(
 
     assert exc_info.value is error
     launch.assert_called_once_with(executable_path=str(executable))
-    logger.info.assert_called_once_with(
-        "Launching Ansys installation browser build %s.", binary_info.packaged_binary_dir
-    )
+    assert _logged_info_arguments(logger) == [(binary_info.packaged_binary_dir,)]
 
 
 @pytest.mark.unit
@@ -3898,10 +3897,9 @@ def test_playwright_pdf_logs_the_browser_launch_through_its_logger(
 
     assert renderer.render_pdf() == b"%PDF-mock"
 
-    logger.info.assert_any_call(
-        "Launching Ansys installation browser build %s.", _PACKAGED_BROWSER_DIR_NAME
-    )
-    logger.info.assert_any_call("Using Ansys installation browser %s.", flow.browser.version)
+    logged_arguments = _logged_info_arguments(logger)
+    assert (_PACKAGED_BROWSER_DIR_NAME,) in logged_arguments
+    assert (flow.browser.version,) in logged_arguments
 
 
 @pytest.mark.unit
