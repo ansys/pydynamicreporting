@@ -42,6 +42,7 @@ import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, PDFPageSize, common_utils
 from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.serverless import ADR
 from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
@@ -2583,7 +2584,7 @@ def test_playwright_pdf_continues_a_tree_row_taller_than_a_page(
 @pytest.mark.integration
 def test_render_report_as_browser_pdf_exports_a_report_through_the_public_entry_point(
     tmp_path: Path,
-    adr_serverless: Any,
+    adr_serverless: ADR,
     product_playwright_context: _ProductPlaywrightContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
