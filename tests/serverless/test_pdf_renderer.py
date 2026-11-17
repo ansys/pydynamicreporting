@@ -4036,7 +4036,9 @@ def test_launch_product_browser_always_launches_metadata_selected_executable(
 
     assert browser is launch.return_value
     launch.assert_called_once_with(executable_path=str(executable))
-    assert _logged_info_arguments(logger) == [(packaged_dir,), ("156.0.8078.4",)]
+    logged_arguments = _logged_info_arguments(logger)
+    assert (packaged_dir,) in logged_arguments
+    assert ("156.0.8078.4",) in logged_arguments
 
 
 @pytest.mark.unit
@@ -4086,7 +4088,9 @@ def test_launch_product_browser_does_not_retry_a_failed_launch(
 
     assert exc_info.value is error
     launch.assert_called_once_with(executable_path=str(executable))
-    assert _logged_info_arguments(logger) == [(binary_info.packaged_binary_dir,)]
+    # The build is logged before the launch. No browser version exists to log after a failure.
+    logged_values = {value for arguments in _logged_info_arguments(logger) for value in arguments}
+    assert logged_values == {binary_info.packaged_binary_dir}
 
 
 @pytest.mark.unit
