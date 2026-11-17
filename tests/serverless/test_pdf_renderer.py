@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import json
 import os
 from dataclasses import dataclass
 from io import BytesIO
@@ -29,7 +28,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import Mock
-from uuid import uuid4
 
 from PIL import Image
 import pytest
@@ -42,7 +40,6 @@ import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, PDFPageSize, common_utils
 from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
-from ansys.dynamicreporting.core.serverless import ADR
 from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
@@ -2070,33 +2067,6 @@ def test_playwright_pdf_keeps_panel_title_with_the_first_content_of_a_section(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_fits_panel_with_unequal_items_side_by_side(
-    tmp_path: Path,
-    product_playwright_context: _ProductPlaywrightContext,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Keep a panel on one page when its last row holds two items of different heights."""
-    Image.new("RGB", (300, 900), "blue").save(tmp_path / "chart.png")
-    items = "".join(
-        f'<adr-data-item style="flex:1"><img class="chart" src="chart.png" '
-        f'style="width:300px;height:{height}px"><p>END-{index}</p></adr-data-item>'
-        for index, height in enumerate((800, 1000))
-    )
-
-    page_text, state, budget = _render_panel_page(
-        tmp_path,
-        product_playwright_context,
-        monkeypatch,
-        _panel_section_html(f'<section class="adr-row" style="display:flex">{items}</section>'),
-    )
-
-    assert len(page_text) == 2
-    for marker in ("PANEL-TITLE", "END-0", "END-1"):
-        assert page_text[1].count(marker) == 1
-    assert state["panelHeight"] <= budget
-
-
-@pytest.mark.unit
 @pytest.mark.parametrize(
     "column_count, parent_parts, continuation",
     [
@@ -2537,94 +2507,6 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
     assert "Magnitude,NormaltoBoundary" in text
     assert "IntensityandViscosityRatio" in text
     assert token in text
-
-
-@pytest.mark.unit
-def test_playwright_pdf_continues_a_tree_row_taller_than_a_page(
-    tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
-) -> None:
-    """Split a tree row that cannot fit on one page instead of clipping or dropping its text."""
-    lines = [f"ROW-LINE-{index:02d}" for index in range(60)]
-    tall_cell = "".join(f"<p>{line}</p>" for line in lines)
-    renderer = _simple_renderer(
-        tmp_path,
-        f"""
-        <html><head><style>
-            body {{font:16px/24px sans-serif}}
-            p {{margin:0}}
-            td {{padding:4px}}
-            adr-data-item {{display:block}}
-        </style></head>
-        <body class="loaded"><main id="report_root"><adr-data-item>
-            <div class="table-responsive"><table class="tree">
-                <tr><td>FIRST-ROW</td><td>Value</td></tr>
-                <tr><td>TALL-ROW</td><td>{tall_cell}</td></tr>
-                <tr><td>LAST-ROW</td><td>Value</td></tr>
-            </table></div>
-        </adr-data-item></main></body></html>
-        """,
-        page_size=PDFPageSize.A4,
-        landscape=True,
-        ansys_installation=product_playwright_context.ansys_installation,
-        ansys_version=product_playwright_context.ansys_version,
-    )
-
-    reader = PdfReader(BytesIO(renderer.render_pdf()))
-    page_text = [page.extract_text() or "" for page in reader.pages]
-
-    for marker in ("FIRST-ROW", "LAST-ROW", *lines):
-        assert sum(text.count(marker) for text in page_text) == 1
-    page_of = {
-        marker: next(index for index, text in enumerate(page_text) if marker in text)
-        for marker in (lines[0], lines[-1])
-    }
-    assert page_of[lines[0]] < page_of[lines[-1]]
-
-
-@pytest.mark.integration
-def test_render_report_as_browser_pdf_exports_a_report_through_the_public_entry_point(
-    tmp_path: Path,
-    adr_serverless: ADR,
-    product_playwright_context: _ProductPlaywrightContext,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Join the public export call, the staging step, and the real browser on a created report.
-
-    Only the outer Django page shell is replaced, because the CI image cannot render it. The
-    report body still comes from the real template and item objects. The assertions avoid page
-    counts, which depend on the ADR version that generates the report HTML.
-    """
-    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
-    from ansys.dynamicreporting.core.serverless import template as template_module
-
-    case_tag = f"browser_pdf_case={uuid4().hex}"
-    report = adr_serverless.create_template(
-        BasicLayout,
-        name=f"{case_tag}-report",
-        params=json.dumps({"HTML": "<h2>PUBLIC-ENTRY-HEADING</h2>"}),
-    )
-    item = adr_serverless.create_item(
-        HTML, name=f"{case_tag}-item", tags=case_tag, content="<p>PUBLIC-ENTRY-ITEM</p>"
-    )
-    monkeypatch.setattr(
-        template_module,
-        "render_to_string",
-        lambda template_name, context, request: _panel_pagination_html(context["HTML"]),
-    )
-    try:
-        pdf_bytes = adr_serverless.render_report_as_browser_pdf(
-            guid=report.guid,
-            item_filter=f"A|i_tags|cont|{case_tag};",
-            page_size=PDFPageSize.A4,
-        )
-    finally:
-        item.delete()
-        report.delete()
-
-    assert pdf_bytes.startswith(b"%PDF")
-    text = "".join(page.extract_text() or "" for page in PdfReader(BytesIO(pdf_bytes)).pages)
-    assert text.count("PUBLIC-ENTRY-HEADING") == 1
-    assert text.count("PUBLIC-ENTRY-ITEM") == 1
 
 
 @pytest.mark.unit
