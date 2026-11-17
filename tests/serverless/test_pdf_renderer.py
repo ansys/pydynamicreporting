@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 import os
 from dataclasses import dataclass
 from io import BytesIO
@@ -28,6 +29,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import Mock
+from uuid import uuid4
 
 from PIL import Image
 import pytest
@@ -2576,6 +2578,52 @@ def test_playwright_pdf_continues_a_tree_row_taller_than_a_page(
         for marker in (lines[0], lines[-1])
     }
     assert page_of[lines[0]] < page_of[lines[-1]]
+
+
+@pytest.mark.integration
+def test_render_report_as_browser_pdf_exports_a_report_through_the_public_entry_point(
+    tmp_path: Path,
+    adr_serverless: Any,
+    product_playwright_context: _ProductPlaywrightContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Join the public export call, the staging step, and the real browser on a created report.
+
+    Only the outer Django page shell is replaced, because the CI image cannot render it. The
+    report body still comes from the real template and item objects. The assertions avoid page
+    counts, which depend on the ADR version that generates the report HTML.
+    """
+    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    case_tag = f"browser_pdf_case={uuid4().hex}"
+    report = adr_serverless.create_template(
+        BasicLayout,
+        name=f"{case_tag}-report",
+        params=json.dumps({"HTML": "<h2>PUBLIC-ENTRY-HEADING</h2>"}),
+    )
+    item = adr_serverless.create_item(
+        HTML, name=f"{case_tag}-item", tags=case_tag, content="<p>PUBLIC-ENTRY-ITEM</p>"
+    )
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: _panel_pagination_html(context["HTML"]),
+    )
+    try:
+        pdf_bytes = adr_serverless.render_report_as_browser_pdf(
+            guid=report.guid,
+            item_filter=f"A|i_tags|cont|{case_tag};",
+            page_size=PDFPageSize.A4,
+        )
+    finally:
+        item.delete()
+        report.delete()
+
+    assert pdf_bytes.startswith(b"%PDF")
+    text = "".join(page.extract_text() or "" for page in PdfReader(BytesIO(pdf_bytes)).pages)
+    assert text.count("PUBLIC-ENTRY-HEADING") == 1
+    assert text.count("PUBLIC-ENTRY-ITEM") == 1
 
 
 @pytest.mark.unit
