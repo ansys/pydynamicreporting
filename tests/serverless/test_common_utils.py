@@ -37,8 +37,6 @@ from ansys.dynamicreporting.core.common_utils import (
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
-# Implicit discovery probes this version after the default one.
-FALLBACK_VERSION = int(AUTO_DETECT_INSTALL_VERSIONS[1])
 
 
 def _path_is_never_dir(self) -> bool:
@@ -337,16 +335,16 @@ def test_get_install_info_none_no_valid(monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_falls_back_to_previous_line_when_default_is_unavailable(
+def test_get_install_info_implicit_falls_back_to_261_when_default_version_is_unavailable(
     monkeypatch, tmp_path
 ):
     """Fall back to the older compatible product line when the default bundled line is absent."""
-    released_dir = tmp_path / f"v{FALLBACK_VERSION}" / "ADR"
+    released_dir = tmp_path / "v261" / "ADR"
     released_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
     monkeypatch.delenv(f"AWP_ROOT{CURRENT_VERSION}", raising=False)
-    monkeypatch.setenv(f"AWP_ROOT{FALLBACK_VERSION}", str(released_dir.parent))
+    monkeypatch.setenv("AWP_ROOT261", str(released_dir.parent))
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
@@ -354,21 +352,19 @@ def test_get_install_info_implicit_falls_back_to_previous_line_when_default_is_u
     # fallback should still keep implicit discovery useful.
     install, ver = get_install_info()
     assert install == str(released_dir)
-    assert ver == FALLBACK_VERSION
+    assert ver == 261
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_prefers_default_version_over_previous_line(
-    monkeypatch, tmp_path
-):
+def test_get_install_info_implicit_prefers_default_version_over_261(monkeypatch, tmp_path):
     """Prefer the bundled default product line when both bundled and compatibility installs exist."""
-    compatibility_dir = tmp_path / f"v{FALLBACK_VERSION}" / "ADR"
+    compatibility_dir = tmp_path / "v261" / "ADR"
     compatibility_dir.mkdir(parents=True)
     bundled_dir = tmp_path / f"v{CURRENT_VERSION}" / "ADR"
     bundled_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
-    monkeypatch.setenv(f"AWP_ROOT{FALLBACK_VERSION}", str(compatibility_dir.parent))
+    monkeypatch.setenv("AWP_ROOT261", str(compatibility_dir.parent))
     monkeypatch.setenv(f"AWP_ROOT{CURRENT_VERSION}", str(bundled_dir.parent))
     monkeypatch.delenv("AWP_ROOT251", raising=False)
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)

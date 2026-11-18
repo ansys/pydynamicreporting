@@ -15,9 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Create Draft Release workflows.
 - Browser-PDF export no longer changes the `PLAYWRIGHT_BROWSERS_PATH` and
   `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE` environment variables while it runs.
-- The default ADR install version is now 27.2 (`272`). When no installation or
-  version is given, install discovery probes 27.2 before 26.2. To use ADR 27.1
-  or 26.1, pass `ansys_installation` or `ansys_version` explicitly.
 
 ### Fixed
 

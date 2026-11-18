@@ -1253,8 +1253,7 @@ def test_run_nexus_utility_no_install_raises_oserror(monkeypatch, tmp_path) -> N
 
 @pytest.mark.ado_test
 def test_run_nexus_utility_no_install_uses_explicit_version(monkeypatch, tmp_path) -> None:
-    # 261 is outside the implicit probe list, so clear its environment variable by name.
-    _isolate_install_discovery(monkeypatch, tmp_path, 261)
+    _isolate_install_discovery(monkeypatch, tmp_path)
 
     with pytest.raises(FileNotFoundError, match="cpython261"):
         r.run_nexus_utility(
