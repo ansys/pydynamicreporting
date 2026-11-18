@@ -20,9 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import io
 from os.path import join
 
 import numpy as np
+from PIL import Image
 import pytest
 
 from ansys.dynamicreporting.core.utils import report_utils as ru
@@ -212,3 +214,34 @@ def test_htmlparser() -> None:
     a = ru.HTMLParser()
     a.handle_starttag(tag="a", attrs=[("href", 1)])
     assert a._links == [1]
+
+
+@pytest.mark.ado_test
+def test_png_compatible_image_clips_32_bit_integer_images() -> None:
+    values = np.array([[-5, 0, 1000], [65535, 70000, 2**31 - 1]], dtype=np.int32)
+    image = Image.fromarray(values)
+    assert image.mode == "I"
+
+    converted = ru.png_compatible_image(image)
+
+    assert converted.mode == "I;16"
+    assert np.array(converted).tolist() == [[0, 0, 1000], [65535, 65535, 65535]]
+
+
+@pytest.mark.ado_test
+def test_png_compatible_image_keeps_other_modes() -> None:
+    image = Image.new("RGB", (2, 2), "red")
+    assert ru.png_compatible_image(image) is image
+
+
+@pytest.mark.ado_test
+def test_pil_image_to_data_saves_32_bit_integer_tiff_as_png() -> None:
+    buff = io.BytesIO()
+    Image.fromarray(np.array([[0, 70000]], dtype=np.int32)).save(buff, "TIFF")
+
+    data = ru.PIL_image_to_data(buff.getvalue())
+
+    assert data["format"] == "tif"
+    png = Image.open(io.BytesIO(data["file_data"]))
+    assert png.format == "PNG"
+    assert np.array(png).tolist() == [[0, 65535]]

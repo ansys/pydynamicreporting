@@ -14,9 +14,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
 
+### Fixed
+
+- Browser-PDF export now decides whether to use the browser packaged in the ADR
+  installation by comparing its build name with the build this release expects,
+  instead of first trying a launch and retrying after it fails. When the builds
+  differ, the packaged browser is launched directly by its executable path, which
+  also avoids the empty temporary folders that a failed browser launch leaves
+  behind. A browser build in the ADR installation that is missing its executable is
+  reported before any launch, for the same reason. Other browser launch failures,
+  such as missing system libraries, are never retried and keep the original
+  Playwright error as their cause.
+- Browser-PDF export no longer fails when the ADR installation's browser folder
+  contains extra browser builds, for example after copying a newer ADR package
+  over an older installation. It uses the build named in the installation's browser
+  metadata and logs a warning that names the ignored builds.
+
+## [1.0.0rc4] - 2026-11-02
+
+### Changed
+
+- Raise the minimum runtime dependency versions to the versions bundled with
+  ADR 26.1: requests 2.32.4, Pillow 11.1.0, python-dateutil 2.9.0.post0,
+  pytz 2024.2, psutil 7.2.1, psycopg 3.2.12, and bleach 6.3.0.
+- When the normal browser launch fails for browser-PDF export, for example because
+  the ADR installation ships a different browser build than this release expects,
+  PyDynamicReporting retries once with the browser executable packaged in the ADR
+  installation and logs a warning. It never uses a browser from outside the ADR
+  installation. If the packaged executable is missing, the export raises an
+  `ADRException` that names the incomplete browser build.
+
+### Removed
+
+- Python 3.10 support. The package now requires Python 3.11 through 3.14. Python
+  3.10 is end-of-life, has no upstream fix for the eMudhra certificate incident,
+  and is not supported by Pillow 13.
+
+### Fixed
+
+- Require statsmodels 0.14.5 or later. Earlier statsmodels releases cannot be
+  imported with SciPy 1.16 or later, which made Serverless ADR setup fail.
+
 ### Security
 
-- Update the development lockfile to Django 5.2.18 for its security fixes.
+- Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
+- Lock Pillow 13.0.0 and Django 5.2.18 for development installs, and support
+  Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
+  with earlier Pillow releases.
+- Update Playwright to 1.64.1. Its bundled Node.js 24.22.1 distrusts the
+  compromised eMudhra intermediates, and it uses Chromium 156
+  (`chromium_headless_shell-1248`).
 
 ## [1.0.0rc3] - 2026-09-21
 
