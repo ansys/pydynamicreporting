@@ -40,7 +40,7 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # released ADR line so users who do not override ``ansys_version`` resolve a
 # real installation by default. Unreleased lines can still be
 # probed explicitly or as lower-priority fallbacks.
-DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
+DEFAULT_ANSYS_INSTALL_RELEASE = "27.2"
 
 
 @dataclass(frozen=True)
@@ -160,7 +160,7 @@ def product_release_to_product_line(product_release: str) -> str:
 
 
 # Derived from DEFAULT_ANSYS_INSTALL_RELEASE.
-# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.1" produces "271".
+# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.2" produces "272".
 DEFAULT_ANSYS_INSTALL_VERSION = str(
     product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
 )
@@ -171,18 +171,18 @@ def _auto_detect_install_versions() -> tuple[str, str]:
 
     Probe the default install line first, then the previous annual line.
     """
-    # Example: "27.1" produces year_line="27" and release_index=1.
+    # Example: "27.2" produces year_line="27" and release_index=2.
     year_line, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
-    # Example: year_line="27" and release_index=1 produce previous_release="26.1".
+    # Example: year_line="27" and release_index=2 produce previous_release="26.2".
     previous_release = f"{int(year_line) - 1:02d}.{release_index}"
-    # Example output: ("271", "261").
+    # Example output: ("272", "262").
     return (
         DEFAULT_ANSYS_INSTALL_VERSION,
         str(product_release_to_install_version(previous_release)),
     )
 
 
-# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.1" produces ("271", "261").
+# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.2" produces ("272", "262").
 AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
 
 

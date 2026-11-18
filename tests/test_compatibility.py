@@ -166,9 +166,9 @@ def test_public_compatibility_surface_is_consistent():
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
     )
-    assert ansys_version == "2027R1"
+    assert ansys_version == "2027R2"
     assert __ansys_version__ == DEFAULT_ANSYS_VERSION
-    assert __ansys_version_str__ == "2027 R1"
+    assert __ansys_version_str__ == "2027 R2"
 
 
 def test_compatibility_info_derives_from_client_major():
