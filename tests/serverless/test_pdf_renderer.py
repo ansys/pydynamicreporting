@@ -32,6 +32,7 @@ from unittest.mock import Mock
 from PIL import Image
 import pytest
 from playwright.sync_api import Browser, Page, Playwright
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from pypdf import PdfReader
 
@@ -3985,6 +3986,25 @@ def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_
     logger.debug.assert_called_once()
     assert logger.debug.call_args.args[-1] == _expected_headless_shell_executable(
         tmp_path, binary_info.packaged_binary_dir, machine_arch
+    )
+
+
+@pytest.mark.unit
+def test_playwright_pdf_wraps_launch_failure_and_keeps_original_cause(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep the caller error ADR-owned while chaining the original Playwright launch error."""
+    error = PlaywrightError("Host system is missing dependencies to run browsers.")
+    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
+    flow.playwright.chromium.launch.side_effect = error
+
+    with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
+        renderer.render_pdf()
+
+    assert exc_info.value.__cause__ is error
+    flow.playwright.chromium.launch.assert_called_once()
+    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(
+        _expected_headless_shell_executable(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME, "win64")
     )
 
 
