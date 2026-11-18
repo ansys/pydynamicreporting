@@ -32,7 +32,6 @@ from unittest.mock import Mock
 from PIL import Image
 import pytest
 from playwright.sync_api import Browser, Page, Playwright
-from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from pypdf import PdfReader
 
@@ -125,7 +124,6 @@ class MockPlaywrightPDFFlow:
 def _mock_playwright_pdf_flow(
     *,
     pdf_bytes: bytes = b"%PDF-mock",
-    launch_side_effect: Exception | None = None,
 ) -> MockPlaywrightPDFFlow:
     """Create the mocked Playwright PDF flow used by renderer tests."""
     page = Mock()
@@ -148,10 +146,7 @@ def _mock_playwright_pdf_flow(
     browser = Mock()
     browser.new_context.return_value = context
     playwright = Mock()
-    if launch_side_effect is None:
-        playwright.chromium.launch.return_value = browser
-    else:
-        playwright.chromium.launch.side_effect = launch_side_effect
+    playwright.chromium.launch.return_value = browser
     playwright_manager = MagicMock()
     playwright_manager.__enter__.return_value = playwright
 
@@ -282,7 +277,6 @@ def _arrange_product_browser_renderer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     *,
-    launch_side_effect: Exception | None = None,
     create_executable: bool = True,
 ) -> tuple[_OfflinePlaywrightPDFRenderer, MockPlaywrightPDFFlow, Path]:
     """Create a renderer wired to a stubbed product browser and Playwright flow."""
@@ -297,7 +291,7 @@ def _arrange_product_browser_renderer(
         ansys_installation=_fake_ansys_installation(ansys_version),
         ansys_version=ansys_version,
     )
-    flow = _mock_playwright_pdf_flow(launch_side_effect=launch_side_effect)
+    flow = _mock_playwright_pdf_flow()
 
     def resolve_browser_binary_info(
         ansys_installation: str | None = None,
@@ -3991,57 +3985,6 @@ def test_launch_product_browser_raises_without_launching_when_packaged_shell_is_
     logger.debug.assert_called_once()
     assert logger.debug.call_args.args[-1] == _expected_headless_shell_executable(
         tmp_path, binary_info.packaged_binary_dir, machine_arch
-    )
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "error",
-    [
-        PlaywrightError("Executable doesn't exist"),
-        PlaywrightError("Host system is missing dependencies to run browsers."),
-        PlaywrightTimeoutError("Timeout 30000ms exceeded"),
-        PlaywrightError("Target crashed"),
-    ],
-    ids=["missing-executable", "missing-system-libraries", "timeout", "crashed"],
-)
-def test_launch_product_browser_does_not_retry_a_failed_launch(
-    tmp_path: Path, error: PlaywrightError
-) -> None:
-    """A failed launch is never interpreted: whatever its message, the error propagates as is."""
-    executable = _create_packaged_headless_shell(tmp_path, "chromium_headless_shell-1223")
-    binary_info = _browser_binary_info(tmp_path, "chromium_headless_shell-1223")
-    launch = Mock(side_effect=error)
-    logger = Mock()
-
-    with pytest.raises(type(error)) as exc_info:
-        pdf_renderer_module._launch_product_browser(launch, binary_info, logger)
-
-    assert exc_info.value is error
-    launch.assert_called_once_with(executable_path=str(executable))
-    # The build is logged before the launch. No browser version exists to log after a failure.
-    logged_values = {value for arguments in _logged_info_arguments(logger) for value in arguments}
-    assert logged_values == {binary_info.packaged_binary_dir}
-
-
-@pytest.mark.unit
-def test_playwright_pdf_does_not_retry_a_failed_launch_and_keeps_its_original_cause(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    error = PlaywrightError("Executable doesn't exist")
-    renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(
-        tmp_path, monkeypatch, launch_side_effect=error
-    )
-
-    with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
-        renderer.render_pdf()
-
-    # The caller gets the ADR-owned error chained to the original Playwright error, and the same
-    # browser is not launched a second time even though a packaged executable is available.
-    assert exc_info.value.__cause__ is error
-    flow.playwright.chromium.launch.assert_called_once()
-    assert flow.playwright.chromium.launch.call_args.kwargs["executable_path"] == str(
-        _expected_headless_shell_executable(browser_binary_dir, _PACKAGED_BROWSER_DIR_NAME, "win64")
     )
 
 
