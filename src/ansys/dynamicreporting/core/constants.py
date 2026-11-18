@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-DOCKER_REPO_URL = "ghcr.io/ansys-internal/adr_dev"
-DOCKER_DEV_REPO_URL = "ghcr.io/ansys-internal/adr_dev"
+DOCKER_REPO_URL = "ghcr.io/ansys/adr_dev:latest"
+DOCKER_DEV_REPO_URL = "ghcr.io/ansys/adr_dev:latest"
 DOCKER_DEFAULT_PORT = 8000
 
 # The product registers the ADR tag as the canonical 3D viewer and retains the
