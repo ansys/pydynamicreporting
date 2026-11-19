@@ -38,6 +38,7 @@ from ansys.dynamicreporting.core import (
 )
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.compatibility import (
+    AUTO_DETECT_INSTALL_VERSIONS,
     DEFAULT_ANSYS_INSTALL_RELEASE,
     ProductCompatibility,
     bundled_product_release_for_client_major,
@@ -166,9 +167,14 @@ def test_public_compatibility_surface_is_consistent():
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
     )
-    assert ansys_version == "2027R1"
+    assert ansys_version == "2027R2"
     assert __ansys_version__ == DEFAULT_ANSYS_VERSION
-    assert __ansys_version_str__ == "2027 R1"
+    assert __ansys_version_str__ == "2027 R2"
+
+
+def test_auto_detect_install_versions_cover_the_supported_releases():
+    """Probe 27.2, 27.1, then 26.1. The 2026 line shipped only 26R1, so 262 is never probed."""
+    assert AUTO_DETECT_INSTALL_VERSIONS == ("272", "271", "261")
 
 
 def test_compatibility_info_derives_from_client_major():
