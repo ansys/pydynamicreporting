@@ -40,6 +40,10 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # released ADR line so users who do not override ``ansys_version`` resolve a
 # real installation by default. Unreleased lines can still be
 # probed explicitly or as lower-priority fallbacks.
+#
+# When this default changes, or when the supported product lines change, also
+# update ``AUTO_DETECT_INSTALL_VERSIONS`` below. That probe list is written by
+# hand because the number of releases in a product line cannot be computed.
 DEFAULT_ANSYS_INSTALL_RELEASE = "27.2"
 
 
