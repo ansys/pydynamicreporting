@@ -1073,6 +1073,28 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path: Path) -> Non
 
 
 @pytest.mark.unit
+def test_apply_pdf_capture_styles_limits_tree_overflow_wrap_to_value_columns(
+    tmp_path: Path,
+) -> None:
+    """Keep tree key columns at normal overflow-wrap while allowing value columns to break."""
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Tree CSS</p></body></html>")
+    page = Mock()
+
+    renderer._apply_pdf_capture_styles(page)
+
+    css = "\n".join(call.kwargs["content"] for call in page.add_style_tag.call_args_list)
+    normalized_css = " ".join(css.split())
+    assert (
+        "table.tree, table.tree th, table.tree td { "
+        "white-space: normal !important; overflow-wrap: normal !important; }"
+    ) in normalized_css
+    assert (
+        "table.tree th:not(:first-child), table.tree td:not(:first-child) { "
+        "overflow-wrap: anywhere !important; }"
+    ) in normalized_css
+
+
+@pytest.mark.unit
 def test_apply_pdf_capture_styles_take_effect_under_screen_media(
     tmp_path: Path, product_playwright_context: _ProductPlaywrightContext
 ) -> None:
@@ -2475,6 +2497,24 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
                     const tree = document.querySelector('#wide');
                     const container = document.querySelector('#container');
                     const style = getComputedStyle(container);
+                    const splitKeyWords = [];
+                    for (const td of tree.querySelectorAll('td:first-child')) {
+                        for (const node of td.childNodes) {
+                            if (node.nodeType !== 3) continue;
+                            for (const match of node.textContent.matchAll(/\\S+/g)) {
+                                const range = document.createRange();
+                                range.setStart(node, match.index);
+                                range.setEnd(node, match.index + match[0].length);
+                                const lineCount = new Set(
+                                    [...range.getClientRects()].map(r => Math.round(r.top))
+                                ).size;
+                                if (lineCount > 1) {
+                                    splitKeyWords.push(match[0]);
+                                }
+                            }
+                        }
+                    }
+                    const firstRowCells = tree.querySelectorAll('tr:first-child td');
                     return {
                         treeWidth: tree.getBoundingClientRect().width,
                         availableWidth: container.clientWidth
@@ -2483,7 +2523,10 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
                         ordinaryWidth: document.querySelector('#ordinary').getBoundingClientRect().width,
                         ordinaryWhitespace: getComputedStyle(document.querySelector('#ordinary')).whiteSpace,
                         fontSize: getComputedStyle(tree.querySelector('td')).fontSize,
-                        indentWidth: tree.querySelector('.treegrid-indent').getBoundingClientRect().width
+                        indentWidth: tree.querySelector('.treegrid-indent').getBoundingClientRect().width,
+                        keyOverflowWrap: getComputedStyle(firstRowCells[0]).overflowWrap,
+                        valueOverflowWrap: getComputedStyle(firstRowCells[1]).overflowWrap,
+                        splitKeyWords
                     };
                 }"""
             )
@@ -2498,6 +2541,9 @@ def test_playwright_pdf_wraps_only_trees_within_their_container(
     assert state["ordinaryWhitespace"] == "nowrap"
     assert state["fontSize"] == "16px"
     assert state["indentWidth"] == 16
+    assert state["keyOverflowWrap"] == "normal"
+    assert state["valueOverflowWrap"] == "anywhere"
+    assert state["splitKeyWords"] == []
     text = "".join("".join(page.extract_text() or "" for page in reader.pages).split())
     assert "Magnitude,NormaltoBoundary" in text
     assert "IntensityandViscosityRatio" in text

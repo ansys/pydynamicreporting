@@ -804,7 +804,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
 
                 /* Tree fit mode keeps values on one line on screen. Wrap them for PDF
-                   without shrinking fonts, stretching short trees, or changing other tables. */
+                   without shrinking fonts, stretching short trees, or changing other tables.
+                   Limit mid-word overflow wrapping to value columns so long unbroken values
+                   do not crush the key column into mid-word breaks. */
                 table.tree {
                     width: auto !important;
                     max-width: 100% !important;
@@ -813,6 +815,10 @@ class _BasePlaywrightPDFRenderer(ABC):
                 table.tree th,
                 table.tree td {
                     white-space: normal !important;
+                    overflow-wrap: normal !important;
+                }
+                table.tree th:not(:first-child),
+                table.tree td:not(:first-child) {
                     overflow-wrap: anywhere !important;
                 }
                 table.tree tr {
