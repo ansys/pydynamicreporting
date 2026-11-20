@@ -1,0 +1,6 @@
+find
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: DataFilterLayout.find

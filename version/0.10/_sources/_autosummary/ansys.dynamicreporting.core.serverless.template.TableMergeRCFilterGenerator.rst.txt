@@ -1,0 +1,165 @@
+﻿TableMergeRCFilterGenerator
+===========================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TableMergeRCFilterGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TableMergeRCFilterGenerator.add_filter
+      
+      
+      TableMergeRCFilterGenerator.add_params
+      
+      
+      TableMergeRCFilterGenerator.add_properties
+      
+      
+      TableMergeRCFilterGenerator.add_property
+      
+      
+      TableMergeRCFilterGenerator.add_sort_fields
+      
+      
+      TableMergeRCFilterGenerator.add_tag
+      
+      
+      TableMergeRCFilterGenerator.as_dict
+      
+      
+      TableMergeRCFilterGenerator.create
+      
+      
+      TableMergeRCFilterGenerator.delete
+      
+      
+      TableMergeRCFilterGenerator.filter
+      
+      
+      TableMergeRCFilterGenerator.find
+      
+      
+      TableMergeRCFilterGenerator.get
+      
+      
+      TableMergeRCFilterGenerator.get_append_tags
+      
+      
+      TableMergeRCFilterGenerator.get_filter
+      
+      
+      TableMergeRCFilterGenerator.get_filter_mode
+      
+      
+      TableMergeRCFilterGenerator.get_generated_items
+      
+      
+      TableMergeRCFilterGenerator.get_params
+      
+      
+      TableMergeRCFilterGenerator.get_property
+      
+      
+      TableMergeRCFilterGenerator.get_sort_fields
+      
+      
+      TableMergeRCFilterGenerator.get_sort_selection
+      
+      
+      TableMergeRCFilterGenerator.get_tags
+      
+      
+      TableMergeRCFilterGenerator.reinit
+      
+      
+      TableMergeRCFilterGenerator.rem_tag
+      
+      
+      TableMergeRCFilterGenerator.remove_tag
+      
+      
+      TableMergeRCFilterGenerator.render
+      
+      
+      TableMergeRCFilterGenerator.render_pdf
+      
+      
+      TableMergeRCFilterGenerator.reorder_child
+      
+      
+      TableMergeRCFilterGenerator.reorder_children
+      
+      
+      TableMergeRCFilterGenerator.save
+      
+      
+      TableMergeRCFilterGenerator.set_append_tags
+      
+      
+      TableMergeRCFilterGenerator.set_filter
+      
+      
+      TableMergeRCFilterGenerator.set_filter_mode
+      
+      
+      TableMergeRCFilterGenerator.set_generated_items
+      
+      
+      TableMergeRCFilterGenerator.set_params
+      
+      
+      TableMergeRCFilterGenerator.set_property
+      
+      
+      TableMergeRCFilterGenerator.set_sort_fields
+      
+      
+      TableMergeRCFilterGenerator.set_sort_selection
+      
+      
+      TableMergeRCFilterGenerator.set_tags
+      
+      
+      TableMergeRCFilterGenerator.to_dict
+      
+      
+      TableMergeRCFilterGenerator.to_json
+      
+      
+      TableMergeRCFilterGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TableMergeRCFilterGenerator.children_order
+      TableMergeRCFilterGenerator.db
+      TableMergeRCFilterGenerator.item_filter
+      TableMergeRCFilterGenerator.master
+      TableMergeRCFilterGenerator.name
+      TableMergeRCFilterGenerator.params
+      TableMergeRCFilterGenerator.parent
+      TableMergeRCFilterGenerator.report_type
+      TableMergeRCFilterGenerator.saved
+      TableMergeRCFilterGenerator.tags
+      TableMergeRCFilterGenerator.type
+      TableMergeRCFilterGenerator.date
+      TableMergeRCFilterGenerator.children
+      TableMergeRCFilterGenerator.guid
+   
+   

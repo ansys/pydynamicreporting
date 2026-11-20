@@ -1,0 +1,6 @@
+has\_file
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoproperty:: File.has_file

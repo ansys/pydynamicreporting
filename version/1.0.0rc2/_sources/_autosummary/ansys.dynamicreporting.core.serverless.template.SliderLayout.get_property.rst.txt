@@ -1,0 +1,6 @@
+get\_property
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.get_property

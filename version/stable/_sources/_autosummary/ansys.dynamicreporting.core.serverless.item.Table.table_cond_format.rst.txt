@@ -1,0 +1,6 @@
+table\_cond\_format
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.table_cond_format

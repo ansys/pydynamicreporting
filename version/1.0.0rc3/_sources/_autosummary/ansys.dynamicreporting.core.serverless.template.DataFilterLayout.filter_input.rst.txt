@@ -1,0 +1,6 @@
+filter\_input
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: DataFilterLayout.filter_input

@@ -1,0 +1,6 @@
+column\_minimum
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.column_minimum

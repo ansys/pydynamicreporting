@@ -1,0 +1,6 @@
+get\_tags
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: ItemsComparisonGenerator.get_tags

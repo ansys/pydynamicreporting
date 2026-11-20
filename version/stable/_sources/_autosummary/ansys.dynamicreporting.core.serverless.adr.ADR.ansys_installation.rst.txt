@@ -1,0 +1,6 @@
+ansys\_installation
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.ansys_installation

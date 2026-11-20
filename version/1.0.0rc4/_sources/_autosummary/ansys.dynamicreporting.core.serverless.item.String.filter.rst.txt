@@ -1,0 +1,6 @@
+filter
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: String.filter

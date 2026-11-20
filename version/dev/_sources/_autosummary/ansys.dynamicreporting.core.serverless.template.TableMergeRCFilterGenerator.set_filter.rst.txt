@@ -1,0 +1,6 @@
+set\_filter
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMergeRCFilterGenerator.set_filter

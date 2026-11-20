@@ -1,0 +1,6 @@
+set\_sort\_fields
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PPTXLayout.set_sort_fields

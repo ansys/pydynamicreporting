@@ -1,0 +1,6 @@
+table\_pagemenu
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.table_pagemenu
