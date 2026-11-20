@@ -52,6 +52,12 @@ from django.utils import timezone
 import numpy
 
 from ..adr_utils import table_attr
+from ..constants import (
+    ANIMATION_EXTENSIONS,
+    ENHANCED_IMAGE_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    SCENE_EXTENSIONS,
+)
 from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
@@ -306,8 +312,8 @@ class FileValidator(StringContent):
 class ImageContent(FileValidator):
     """Validator for image payloads, including enhanced images."""
 
-    ENHANCED_EXT = ("tif", "tiff")
-    ALLOWED_EXT = ("png", "jpg") + ENHANCED_EXT
+    ENHANCED_EXT = ENHANCED_IMAGE_EXTENSIONS
+    ALLOWED_EXT = IMAGE_EXTENSIONS
 
     def process(self, value, obj):
         """Validate an image file and record its metadata."""
@@ -329,13 +335,13 @@ class ImageContent(FileValidator):
 class AnimContent(FileValidator):
     """Validator for animation/video payloads."""
 
-    ALLOWED_EXT = ("mp4",)
+    ALLOWED_EXT = ANIMATION_EXTENSIONS
 
 
 class SceneContent(FileValidator):
     """Validator for 3D scene and geometry payloads."""
 
-    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj")
+    ALLOWED_EXT = SCENE_EXTENSIONS
 
 
 class FileContent(FileValidator):

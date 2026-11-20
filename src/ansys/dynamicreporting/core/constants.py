@@ -63,6 +63,13 @@ GENERATOR_TYPES = (
 
 REPORT_TYPES = LAYOUT_TYPES + GENERATOR_TYPES
 
+# Lowercase file extensions accepted for media item payloads, shared by the
+# serverless validators, the REST payload setters, and the JSON item import.
+ENHANCED_IMAGE_EXTENSIONS = ("tif", "tiff")
+IMAGE_EXTENSIONS = ("png", "jpg") + ENHANCED_IMAGE_EXTENSIONS
+ANIMATION_EXTENSIONS = ("mp4",)
+SCENE_EXTENSIONS = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj")
+
 JSON_ATTR_KEYS = ("name", "report_type", "tags", "item_filter")
 JSON_NECESSARY_KEYS = ("name", "report_type", "parent", "children")
 JSON_UNNECESSARY_KEYS = ("tags", "params", "sort_selection", "item_filter")
