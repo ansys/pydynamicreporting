@@ -1,7 +1,7 @@
 version: 2
 updates:
-  # 1. Python dependencies from pyproject.toml
-  - package-ecosystem: "pip"
+  # 1. Python dependencies from pyproject.toml and uv.lock (test/doc/dev only)
+  - package-ecosystem: "uv"
     cooldown:
       default-days: 10 # Fallback cooldown if no specific rule applies
     directory: "/"
@@ -10,6 +10,11 @@ updates:
     open-pull-requests-limit: 1
     labels:
       - "dependencies"
+    # Only open version-update PRs for direct non-production dependencies
+    # ([project.optional-dependencies] test/doc/dev and build-system.requires),
+    # excluding shipped runtime dependencies in [project].dependencies.
+    allow:
+      - dependency-type: "development"
 
   # 2. GitHub-hosted things:
   #    - GitHub Actions in .github/workflows/
@@ -23,3 +28,22 @@ updates:
     open-pull-requests-limit: 1
     labels:
       - "dependencies"
+
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+      exclude:
+        - "ansys/pre-commit-hooks/*"
+    labels:
+      - "maintenance"
+    commit-message:
+      prefix: "chore(pre-commit)"
+    groups:
+      pre-commit-hooks:
+        patterns:
+          - "*"
+    assignees:
+      - "margalva"
