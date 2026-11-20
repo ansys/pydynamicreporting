@@ -23,52 +23,18 @@
 """Tests for Dependabot and lockfile CI guardrails."""
 
 from pathlib import Path
-import tomllib
 
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _load_uv_dependabot_entry() -> dict:
+def test_dependabot_uses_uv_and_targets_development_dependencies_only():
+    """Dependabot must use uv and restrict version PRs to non-shipped development deps."""
     config = yaml.safe_load((REPO_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
     uv_entries = [entry for entry in config["updates"] if entry["package-ecosystem"] == "uv"]
     assert len(uv_entries) == 1
-    return uv_entries[0]
-
-
-def test_dependabot_ignores_all_shipped_dependencies_only():
-    """Dependabot must ignore every shipped runtime dependency while keeping test/doc/dev active."""
-    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    shipped = {
-        canonicalize_name(Requirement(spec).name) for spec in pyproject["project"]["dependencies"]
-    }
-    optional_deps = {
-        canonicalize_name(Requirement(spec).name)
-        for specs in pyproject["project"].get("optional-dependencies", {}).values()
-        for spec in specs
-    }
-
-    uv_entry = _load_uv_dependabot_entry()
-    assert {"dependency-type": "direct"} in uv_entry.get("allow", [])
-
-    ignored = {
-        canonicalize_name(rule["dependency-name"])
-        for rule in uv_entry.get("ignore", [])
-        if "update-types" not in rule and "versions" not in rule
-    }
-
-    missing_shipped = shipped - ignored
-    assert not missing_shipped, (
-        f"Shipped runtime dependencies missing from .github/dependabot.yml ignore list: {sorted(missing_shipped)}"
-    )
-
-    ignored_optional = (optional_deps - shipped) & ignored
-    assert not ignored_optional, (
-        f"Optional test/doc/dev dependencies must not be ignored in .github/dependabot.yml: {sorted(ignored_optional)}"
-    )
+    assert uv_entries[0].get("allow") == [{"dependency-type": "development"}]
 
 
 def test_ci_enforces_uv_lock_consistency():
