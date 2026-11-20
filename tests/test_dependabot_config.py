@@ -42,7 +42,9 @@ def _load_uv_dependabot_entry() -> dict:
 def test_dependabot_ignores_all_shipped_dependencies_only():
     """Dependabot must ignore every shipped runtime dependency while keeping test/doc/dev active."""
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    shipped = {canonicalize_name(Requirement(spec).name) for spec in pyproject["project"]["dependencies"]}
+    shipped = {
+        canonicalize_name(Requirement(spec).name) for spec in pyproject["project"]["dependencies"]
+    }
     optional_deps = {
         canonicalize_name(Requirement(spec).name)
         for specs in pyproject["project"].get("optional-dependencies", {}).values()
