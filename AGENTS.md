@@ -308,6 +308,12 @@ If you change:
 - Helpers live in `codegen/`
 - Some core modules may be generated during build hooks; avoid editing outputs directly unless unavoidable.
 
+### Default ADR version
+- The default install version is `DEFAULT_ANSYS_INSTALL_RELEASE` in `src/ansys/dynamicreporting/core/compatibility.py`.
+- When you change it, or when the supported product lines change, also update `AUTO_DETECT_INSTALL_VERSIONS` in the same file. That probe list is written by hand.
+- List only releases that shipped, newest first. The 2026 line had a single release, 26R1, so there is no `262`.
+- Update the expected values in `tests/test_compatibility.py` in the same change.
+
 ### Release tooling (FYI)
 - The repo uses tag-driven versioning through Hatch (`uv run hatch version`).
 - See `scripts/tag_release.sh` and `make tag`.
