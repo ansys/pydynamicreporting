@@ -1,7 +1,7 @@
 version: 2
 updates:
-  # 1. Python dependencies from pyproject.toml
-  - package-ecosystem: "pip"
+  # 1. Python dependencies from pyproject.toml and uv.lock (test/doc/dev only)
+  - package-ecosystem: "uv"
     cooldown:
       default-days: 10 # Fallback cooldown if no specific rule applies
     directory: "/"
@@ -10,6 +10,33 @@ updates:
     open-pull-requests-limit: 1
     labels:
       - "dependencies"
+    allow:
+      - dependency-type: "direct"
+    # Ignore shipped runtime library dependencies ([project].dependencies) so
+    # Dependabot only opens PRs for test/doc/dev optional dependencies.
+    ignore:
+      - dependency-name: "bleach"
+      - dependency-name: "django"
+      - dependency-name: "django-guardian"
+      - dependency-name: "djangorestframework"
+      - dependency-name: "docker"
+      - dependency-name: "lark"
+      - dependency-name: "numpy"
+      - dependency-name: "pandas"
+      - dependency-name: "pillow"
+      - dependency-name: "playwright"
+      - dependency-name: "psutil"
+      - dependency-name: "psycopg"
+      - dependency-name: "psycopg-binary"
+      - dependency-name: "pypng"
+      - dependency-name: "python-dateutil"
+      - dependency-name: "python-pptx"
+      - dependency-name: "pytz"
+      - dependency-name: "qtpy"
+      - dependency-name: "requests"
+      - dependency-name: "statsmodels"
+      - dependency-name: "tzlocal"
+      - dependency-name: "urllib3"
 
   # 2. GitHub-hosted things:
   #    - GitHub Actions in .github/workflows/

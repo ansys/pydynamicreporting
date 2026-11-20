@@ -31,6 +31,9 @@ jobs:
       - name: Set up Python
         uses: ./.github/actions/setup-python-env
 
+      - name: Check lockfile consistency
+        run: uv lock --locked
+
       - name: PyAnsys code style checks
         uses: ansys/actions/code-style@v11.1.5
         with:
