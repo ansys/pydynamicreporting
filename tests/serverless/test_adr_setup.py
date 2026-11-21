@@ -249,3 +249,81 @@ def test_setup_rolls_back_state_after_dataset_creation_failure(tmp_path, monkeyp
     assert adr._dataset is None
     assert restore_calls == ["restored"]
     assert adr._runtime_compat_restore is None
+
+
+def _construct_adr_without_install(monkeypatch, tmp_path, **kwargs) -> ADR:
+    """Build an ADR with directory handling only, stubbing installation discovery."""
+    from ansys.dynamicreporting.core.common_utils import InstallResolution
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    install_root = tmp_path / "install"
+    install_root.mkdir(exist_ok=True)
+    monkeypatch.setattr(
+        adr_module,
+        "resolve_install_info",
+        lambda **_: InstallResolution(install_dir=str(install_root), version=261),
+    )
+    monkeypatch.setattr(adr_module, "get_compatibility_warning_for_install_version", lambda _: None)
+    # Keep the secret key and directory variables from leaking between tests.
+    for variable in (
+        "CEI_NEXUS_SECRET_KEY",
+        "CEI_NEXUS_LOCAL_DB_DIR",
+        "CEI_NEXUS_LOCAL_MEDIA_DIR",
+    ):
+        monkeypatch.delenv(variable, raising=False)
+    return ADR(**kwargs)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("precreate", [False, True], ids=["missing", "existing-empty"])
+def test_default_media_directory_is_created(tmp_path, monkeypatch, precreate):
+    """A missing or existing-but-empty db_directory gets <db_directory>/media."""
+    db_directory = tmp_path / "db"
+    if precreate:
+        db_directory.mkdir()
+
+    adr = _construct_adr_without_install(monkeypatch, tmp_path, db_directory=str(db_directory))
+
+    assert (db_directory / "media").is_dir()
+    assert adr.media_directory == str(db_directory / "media")
+
+
+@pytest.mark.unit
+def test_missing_db_directory_gets_viewer_token(tmp_path, monkeypatch):
+    """Only a newly created db_directory gets a secret key and viewer token."""
+    db_directory = tmp_path / "db"
+
+    _construct_adr_without_install(monkeypatch, tmp_path, db_directory=str(db_directory))
+
+    assert (db_directory / "view_report.nexdb").is_file()
+
+
+@pytest.mark.unit
+def test_external_media_directory_is_not_duplicated_in_db_directory(tmp_path, monkeypatch):
+    """With media outside the database, no stray <db_directory>/media is created."""
+    db_directory = tmp_path / "db"
+    media_directory = tmp_path / "elsewhere" / "media"
+
+    adr = _construct_adr_without_install(
+        monkeypatch,
+        tmp_path,
+        db_directory=str(db_directory),
+        media_directory=str(media_directory),
+    )
+
+    assert media_directory.is_dir()
+    assert adr.media_directory == str(media_directory)
+    assert not (db_directory / "media").exists()
+
+
+@pytest.mark.unit
+def test_populated_db_directory_is_not_reinitialized(tmp_path, monkeypatch):
+    """An existing database directory is used as-is, without a new viewer token."""
+    db_directory = tmp_path / "db"
+    (db_directory / "media").mkdir(parents=True)
+    (db_directory / "db.sqlite3").touch()
+
+    adr = _construct_adr_without_install(monkeypatch, tmp_path, db_directory=str(db_directory))
+
+    assert not (db_directory / "view_report.nexdb").exists()
+    assert adr.media_directory == str(db_directory / "media")

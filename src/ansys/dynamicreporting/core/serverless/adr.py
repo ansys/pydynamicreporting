@@ -107,6 +107,8 @@ class ADR:
     db_directory : str, optional
         Directory for a local SQLite database (and media subdirectory).
         Either this or ``databases`` is required unless ``in_memory=True``.
+        A missing directory is created. When media falls back to
+        ``<db_directory>/media``, that subdirectory is created if needed.
     databases : dict, optional
         Full ``DATABASES`` configuration. If provided, it replaces
         the default SQLite configuration. Must include a ``"default"`` key.
@@ -272,11 +274,11 @@ class ADR:
                     try:
                         self._db_directory = self._check_dir(db_directory)
                     except InvalidPath:
-                        # Directory doesn't exist; create it (and "media") plus secret key.
+                        # Directory doesn't exist; create it plus a secret key. Media is
+                        # created below, where its location is known: it may live outside
+                        # the database directory.
                         self._db_directory = Path(db_directory)
                         self._db_directory.mkdir(parents=True, exist_ok=True)
-                        # media dir
-                        (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
                         # Create a secret key if not already present.
                         if "CEI_NEXUS_SECRET_KEY" not in os.environ:
                             # Make a random string that could be used as a secret key for the database
@@ -310,7 +312,10 @@ class ADR:
                     self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"]) / "media"
                 )
             elif self._db_directory is not None:  # fallback to the DB directory
-                self._media_directory = self._check_dir(self._db_directory / "media")
+                # Create it like an explicit media_directory, so an existing but empty
+                # database directory (for example, made with mkdir first) also works.
+                self._media_directory = self._db_directory / "media"
+                self._media_directory.mkdir(exist_ok=True)
             else:
                 raise ImproperlyConfiguredError(
                     "A media directory must be specified using either the 'media_directory'"

@@ -65,5 +65,8 @@ REPORT_TYPES = LAYOUT_TYPES + GENERATOR_TYPES
 
 JSON_ATTR_KEYS = ("name", "report_type", "tags", "item_filter")
 JSON_NECESSARY_KEYS = ("name", "report_type", "parent", "children")
-JSON_UNNECESSARY_KEYS = ("tags", "params", "sort_selection", "item_filter")
+# Template.to_dict/to_json write "guid" on every entry (a fresh value on the root, None on
+# children). The loader ignores it, but accepting it lets a saved file load back without an
+# "extra keys" warning.
+JSON_UNNECESSARY_KEYS = ("tags", "params", "sort_selection", "item_filter", "guid")
 JSON_TEMPLATE_KEYS = JSON_NECESSARY_KEYS + JSON_UNNECESSARY_KEYS
