@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import collections
+from collections.abc import Callable
 import configparser
 import functools
 import hashlib
@@ -38,6 +39,7 @@ import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
+from typing import TYPE_CHECKING
 import urllib
 from urllib.parse import urlparse
 import uuid
@@ -52,10 +54,19 @@ from .. import common_utils
 from ..adr_utils import build_query_url
 from ..common_utils import PDFPageSize, populate_template
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION, validate_supported_server_install_version
-from ..constants import JSON_ATTR_KEYS
-from ..exceptions import ADRException, InvalidAnsysPath, UnsupportedServerVersionError
+from ..constants import IMAGE_EXTENSIONS, JSON_ATTR_KEYS
+from ..exceptions import (
+    ADRException,
+    ADRItemImportError,
+    InvalidAnsysPath,
+    UnsupportedServerVersionError,
+)
 from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
+
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from .json_item_import import ImportResult
+    from .json_item_import.importer import OnError
 
 QtCore = None
 QtGui = None
@@ -1433,6 +1444,115 @@ class Server:
 
         for child_id_str in children_id_strs:
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
+
+    _IMPORT_PAYLOAD_SETTERS: dict[str, Callable[[report_objects.ItemREST, object], None]] = {
+        "text": report_objects.ItemREST.set_payload_string,
+        "html": report_objects.ItemREST.set_payload_html,
+        "table": report_objects.ItemREST.set_payload_table,
+        "tree": report_objects.ItemREST.set_payload_tree,
+        "image": report_objects.ItemREST.set_payload_image,
+        "animation": report_objects.ItemREST.set_payload_animation,
+        "scene": report_objects.ItemREST.set_payload_scene,
+        "file": report_objects.ItemREST.set_payload_file,
+    }
+    """Import ``item_type`` to the :class:`report_objects.ItemREST` payload setter."""
+
+    def import_items_from_json(
+        self,
+        document: str | Path | dict,
+        *,
+        on_error: "OnError" = "collect",
+        logger: logging.Logger | None = None,
+    ) -> "ImportResult":
+        """Import report items from a JSON document into this server.
+
+        Backs :meth:`ansys.dynamicreporting.core.Service.import_items_from_json`,
+        which documents the parameters; ``logger`` receives validation warnings
+        and per-item failures.
+        """
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from .json_item_import import import_items, load_document
+
+        validated = load_document(document, logger=logger)
+        return import_items(
+            validated,
+            functools.partial(self._populate_item, logger=logger),
+            on_error=on_error,
+            logger=logger,
+        )
+
+    def _populate_item(
+        self,
+        item_data: dict,
+        doc_tags: tuple[tuple[str, str], ...],
+        logger: logging.Logger | None = None,
+    ) -> report_objects.ItemREST:
+        """Build one :class:`report_objects.ItemREST` from a validated item and push it."""
+        from .json_item_import.mapping import payload_from_json, table_properties_from_json
+        from .json_item_import.spec import check_tags
+
+        item = self.create_item(name=item_data["name"], sequence=item_data["sequence"])
+        # create_item() skips a falsy source; the document value is stored verbatim.
+        item.source = item_data["source"]
+        # Document tags come first, so an item tag with the same key overrides them.
+        for key, value in (*doc_tags, *check_tags(item_data["tags"], "item tags")):
+            item.add_tag(key, value)
+
+        item_type = item_data["item_type"]
+        content = payload_from_json(item_data)
+        if item_type == "table":
+            # Display fields travel inside the table payload, the same
+            # dictionary adr_item.Item builds for set_payload_table.
+            content = {**content, **table_properties_from_json(item_data)}
+        elif item_type == "image":
+            # set_payload_image expects image bytes and never sees the path, so
+            # check the path with the validator the other REST media setters use.
+            item.validate_file(content, "image file", list(IMAGE_EXTENSIONS))
+            # As in adr_item.Item, PNG files are passed through and any other
+            # format is converted first.
+            if content.lower().endswith(".png"):
+                with open(content, "rb") as handle:
+                    content = handle.read()
+            else:
+                content = report_utils.PIL_image_to_data(content)["file_data"]
+        self._IMPORT_PAYLOAD_SETTERS[item_type](item, content)
+
+        try:
+            status = self.put_objects([item])
+            if status != requests.codes.ok:
+                # Read before cleanup, which can overwrite _last_error.
+                raise ADRItemImportError(
+                    f"the server rejected item {item_data['name']!r} "
+                    f"(HTTP {status}): {self._last_error}"
+                )
+        except Exception:
+            # put_objects() creates the item record before uploading its
+            # payload file, so a failed upload leaves an item without a
+            # payload behind, whether it is reported by status or raised
+            # (for example PermissionDenied). Remove it, as the serverless
+            # backend does.
+            try:
+                status = self.del_objects([item])
+                # 404 means the record was never created, which needs no cleanup.
+                failure = (
+                    None
+                    if status in (requests.codes.ok, requests.codes.not_found)
+                    else f"HTTP {status}"
+                )
+            except Exception as exc:
+                failure = exc
+            # Logged rather than raised: the push failure is the error to report.
+            if failure is not None and logger is not None:
+                logger.warning(
+                    "Could not remove partially imported item %r: %s", item.name, failure
+                )
+            raise
+        finally:
+            # The file payload setters open the payload and never close it.
+            if item.fileobj is not None:
+                item.fileobj.close()
+        return item
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None

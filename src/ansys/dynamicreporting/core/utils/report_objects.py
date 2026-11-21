@@ -45,6 +45,7 @@ import pytz
 
 from . import extremely_ugly_hacks, report_utils
 from ..common_utils import check_dictionary_for_html
+from ..constants import ANIMATION_EXTENSIONS, SCENE_EXTENSIONS
 from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
@@ -1456,7 +1457,7 @@ class ItemREST(BaseRESTObject):
 
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
-        self.validate_file(mp4_filename, "animation file", ["mp4"])
+        self.validate_file(mp4_filename, "animation file", list(ANIMATION_EXTENSIONS))
         self.type = ItemREST.type_anim
         self.fileobj = open(mp4_filename, "rb")
         self.fileurl = mp4_filename
@@ -1470,11 +1471,7 @@ class ItemREST(BaseRESTObject):
 
     def set_payload_scene(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
-        self.validate_file(
-            filename,
-            "scene file",
-            ["stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"],
-        )
+        self.validate_file(filename, "scene file", list(SCENE_EXTENSIONS))
         self.type = ItemREST.type_scn
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
