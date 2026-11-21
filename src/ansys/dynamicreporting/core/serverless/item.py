@@ -43,6 +43,7 @@ import io
 from pathlib import Path
 import pickle  # nosec B403
 import platform
+from typing import Any
 import uuid
 
 from PIL import Image as PILImage
@@ -945,7 +946,7 @@ class Image(FilePayloadMixin, Item):
         """Whether this image is an enhanced image (for example TIFF with metadata)."""
         return self._enhanced
 
-    def save(self, **kwargs):
+    def save(self, **kwargs: Any) -> None:
         """Save the image payload, converting to PNG when appropriate.
 
         Non-enhanced images are stored as PNG files, while enhanced
