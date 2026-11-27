@@ -1,0 +1,6 @@
+get\_children\_layout
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: BoxLayout.get_children_layout

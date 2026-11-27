@@ -1,0 +1,6 @@
+add\_properties
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: ReportLinkLayout.add_properties

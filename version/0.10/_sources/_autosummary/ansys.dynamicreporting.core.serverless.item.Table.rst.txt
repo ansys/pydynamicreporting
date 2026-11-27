@@ -1,0 +1,168 @@
+﻿Table
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: Table
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Table.add_tag
+      
+      
+      Table.as_dict
+      
+      
+      Table.create
+      
+      
+      Table.delete
+      
+      
+      Table.filter
+      
+      
+      Table.find
+      
+      
+      Table.get
+      
+      
+      Table.get_tags
+      
+      
+      Table.reinit
+      
+      
+      Table.rem_tag
+      
+      
+      Table.remove_tag
+      
+      
+      Table.render
+      
+      
+      Table.save
+      
+      
+      Table.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Table.align_column
+      Table.bar_gap
+      Table.bar_mode
+      Table.col_tags
+      Table.collbls
+      Table.column_maximum
+      Table.column_minimum
+      Table.content
+      Table.dataset
+      Table.db
+      Table.format
+      Table.format_column
+      Table.format_row
+      Table.height
+      Table.histogram_bin_size
+      Table.histogram_cumulative
+      Table.histogram_normalized
+      Table.histogram_threshold
+      Table.item_justification
+      Table.labels_column
+      Table.labels_row
+      Table.legend_position
+      Table.line_color
+      Table.line_error_bars
+      Table.line_marker
+      Table.line_marker_aux0
+      Table.line_marker_aux1
+      Table.line_marker_aux2
+      Table.line_marker_aux3
+      Table.line_marker_aux4
+      Table.line_marker_aux5
+      Table.line_marker_aux6
+      Table.line_marker_aux7
+      Table.line_marker_aux8
+      Table.line_marker_aux9
+      Table.line_marker_opacity
+      Table.line_marker_scale
+      Table.line_marker_size
+      Table.line_marker_text
+      Table.line_style
+      Table.line_width
+      Table.marker_text_rowname
+      Table.name
+      Table.nan_display
+      Table.palette
+      Table.palette_position
+      Table.palette_range
+      Table.palette_show
+      Table.palette_title
+      Table.plot
+      Table.plot_margins
+      Table.plot_title
+      Table.plot_xaxis_type
+      Table.plot_yaxis_type
+      Table.plot_zaxis_type
+      Table.row_tags
+      Table.rowlbls
+      Table.saved
+      Table.sequence
+      Table.session
+      Table.show_border
+      Table.show_legend
+      Table.show_legend_border
+      Table.source
+      Table.stacked
+      Table.table_bordered
+      Table.table_cond_format
+      Table.table_condensed
+      Table.table_default_col_labels
+      Table.table_page
+      Table.table_pagemenu
+      Table.table_scrollx
+      Table.table_scrolly
+      Table.table_search
+      Table.table_sort
+      Table.table_title
+      Table.table_wrap_content
+      Table.tags
+      Table.title
+      Table.type
+      Table.width
+      Table.xaxis
+      Table.xaxis_format
+      Table.xaxis_tick_delta
+      Table.xrange
+      Table.xtitle
+      Table.yaxis
+      Table.yaxis_format
+      Table.yaxis_tick_delta
+      Table.yrange
+      Table.ytitle
+      Table.zaxis
+      Table.zaxis_format
+      Table.zaxis_tick_delta
+      Table.zrange
+      Table.ztitle
+      Table.date
+      Table.guid
+   
+   

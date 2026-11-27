@@ -1,0 +1,189 @@
+﻿ReportLinkLayout
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: ReportLinkLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      ReportLinkLayout.add_filter
+      
+      
+      ReportLinkLayout.add_params
+      
+      
+      ReportLinkLayout.add_properties
+      
+      
+      ReportLinkLayout.add_property
+      
+      
+      ReportLinkLayout.add_sort_fields
+      
+      
+      ReportLinkLayout.add_tag
+      
+      
+      ReportLinkLayout.as_dict
+      
+      
+      ReportLinkLayout.create
+      
+      
+      ReportLinkLayout.delete
+      
+      
+      ReportLinkLayout.filter
+      
+      
+      ReportLinkLayout.find
+      
+      
+      ReportLinkLayout.get
+      
+      
+      ReportLinkLayout.get_column_count
+      
+      
+      ReportLinkLayout.get_column_widths
+      
+      
+      ReportLinkLayout.get_comments
+      
+      
+      ReportLinkLayout.get_filter
+      
+      
+      ReportLinkLayout.get_filter_mode
+      
+      
+      ReportLinkLayout.get_html
+      
+      
+      ReportLinkLayout.get_params
+      
+      
+      ReportLinkLayout.get_property
+      
+      
+      ReportLinkLayout.get_skip
+      
+      
+      ReportLinkLayout.get_sort_fields
+      
+      
+      ReportLinkLayout.get_sort_selection
+      
+      
+      ReportLinkLayout.get_tags
+      
+      
+      ReportLinkLayout.get_transpose
+      
+      
+      ReportLinkLayout.reinit
+      
+      
+      ReportLinkLayout.rem_tag
+      
+      
+      ReportLinkLayout.remove_tag
+      
+      
+      ReportLinkLayout.render
+      
+      
+      ReportLinkLayout.render_pdf
+      
+      
+      ReportLinkLayout.reorder_child
+      
+      
+      ReportLinkLayout.reorder_children
+      
+      
+      ReportLinkLayout.save
+      
+      
+      ReportLinkLayout.set_column_count
+      
+      
+      ReportLinkLayout.set_column_widths
+      
+      
+      ReportLinkLayout.set_comments
+      
+      
+      ReportLinkLayout.set_filter
+      
+      
+      ReportLinkLayout.set_filter_mode
+      
+      
+      ReportLinkLayout.set_html
+      
+      
+      ReportLinkLayout.set_params
+      
+      
+      ReportLinkLayout.set_property
+      
+      
+      ReportLinkLayout.set_skip
+      
+      
+      ReportLinkLayout.set_sort_fields
+      
+      
+      ReportLinkLayout.set_sort_selection
+      
+      
+      ReportLinkLayout.set_tags
+      
+      
+      ReportLinkLayout.set_transpose
+      
+      
+      ReportLinkLayout.to_dict
+      
+      
+      ReportLinkLayout.to_json
+      
+      
+      ReportLinkLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      ReportLinkLayout.children_order
+      ReportLinkLayout.db
+      ReportLinkLayout.item_filter
+      ReportLinkLayout.master
+      ReportLinkLayout.name
+      ReportLinkLayout.params
+      ReportLinkLayout.parent
+      ReportLinkLayout.report_type
+      ReportLinkLayout.saved
+      ReportLinkLayout.tags
+      ReportLinkLayout.type
+      ReportLinkLayout.date
+      ReportLinkLayout.children
+      ReportLinkLayout.guid
+   
+   

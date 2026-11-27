@@ -1,0 +1,6 @@
+line\_marker\_size
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.line_marker_size

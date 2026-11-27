@@ -1,0 +1,6 @@
+add\_params
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMapGenerator.add_params

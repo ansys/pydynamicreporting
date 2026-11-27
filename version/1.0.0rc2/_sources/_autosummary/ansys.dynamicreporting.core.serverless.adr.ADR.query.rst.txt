@@ -1,0 +1,6 @@
+query
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.query

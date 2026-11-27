@@ -1,0 +1,6 @@
+get\_report\_count
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.get_report_count

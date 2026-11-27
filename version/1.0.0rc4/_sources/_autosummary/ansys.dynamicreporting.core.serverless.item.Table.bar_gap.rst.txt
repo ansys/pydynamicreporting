@@ -1,0 +1,6 @@
+bar\_gap
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.bar_gap

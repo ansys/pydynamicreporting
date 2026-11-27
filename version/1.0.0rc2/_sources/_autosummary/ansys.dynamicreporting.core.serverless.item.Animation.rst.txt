@@ -1,0 +1,85 @@
+﻿Animation
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: Animation
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Animation.add_tag
+      
+      
+      Animation.as_dict
+      
+      
+      Animation.create
+      
+      
+      Animation.delete
+      
+      
+      Animation.filter
+      
+      
+      Animation.find
+      
+      
+      Animation.get
+      
+      
+      Animation.get_tags
+      
+      
+      Animation.reinit
+      
+      
+      Animation.rem_tag
+      
+      
+      Animation.remove_tag
+      
+      
+      Animation.render
+      
+      
+      Animation.save
+      
+      
+      Animation.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Animation.content
+      Animation.dataset
+      Animation.db
+      Animation.file_ext
+      Animation.file_path
+      Animation.has_file
+      Animation.name
+      Animation.saved
+      Animation.sequence
+      Animation.session
+      Animation.source
+      Animation.tags
+      Animation.type
+      Animation.date
+      Animation.guid
+   
+   

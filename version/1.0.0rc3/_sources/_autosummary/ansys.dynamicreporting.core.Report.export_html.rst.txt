@@ -1,0 +1,6 @@
+export\_html
+============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.export_html

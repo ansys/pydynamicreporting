@@ -1,0 +1,6 @@
+setup
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.setup

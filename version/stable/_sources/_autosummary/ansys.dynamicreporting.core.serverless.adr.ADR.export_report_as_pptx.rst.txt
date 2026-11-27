@@ -1,0 +1,6 @@
+export\_report\_as\_pptx
+========================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.export_report_as_pptx

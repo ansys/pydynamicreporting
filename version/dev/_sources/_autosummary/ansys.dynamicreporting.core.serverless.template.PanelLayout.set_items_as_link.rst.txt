@@ -1,0 +1,6 @@
+set\_items\_as\_link
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PanelLayout.set_items_as_link

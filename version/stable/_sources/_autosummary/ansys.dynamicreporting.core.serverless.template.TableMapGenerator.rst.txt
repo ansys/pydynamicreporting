@@ -1,0 +1,165 @@
+﻿TableMapGenerator
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TableMapGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TableMapGenerator.add_filter
+      
+      
+      TableMapGenerator.add_params
+      
+      
+      TableMapGenerator.add_properties
+      
+      
+      TableMapGenerator.add_property
+      
+      
+      TableMapGenerator.add_sort_fields
+      
+      
+      TableMapGenerator.add_tag
+      
+      
+      TableMapGenerator.as_dict
+      
+      
+      TableMapGenerator.create
+      
+      
+      TableMapGenerator.delete
+      
+      
+      TableMapGenerator.filter
+      
+      
+      TableMapGenerator.find
+      
+      
+      TableMapGenerator.get
+      
+      
+      TableMapGenerator.get_append_tags
+      
+      
+      TableMapGenerator.get_filter
+      
+      
+      TableMapGenerator.get_filter_mode
+      
+      
+      TableMapGenerator.get_generated_items
+      
+      
+      TableMapGenerator.get_params
+      
+      
+      TableMapGenerator.get_property
+      
+      
+      TableMapGenerator.get_sort_fields
+      
+      
+      TableMapGenerator.get_sort_selection
+      
+      
+      TableMapGenerator.get_tags
+      
+      
+      TableMapGenerator.reinit
+      
+      
+      TableMapGenerator.rem_tag
+      
+      
+      TableMapGenerator.remove_tag
+      
+      
+      TableMapGenerator.render
+      
+      
+      TableMapGenerator.render_pdf
+      
+      
+      TableMapGenerator.reorder_child
+      
+      
+      TableMapGenerator.reorder_children
+      
+      
+      TableMapGenerator.save
+      
+      
+      TableMapGenerator.set_append_tags
+      
+      
+      TableMapGenerator.set_filter
+      
+      
+      TableMapGenerator.set_filter_mode
+      
+      
+      TableMapGenerator.set_generated_items
+      
+      
+      TableMapGenerator.set_params
+      
+      
+      TableMapGenerator.set_property
+      
+      
+      TableMapGenerator.set_sort_fields
+      
+      
+      TableMapGenerator.set_sort_selection
+      
+      
+      TableMapGenerator.set_tags
+      
+      
+      TableMapGenerator.to_dict
+      
+      
+      TableMapGenerator.to_json
+      
+      
+      TableMapGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TableMapGenerator.children_order
+      TableMapGenerator.db
+      TableMapGenerator.item_filter
+      TableMapGenerator.master
+      TableMapGenerator.name
+      TableMapGenerator.params
+      TableMapGenerator.parent
+      TableMapGenerator.report_type
+      TableMapGenerator.saved
+      TableMapGenerator.tags
+      TableMapGenerator.type
+      TableMapGenerator.date
+      TableMapGenerator.children
+      TableMapGenerator.guid
+   
+   
